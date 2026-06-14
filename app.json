@@ -2,6 +2,7 @@
   "expo": {
     "name": "PilatesMatch",
     "slug": "pilates-match",
+    "owner": "chelo.perez",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
@@ -11,7 +12,9 @@
       "resizeMode": "contain",
       "backgroundColor": "#4A5D4E"
     },
-    "assetBundlePatterns": ["**/*"],
+    "assetBundlePatterns": [
+      "**/*"
+    ],
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.pilates.match",
@@ -56,13 +59,6 @@
         {
           "photosPermission": "Para seleccionar tu foto de perfil.",
           "cameraPermission": "Para tomar una foto de perfil."
-        }
-      ],
-      [
-        "react-native-google-mobile-ads",
-        {
-          "androidAppId": "ca-app-pub-3940256099942544~3347511713",
-          "iosAppId": "ca-app-pub-3940256099942544~1458002511"
         }
       ]
     ],
