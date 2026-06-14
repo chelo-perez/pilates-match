@@ -1,0 +1,75 @@
+{
+  "expo": {
+    "name": "PilatesMatch",
+    "slug": "pilates-match",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "light",
+    "splash": {
+      "image": "./assets/splash.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#4A5D4E"
+    },
+    "assetBundlePatterns": ["**/*"],
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.pilates.match",
+      "infoPlist": {
+        "NSCameraUsageDescription": "Para subir tu foto de perfil.",
+        "NSPhotoLibraryUsageDescription": "Para seleccionar una foto de perfil.",
+        "NSUserNotificationsUsageDescription": "Para enviarte solicitudes de cobertura de clases."
+      }
+    },
+    "android": {
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/icon.png",
+        "backgroundColor": "#4A5D4E"
+      },
+      "package": "com.pilates.match",
+      "permissions": [
+        "android.permission.CAMERA",
+        "android.permission.READ_EXTERNAL_STORAGE",
+        "android.permission.RECEIVE_BOOT_COMPLETED",
+        "android.permission.VIBRATE",
+        "android.permission.POST_NOTIFICATIONS"
+      ],
+      "splash": {
+        "androidImage": "./assets/splash.png",
+        "resizeMode": "contain",
+        "backgroundColor": "#4A5D4E"
+      },
+      "googleServicesFile": "./google-services.json"
+    },
+    "plugins": [
+      [
+        "expo-notifications",
+        {
+          "icon": "./assets/icon.png",
+          "color": "#4A5D4E",
+          "sounds": []
+        }
+      ],
+      "expo-font",
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "Para seleccionar tu foto de perfil.",
+          "cameraPermission": "Para tomar una foto de perfil."
+        }
+      ],
+      [
+        "react-native-google-mobile-ads",
+        {
+          "androidAppId": "ca-app-pub-3940256099942544~3347511713",
+          "iosAppId": "ca-app-pub-3940256099942544~1458002511"
+        }
+      ]
+    ],
+    "extra": {
+      "eas": {
+        "projectId": "e85480c1-c17a-4b5a-bdd7-c3757f30cae5"
+      }
+    }
+  }
+}

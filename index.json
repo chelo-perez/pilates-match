@@ -1,0 +1,6 @@
+import { registerRootComponent } from 'expo';
+import App from './App';
+
+// registerRootComponent hace que el componente principal se renderice correctamente
+// independientemente de si estás en el celular, web o simulador.
+registerRootComponent(App);

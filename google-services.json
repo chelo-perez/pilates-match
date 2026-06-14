@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "672164413122",
+    "project_id": "pilates-match",
+    "storage_bucket": "pilates-match.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:672164413122:android:ff0abda712e1b85cd0c55b",
+        "android_client_info": {
+          "package_name": "com.pilates.match"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBwptAunfMHp71ODSi018kjlZRaBZnuhgQ"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
