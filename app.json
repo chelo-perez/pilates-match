@@ -37,11 +37,6 @@
         "android.permission.VIBRATE",
         "android.permission.POST_NOTIFICATIONS"
       ],
-      "splash": {
-        "androidImage": "./assets/splash.png",
-        "resizeMode": "contain",
-        "backgroundColor": "#4A5D4E"
-      },
       "googleServicesFile": "./google-services.json"
     },
     "plugins": [
