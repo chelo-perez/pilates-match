@@ -4,8 +4,8 @@ import AsyncStorage from '@react-native-async-storage/async-storage'
 // database.types se genera con: npm run db:types
 // Por ahora usamos any para no bloquear el desarrollo
 
-const SUPABASE_URL = process.env.EXPO_PUBLIC_SUPABASE_URL!
-const SUPABASE_ANON_KEY = process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY!
+const SUPABASE_URL = process.env.EXPO_PUBLIC_SUPABASE_URL || 'https://tkhaiovstwgqzabvxxss.supabase.co'
+const SUPABASE_ANON_KEY = process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InRraGFpb3ZzdHdncXphYnZ4eHNzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzg3MzU4NzksImV4cCI6MjA5NDMxMTg3OX0.KuuF4sOr4Bs51vvgCJQz0C1ophIyFLLpTNwFgrcS1Sc'
 
 // DEBUG — verificar que las variables se leen correctamente
 console.log('SUPABASE_URL:', SUPABASE_URL ? SUPABASE_URL.substring(0, 30) + '...' : 'UNDEFINED')
