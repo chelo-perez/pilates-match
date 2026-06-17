@@ -1,10 +1,15 @@
-import React, { useEffect, useCallback } from 'react'
-import { View, Text, StyleSheet } from 'react-native'
+import React, { useEffect } from 'react'
+import { View, Text, StyleSheet, ActivityIndicator } from 'react-native'
 import { SafeAreaProvider } from 'react-native-safe-area-context'
+import { NavigationContainer } from '@react-navigation/native'
+import { createNativeStackNavigator } from '@react-navigation/native-stack'
 import { useFonts } from 'expo-font'
 import * as SplashScreen from 'expo-splash-screen'
+import LoginScreen from './src/screens/auth/LoginScreen'
 
 SplashScreen.preventAutoHideAsync()
+
+const Stack = createNativeStackNavigator()
 
 export default function App() {
   const [fontsLoaded] = useFonts({
@@ -20,18 +25,21 @@ export default function App() {
     return () => clearTimeout(t)
   }, [fontsLoaded])
 
+  if (!fontsLoaded) {
+    return (
+      <View style={{ flex: 1, backgroundColor: '#F9F9F6', alignItems: 'center', justifyContent: 'center' }}>
+        <ActivityIndicator color="#4A5D4E" size="large" />
+      </View>
+    )
+  }
+
   return (
     <SafeAreaProvider>
-      <View style={styles.container}>
-        <Text style={styles.title}>PilatesMatch</Text>
-        <Text style={styles.sub}>App funcionando ✓</Text>
-      </View>
+      <NavigationContainer>
+        <Stack.Navigator screenOptions={{ headerShown: false }}>
+          <Stack.Screen name="Login" component={LoginScreen} />
+        </Stack.Navigator>
+      </NavigationContainer>
     </SafeAreaProvider>
   )
 }
-
-const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#F9F9F6', alignItems: 'center', justifyContent: 'center' },
-  title: { fontFamily: 'Nunito-Bold', fontSize: 28, color: '#4A5D4E', marginBottom: 8 },
-  sub:   { fontFamily: 'Nunito-Regular', fontSize: 14, color: '#9A9A9A' },
-})
