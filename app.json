@@ -2,7 +2,7 @@
   "expo": {
     "name": "Trabajo Más Fácil",
     "slug": "pilates-match",
-    "owner": "chelo.perez",
+    "owner": "chelo.perez2",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
@@ -35,7 +35,8 @@
         "android.permission.READ_EXTERNAL_STORAGE",
         "android.permission.RECEIVE_BOOT_COMPLETED",
         "android.permission.VIBRATE",
-        "android.permission.POST_NOTIFICATIONS"
+        "android.permission.POST_NOTIFICATIONS",
+        "android.permission.RECORD_AUDIO"
       ],
       "googleServicesFile": "./google-services.json"
     },
@@ -59,7 +60,7 @@
     ],
     "extra": {
       "eas": {
-        "projectId": "e85480c1-c17a-4b5a-bdd7-c3757f30cae5"
+        "projectId": "b4a4203f-9798-4618-9919-e783d7c8ef76"
       }
     }
   }
