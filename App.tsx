@@ -1,13 +1,16 @@
 import React, { useEffect } from 'react'
 import { View, ActivityIndicator } from 'react-native'
 import { SafeAreaProvider } from 'react-native-safe-area-context'
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { useFonts } from 'expo-font'
 import * as SplashScreen from 'expo-splash-screen'
 import RootNavigator from './src/navigation'
 import { supabase } from './src/lib/supabase'
 import { useAuthStore } from './src/store'
+import { registerPushToken } from './src/lib/push'
 
 SplashScreen.preventAutoHideAsync()
+const queryClient = new QueryClient()
 
 export default function App() {
   const { setUser, setSession, setLoading } = useAuthStore()
@@ -28,25 +31,37 @@ export default function App() {
     supabase.auth.getSession().then(async ({ data: { session } }) => {
       setSession(session)
       if (session?.user) {
-        const { data: profile } = await supabase.from('users').select('*').eq('id', session.user.id).single()
+        const { data: profile } = await supabase
+          .from('users').select('*').eq('id', session.user.id).single()
         setUser(profile)
+        registerPushToken(session.user.id).catch(console.error)
       }
       setLoading(false)
     })
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
-      setSession(session)
-      if (event === 'SIGNED_OUT') { setUser(null); setLoading(false) }
-    })
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(
+      async (event, session) => {
+        setSession(session)
+        if (event === 'SIGNED_OUT') { setUser(null); setLoading(false) }
+        if (event === 'SIGNED_IN' && session?.user) {
+          registerPushToken(session.user.id).catch(console.error)
+        }
+      }
+    )
     return () => subscription.unsubscribe()
   }, [])
 
-  if (!fontsLoaded) {
-    return <View style={{ flex: 1, backgroundColor: '#F9F9F6', alignItems: 'center', justifyContent: 'center' }}><ActivityIndicator color="#4A5D4E" size="large" /></View>
-  }
+  if (!fontsLoaded) return (
+    <View style={{ flex: 1, backgroundColor: '#F9F9F6', alignItems: 'center', justifyContent: 'center' }}>
+      <ActivityIndicator color="#4A5D4E" size="large" />
+    </View>
+  )
 
   return (
-    <SafeAreaProvider>
-      <RootNavigator />
-    </SafeAreaProvider>
+    <QueryClientProvider client={queryClient}>
+      <SafeAreaProvider>
+        <RootNavigator />
+      </SafeAreaProvider>
+    </QueryClientProvider>
   )
 }
