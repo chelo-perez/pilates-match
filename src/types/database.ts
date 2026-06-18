@@ -17,6 +17,7 @@ export interface User {
   id: string
   email: string
   role: UserRole
+  camara_id: string | null
   full_name: string | null
   phone: string | null
   avatar_url: string | null
