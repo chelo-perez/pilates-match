@@ -1,17 +1,21 @@
-import React, { useEffect, useState } from 'react'
-import { View, Text, ActivityIndicator } from 'react-native'
-import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context'
+import React, { useEffect } from 'react'
+import { View, ActivityIndicator } from 'react-native'
+import { SafeAreaProvider } from 'react-native-safe-area-context'
 import { useFonts } from 'expo-font'
 import * as SplashScreen from 'expo-splash-screen'
+import RootNavigator from './src/navigation'
 import { supabase } from './src/lib/supabase'
+import { useAuthStore } from './src/store'
 
 SplashScreen.preventAutoHideAsync()
 
 export default function App() {
-  const [status, setStatus] = useState('Conectando...')
+  const { setUser, setSession, setLoading } = useAuthStore()
   const [fontsLoaded] = useFonts({
-    'Nunito-Regular': require('./assets/fonts/Nunito-Regular.ttf'),
-    'Nunito-Bold':    require('./assets/fonts/Nunito-Bold.ttf'),
+    'Nunito-Regular':  require('./assets/fonts/Nunito-Regular.ttf'),
+    'Nunito-Medium':   require('./assets/fonts/Nunito-Medium.ttf'),
+    'Nunito-SemiBold': require('./assets/fonts/Nunito-SemiBold.ttf'),
+    'Nunito-Bold':     require('./assets/fonts/Nunito-Bold.ttf'),
   })
 
   useEffect(() => {
@@ -21,19 +25,28 @@ export default function App() {
   }, [fontsLoaded])
 
   useEffect(() => {
-    supabase.from('users').select('count').single()
-      .then(({ data, error }) => {
-        if (error) setStatus('Error: ' + error.message)
-        else setStatus('Supabase OK ✓')
-      })
+    supabase.auth.getSession().then(async ({ data: { session } }) => {
+      setSession(session)
+      if (session?.user) {
+        const { data: profile } = await supabase.from('users').select('*').eq('id', session.user.id).single()
+        setUser(profile)
+      }
+      setLoading(false)
+    })
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
+      setSession(session)
+      if (event === 'SIGNED_OUT') { setUser(null); setLoading(false) }
+    })
+    return () => subscription.unsubscribe()
   }, [])
+
+  if (!fontsLoaded) {
+    return <View style={{ flex: 1, backgroundColor: '#F9F9F6', alignItems: 'center', justifyContent: 'center' }}><ActivityIndicator color="#4A5D4E" size="large" /></View>
+  }
 
   return (
     <SafeAreaProvider>
-      <SafeAreaView style={{ flex: 1, backgroundColor: '#F9F9F6', alignItems: 'center', justifyContent: 'center', padding: 24 }}>
-        <Text style={{ fontFamily: 'Nunito-Bold', fontSize: 28, color: '#4A5D4E', marginBottom: 16 }}>Trabajo Más Fácil</Text>
-        <Text style={{ fontFamily: 'Nunito-Regular', fontSize: 14, color: '#9A9A9A' }}>{status}</Text>
-      </SafeAreaView>
+      <RootNavigator />
     </SafeAreaProvider>
   )
 }
