@@ -9,7 +9,7 @@ import { Card, Badge, LoadingScreen, colors, spacing, radius, typography } from 
 import type { NativeStackScreenProps } from '@react-navigation/native-stack'
 
 // IMPORTACIÓN DE ICONOS VECTORIALES PREMIUM
-import { Feather, Ionicons, MaterialCommunityIcons } from '@expo/vector-icons'
+import { Feather } from '@expo/vector-icons'
 
 type Props = NativeStackScreenProps<any, 'CamaraTabs'>
 
@@ -112,10 +112,10 @@ export default function CamaraDashboardScreen({ navigation }: Props) {
       <Text style={styles.sectionTitle}>Acciones rápidas</Text>
       <View style={styles.actionsGrid}>
         {[
-          { icon: <Ionicons name="person-add-outline" size={24} color={colors.dark} />, label: 'Agregar instructor', screen: 'Directorio' },
-          { icon: <Ionicons name="checkmark-circle-outline" size={24} color={colors.dark} />, label: 'Verificar pendientes', screen: 'Directorio' },
-          { icon: <MaterialCommunityIcons name="office-building-outline" size={24} color={colors.dark} />, label: 'Ver estudios', screen: 'Estudios' },
-          { icon: <Ionicons name="cash-outline" size={24} color={colors.dark} />, label: 'Valores por Hora', screen: 'Tarifas' },
+          { icon: <Feather name="user-plus" size={24} color={colors.dark} />, label: 'Agregar instructor', screen: 'Directorio' },
+          { icon: <Feather name="check-circle" size={24} color={colors.dark} />, label: 'Verificar pendientes', screen: 'Directorio' },
+          { icon: <Feather name="briefcase" size={24} color={colors.dark} />, label: 'Ver estudios', screen: 'Estudios' },
+          { icon: <Feather name="dollar-sign" size={24} color={colors.dark} />, label: 'Valores por Hora', screen: 'Tarifas' },
         ].map((a, i) => (
           <TouchableOpacity key={i} style={styles.actionCard} onPress={() => navigation.navigate(a.screen)}>
             <View style={styles.actionIconContainer}>{a.icon}</View>

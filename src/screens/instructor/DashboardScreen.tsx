@@ -3,9 +3,9 @@ import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from 'react-nati
 import { useQuery } from '@tanstack/react-query'
 import { supabase } from '../../lib/supabase'
 import { useAuthStore } from '../../store'
-import { AD_UNITS } from '../../lib/admob'
-import { Card, Avatar, Badge, ScoreDisplay, LoadingScreen, colors, spacing, typography, radius } from '../../components/ui'
-import { Feather, Ionicons } from '@expo/vector-icons'
+
+import { colors, spacing, typography } from '../../components/ui'
+import { Feather } from '@expo/vector-icons'
 
 export default function InstructorDashboardScreen({ navigation }: any) {
   const user = useAuthStore(s => s.user)

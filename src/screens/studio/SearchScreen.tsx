@@ -12,7 +12,7 @@ import {
 } from '../../components/ui'
 import type { InstructorSearchResult } from '../../types/database'
 import type { NativeStackScreenProps } from '@react-navigation/native-stack'
-import { Ionicons, Feather } from '@expo/vector-icons'
+import { Feather } from '@expo/vector-icons'
 
 type Props = NativeStackScreenProps<any, 'Search'>
 
@@ -40,10 +40,10 @@ export default function SearchScreen({ navigation }: Props) {
       {/* Cabecera / Barra de búsqueda */}
       <View style={styles.searchHeader}>
         <TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()}>
-          <Ionicons name="arrow-back" size={24} color={colors.dark || '#333'} />
+          <Feather name="arrow-left" size={24} color={colors.dark || '#333'} />
         </TouchableOpacity>
         <View style={styles.inputContainer}>
-          <Ionicons name="search" size={18} color={colors.light || '#999'} style={styles.searchIcon} />
+          <Feather name="search" size={18} color={colors.light || '#999'} style={styles.searchIcon} />
           <TextInput
             style={styles.input}
             placeholder="Buscar instructor por nombre..."
@@ -53,7 +53,7 @@ export default function SearchScreen({ navigation }: Props) {
           />
         </View>
         <TouchableOpacity style={styles.filterButton} onPress={() => setShowFilters(true)}>
-          <Ionicons name="options-outline" size={22} color="#4A5D4E" />
+          <Feather name="sliders" size={22} color="#4A5D4E" />
         </TouchableOpacity>
       </View>
 
@@ -104,7 +104,7 @@ export default function SearchScreen({ navigation }: Props) {
         <View style={filtersStyles.header}>
           <Text style={filtersStyles.title}>Filtros de Búsqueda</Text>
           <TouchableOpacity onPress={() => setShowFilters(false)}>
-            <Ionicons name="close" size={26} color={colors.dark || '#333'} />
+            <Feather name="x" size={26} color={colors.dark || '#333'} />
           </TouchableOpacity>
         </View>
         <ScrollView style={filtersStyles.content}>
