@@ -1,31 +1,5 @@
 import React, { useEffect, useState } from 'react'
-import { View, Text, TouchableOpacity, ActivityIndicator } from 'react-native'
-import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context'
-import { useFonts } from 'expo-font'
-import * as SplashScreen from 'expo-splash-screen'
-import { supabase } from './src/lib/supabase'
-
-SplashScreen.preventAutoHideAsync()
-
-export default function App() {
-  const [status, setStatus] = useState('Conectando...')
-  const [fontsLoaded] = useFonts({
-    'Nunito-Regular': require('./assets/fonts/Nunito-Regular.ttf'),
-    'Nunito-Bold':    require('./assets/fonts/Nunito-Bold.ttf'),
-  })
-
-  useEffect(() => {
-    if (fontsLoaded) SplashScreen.hideAsync()
-    const t = setTimeout(() => SplashScreen.hideAsync(), 3000)
-    return () => clearTimeout(t)
-  }, [fontsLoaded])
-
-  useEffect(() => {
-    supabase.from('users').select('count').single()
-      .then(({ data, error })
-cat > App.tsx << 'APPEOF'
-import React, { useEffect, useState } from 'react'
-import { View, Text, TouchableOpacity, ActivityIndicator } from 'react-native'
+import { View, Text, ActivityIndicator } from 'react-native'
 import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context'
 import { useFonts } from 'expo-font'
 import * as SplashScreen from 'expo-splash-screen'
