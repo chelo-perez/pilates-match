@@ -2,12 +2,12 @@ import React, { useEffect } from 'react'
 import { View, Text, TouchableOpacity } from 'react-native'
 import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context'
 import { NavigationContainer } from '@react-navigation/native'
-import { createNativeStackNavigator } from '@react-navigation/native-stack'
+import { createStackNavigator } from '@react-navigation/stack'
 import { useFonts } from 'expo-font'
 import * as SplashScreen from 'expo-splash-screen'
 
 SplashScreen.preventAutoHideAsync()
-const Stack = createNativeStackNavigator()
+const Stack = createStackNavigator()
 
 function LoginScreen({ navigation }: any) {
   return (
@@ -26,7 +26,7 @@ function LoginScreen({ navigation }: any) {
 function HomeScreen() {
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: '#F9F9F6', alignItems: 'center', justifyContent: 'center' }}>
-      <Text style={{ fontFamily: 'Nunito-Bold', fontSize: 22, color: '#4A5D4E' }}>Stack Navigator ✓</Text>
+      <Text style={{ fontFamily: 'Nunito-Bold', fontSize: 22, color: '#4A5D4E' }}>Stack clásico ✓</Text>
     </SafeAreaView>
   )
 }
