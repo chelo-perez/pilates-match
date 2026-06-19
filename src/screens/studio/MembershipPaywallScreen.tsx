@@ -54,7 +54,7 @@ export default function MembershipPaywallScreen({ navigation }: Props) {
           <View key={i} style={[styles.tableRow, i % 2 === 1 && styles.tableRowAlt]}>
             <Text style={[styles.tdCell, { flex: 2 }]}>{f.label}</Text>
             <Text style={[styles.tdCell, { color: colors.light }]}>{f.free}</Text>
-            <Text style={[styles.tdCell, { color: colors.success, fontFamily: 'DM_Sans-SemiBold' }]}>{f.member}</Text>
+            <Text style={[styles.tdCell, { color: colors.sage, fontFamily: 'DM_Sans-SemiBold' }]}>{f.member}</Text>
           </View>
         ))}
       </View>
@@ -98,6 +98,6 @@ const styles = StyleSheet.create({
   tableRowAlt: { backgroundColor: colors.cream },
   tdCell: { flex: 1, ...typography.small, color: colors.dark, textAlign: 'center' },
   cta: { marginBottom: spacing.md, backgroundColor: colors.gold },
-  infoBox: { backgroundColor: colors.goldLight, borderRadius: radius.md, padding: spacing.md, borderWidth: 0.5, borderColor: colors.goldMid },
-  infoText: { ...typography.small, color: colors.sandDark, lineHeight: 18, textAlign: 'center' },
+  infoBox: { backgroundColor: colors.goldLight, borderRadius: radius.md, padding: spacing.md, borderWidth: 0.5, borderColor: colors.gold },
+  infoText: { ...typography.small, color: colors.dark, lineHeight: 18, textAlign: 'center' },
 })

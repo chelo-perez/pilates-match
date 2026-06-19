@@ -1,10 +1,28 @@
 // src/screens/camara/RateRangesScreen.tsx
 import React, { useState, useEffect } from 'react'
-import { View, Text, StyleSheet, ScrollView, Alert } from 'react-native'
+import { View, TouchableOpacity, Text, StyleSheet, ScrollView, Alert } from 'react-native'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { db } from '../../lib/supabase'
 import { camaraAPI } from '../../lib/api'
-import { Card, Button, ScoreSlider, Badge, LoadingScreen, colors, spacing, typography, radius } from '../../components/ui'
+import { Card, Button, Badge, LoadingScreen, colors, spacing, typography, radius } from '../../components/ui'
+
+
+function RangeInput({ value, onChange }: { label: string; value: number; onChange: (v: number) => void }) {
+  return (
+    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginVertical: 6 }}>
+      {[1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20].map(n => (
+        <TouchableOpacity
+          key={n}
+          onPress={() => onChange(n)}
+          style={{
+            width: 14, height: 14, borderRadius: 7,
+            backgroundColor: n <= value ? colors.sage : colors.borderLight,
+          }}
+        />
+      ))}
+    </View>
+  )
+}
 
 export default function RateRangesScreen() {
   const qc = useQueryClient()
@@ -69,13 +87,13 @@ export default function RateRangesScreen() {
         <View style={styles.sliderRow}>
           <Text style={styles.sliderVal}>{formatARS(regMin)}</Text>
         </View>
-        <ScoreSlider label="" value={Math.round(regMin / 1000)} onChange={v => setRegMin(v * 1000)} />
+        <RangeInput label="" value={Math.round(regMin / 1000)} onChange={v => setRegMin(v * 1000)} />
 
         <Text style={styles.fieldLabel}>MÁXIMO</Text>
         <View style={styles.sliderRow}>
           <Text style={styles.sliderVal}>{formatARS(regMax)}</Text>
         </View>
-        <ScoreSlider label="" value={Math.round(regMax / 1000)} onChange={v => setRegMax(v * 1000)} />
+        <RangeInput label="" value={Math.round(regMax / 1000)} onChange={v => setRegMax(v * 1000)} />
 
         <View style={styles.rangeSummary}>
           <Text style={styles.rangeText}>Rango actual: {formatARS(regMin)} – {formatARS(regMax)}</Text>
@@ -93,13 +111,13 @@ export default function RateRangesScreen() {
         <View style={styles.sliderRow}>
           <Text style={styles.sliderVal}>{formatARS(repMin)}</Text>
         </View>
-        <ScoreSlider label="" value={Math.round(repMin / 1000)} onChange={v => setRepMin(v * 1000)} />
+        <RangeInput label="" value={Math.round(repMin / 1000)} onChange={v => setRepMin(v * 1000)} />
 
         <Text style={styles.fieldLabel}>MÁXIMO</Text>
         <View style={styles.sliderRow}>
           <Text style={styles.sliderVal}>{formatARS(repMax)}</Text>
         </View>
-        <ScoreSlider label="" value={Math.round(repMax / 1000)} onChange={v => setRepMax(v * 1000)} />
+        <RangeInput label="" value={Math.round(repMax / 1000)} onChange={v => setRepMax(v * 1000)} />
 
         <View style={styles.rangeSummary}>
           <Text style={styles.rangeText}>Rango actual: {formatARS(repMin)} – {formatARS(repMax)}</Text>
@@ -151,7 +169,7 @@ const styles = StyleSheet.create({
   sliderVal: { fontFamily: 'DM_Sans-SemiBold', fontSize: 18, color: colors.dark },
   rangeSummary: { backgroundColor: colors.sageLight, borderRadius: radius.sm, padding: spacing.sm, marginTop: spacing.sm },
   rangeText: { ...typography.small, color: colors.sage, textAlign: 'center', fontFamily: 'DM_Sans-Medium' },
-  warning: { backgroundColor: colors.warningBg, borderRadius: radius.sm, padding: spacing.sm, marginTop: spacing.sm },
-  warningText: { ...typography.small, color: colors.warning, lineHeight: 18 },
+  warning: { backgroundColor: colors.warnBg, borderRadius: radius.sm, padding: spacing.sm, marginTop: spacing.sm },
+  warningText: { ...typography.small, color: colors.warnTx, lineHeight: 18 },
   lastUpdate: { ...typography.small, color: colors.light, textAlign: 'center', marginTop: spacing.lg },
 })

@@ -142,7 +142,7 @@ const styles = StyleSheet.create({
   alertCard: {
     flexDirection: 'row', alignItems: 'center', padding: spacing.md,
     marginBottom: spacing.sm, backgroundColor: colors.goldLight,
-    borderColor: colors.goldMid, borderWidth: 0.5,
+    borderColor: colors.gold, borderWidth: 0.5,
   },
   alertTitle: { fontFamily: 'DM_Sans-SemiBold', fontSize: 13, color: colors.gold },
   alertSub: { ...typography.small, color: colors.mid, marginTop: 2 },

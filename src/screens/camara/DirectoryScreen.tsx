@@ -158,20 +158,20 @@ export default function DirectoryScreen({ navigation }: any) {
 }
 
 const styles = StyleSheet.create({
-  searchBox: { backgroundColor: colors.sandLight, padding: spacing.lg, paddingBottom: spacing.sm },
+  searchBox: { backgroundColor: colors.cream, padding: spacing.lg, paddingBottom: spacing.sm },
   searchInput: { backgroundColor: colors.white, borderRadius: radius.md, padding: spacing.md, ...typography.body, color: colors.dark, borderWidth: 0.5, borderColor: colors.border },
   filtersRow: { paddingVertical: spacing.sm },
   chip: { paddingVertical: 6, paddingHorizontal: 14, borderRadius: 999, backgroundColor: colors.white, borderWidth: 0.5, borderColor: colors.border, marginRight: spacing.xs },
-  chipActive: { backgroundColor: colors.sand, borderColor: colors.sand },
+  chipActive: { backgroundColor: colors.cream, borderColor: colors.cream },
   chipText: { ...typography.small, color: colors.mid },
-  chipTextActive: { color: colors.sandDark, fontFamily: 'DM_Sans-SemiBold' },
+  chipTextActive: { color: colors.dark, fontFamily: 'DM_Sans-SemiBold' },
   card: { flexDirection: 'row', alignItems: 'center', padding: spacing.md, backgroundColor: colors.white },
   name: { fontFamily: 'DM_Sans-SemiBold', fontSize: 14, color: colors.dark },
   meta: { ...typography.small, color: colors.mid, marginTop: 2 },
   fab: {
     position: 'absolute', bottom: spacing.xl, right: spacing.xl,
     width: 52, height: 52, borderRadius: 26,
-    backgroundColor: colors.sand, alignItems: 'center', justifyContent: 'center',
+    backgroundColor: colors.cream, alignItems: 'center', justifyContent: 'center',
     shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.15, shadowRadius: 8, elevation: 8,
   },
   modalHeader: { flexDirection: 'row', alignItems: 'flex-start', padding: spacing.xl, backgroundColor: colors.goldLight },

@@ -1,20 +1,35 @@
 // src/screens/studio/EvaluateInstructorScreen.tsx
 import React, { useState, useCallback } from 'react'
 import {
-  View, Text, ScrollView, StyleSheet, Alert, KeyboardAvoidingView, Platform
+  View, Text, ScrollView, StyleSheet, Alert, KeyboardAvoidingView, Platform, ActivityIndicator
 } from 'react-native'
 import { useInstructor, useCreateEvaluation } from '../../hooks'
 import {
-  Card, Avatar, Badge, ScoreSlider, Button, Input,
+  Card, Avatar, Badge, Button, Input,
   colors, spacing, radius, typography
 } from '../../components/ui'
 import type { NativeStackScreenProps } from '@react-navigation/native-stack'
 import { Feather } from '@expo/vector-icons'
+import { TouchableOpacity as TO } from 'react-native'
+
+function SimpleSlider({ value, onValueChange, min = 1, max = 10, step = 1 }: any) {
+  const steps = []
+  for (let i = min; i <= max; i += step) steps.push(i)
+  return (
+    <View style={{ flexDirection: 'row', gap: 4, marginVertical: 8 }}>
+      {steps.map(n => (
+        <TO key={n} onPress={() => onValueChange(n)} style={{ flex: 1, height: 32, borderRadius: 6, backgroundColor: n <= value ? '#4A5D4E' : '#EFEFEB', alignItems: 'center', justifyContent: 'center' }}>
+          <Text style={{ fontSize: 11, fontFamily: 'Nunito-Bold', color: n <= value ? '#fff' : '#9A9A9A' }}>{n}</Text>
+        </TO>
+      ))}
+    </View>
+  )
+}
 
 type Props = NativeStackScreenProps<any, 'EvaluateInstructor'>
 
 export default function EvaluateInstructorScreen({ navigation, route }: Props) {
-  const { instructorId, classDate, classType } = route.params
+  const { instructorId, classDate, classType } = (route.params || {}) as any
   const { data: instructor, isLoading } = useInstructor(instructorId)
   const createEval = useCreateEvaluation()
 
@@ -37,7 +52,10 @@ export default function EvaluateInstructorScreen({ navigation, route }: Props) {
         instructor_id: instructorId,
         class_type: classType,
         class_date: classDate,
-        scores,
+        score_technique: scores?.technique ?? 5,
+        score_punctuality: scores?.punctuality ?? 5,
+        score_student_care: scores?.studentCare ?? 5,
+        score_presentation: scores?.presentation ?? 5,
         comment
       })
       Alert.alert('Calificación guardada', 'Muchas gracias por evaluar al instructor. Ayuda a mantener transparente la comunidad.', [
@@ -72,10 +90,10 @@ export default function EvaluateInstructorScreen({ navigation, route }: Props) {
         <Card style={styles.criteriaCard}>
           <Text style={styles.sectionTitle}>Criterios de Excelencia</Text>
           
-          <ScoreSlider label="Técnica y pedagogía de Pilates" value={scores.technique} onValueChange={setScore('technique')} min={1} max={10} step={1} />
-          <ScoreSlider label="Puntualidad y manejo del tiempo" value={scores.punctuality} onValueChange={setScore('punctuality')} min={1} max={10} step={1} />
-          <ScoreSlider label="Trato y cuidado del alumno" value={scores.studentCare} onValueChange={setScore('studentCare')} min={1} max={10} step={1} />
-          <ScoreSlider label="Presencia y cumplimiento de normas" value={scores.presentation} onValueChange={setScore('presentation')} min={1} max={10} step={1} />
+          <SimpleSlider label="Técnica y pedagogía de Pilates" value={scores.technique} onValueChange={setScore('technique')} min={1} max={10} step={1} />
+          <SimpleSlider label="Puntualidad y manejo del tiempo" value={scores.punctuality} onValueChange={setScore('punctuality')} min={1} max={10} step={1} />
+          <SimpleSlider label="Trato y cuidado del alumno" value={scores.studentCare} onValueChange={setScore('studentCare')} min={1} max={10} step={1} />
+          <SimpleSlider label="Presencia y cumplimiento de normas" value={scores.presentation} onValueChange={setScore('presentation')} min={1} max={10} step={1} />
         </Card>
 
         {/* Promedio General */}

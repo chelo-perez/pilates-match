@@ -160,7 +160,7 @@ export default function InstructorRatesScreen({ navigation }: any) {
         value={rateReplacement}
         setValue={setRateReplacement}
         rangeData={replacement}
-        accentColor={colors.blushDark}
+        accentColor={colors.redTx}
         accentBg="#F5E8E8"
       />
 
@@ -240,9 +240,9 @@ const styles = StyleSheet.create({
     backgroundColor: colors.sageLight, borderRadius: 10, padding: spacing.md,
     marginBottom: spacing.md, borderWidth: 0.5, borderColor: colors.sageMid + '50',
   },
-  diffBoxInvalid: { backgroundColor: colors.dangerBg, borderColor: colors.danger + '30' },
+  diffBoxInvalid: { backgroundColor: colors.redBg, borderColor: colors.redTx + '30' },
   diffText: { ...typography.small, color: colors.sage, fontFamily: 'DM_Sans-Medium', textAlign: 'center' },
-  diffTextInvalid: { color: colors.danger },
+  diffTextInvalid: { color: colors.redTx },
 
   privacyRow: {
     flexDirection: 'row', alignItems: 'flex-start', gap: spacing.sm,

@@ -128,7 +128,7 @@ export default function InstructorDashboardScreen({ navigation }: any) {
             </View>
             <View style={styles.rateItem}>
               <Text style={styles.rateLabel}>Reemplazo</Text>
-              <Text style={[styles.rateVal, { color: colors.blushDark }]}>${instructor.rates.rate_replacement?.toLocaleString('es-AR')}</Text>
+              <Text style={[styles.rateVal, { color: colors.redTx }]}>${instructor.rates.rate_replacement?.toLocaleString('es-AR')}</Text>
             </View>
           </View>
         ) : (

@@ -68,7 +68,7 @@ export default function SearchScreen({ navigation }: Props) {
           data={filtered}
           keyExtractor={(item) => item.id}
           contentContainerStyle={styles.listContent}
-          ListEmptyState={() => (
+          ListEmptyComponent={() => (
             <EmptyState message="No encontramos instructores que coincidan con los filtros aplicados en Buenos Aires." />
           )}
           renderItem={({ item }: { item: InstructorSearchResult }) => (
@@ -77,22 +77,22 @@ export default function SearchScreen({ navigation }: Props) {
                 <Avatar src={item.avatar_url} fallback={item.full_name[0]} size="lg" />
                 <View style={styles.metaArea}>
                   <Text style={styles.nameText}>{item.full_name}</Text>
-                  <Text style={styles.subText}>{item.neighborhood || 'Buenos Aires'} • {item.experience_years || 0} años exp.</Text>
+                  <Text style={styles.subText}>{item.neighborhood || 'Buenos Aires'} • {(item.stats?.total_evaluations || 0) || 0} años exp.</Text>
                 </View>
-                <ScoreDisplay score={item.average_score || 0} />
+                <ScoreDisplay score={(item.stats?.avg_score || 0) || 0} />
               </View>
 
               {/* Bloque de tarifas unificado con el ecosistema de la app */}
               <View style={styles.tariffRow}>
                 <View style={styles.tariffBox}>
                   <Text style={styles.tariffLabel}>CLASE REGULAR</Text>
-                  <Text style={styles.tariffValue}>${item.tariff_regular || '—'}</Text>
+                  <Text style={styles.tariffValue}>${(item.rates?.rate_regular || 0) || '—'}</Text>
                 </View>
                 <View style={styles.tariffBox}>
                   <Text style={styles.tariffLabel}>REEMPLAZO</Text>
-                  <Text style={styles.tariffValue}>${item.tariff_replacement || '—'}</Text>
+                  <Text style={styles.tariffValue}>${(item.rates?.rate_replacement || 0) || '—'}</Text>
                 </View>
-                <TariffMatchPill matchType={item.tariff_match_status} />
+                <TariffMatchPill status={item.tariff_status_regular} />
               </View>
             </Card>
           )}

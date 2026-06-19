@@ -13,7 +13,7 @@ import type { NativeStackScreenProps } from '@react-navigation/native-stack'
 type Props = NativeStackScreenProps<any, 'RequestMatch'>
 
 export default function RequestMatchScreen({ navigation, route }: Props) {
-  const { instructorId, instructorName } = route.params
+  const { instructorId, instructorName } = (route.params || {}) as any
   const { data: studio } = useMyStudio()
   const createMatch = useCreateMatch()
 

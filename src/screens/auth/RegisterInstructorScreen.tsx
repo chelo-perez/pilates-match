@@ -239,7 +239,7 @@ export default function RegisterInstructorScreen({ navigation }: Props) {
                   label="FECHA DE NACIMIENTO *"
                   placeholder="DD/MM/AAAA"
                   value={value ?? ''}
-                  onChangeText={(text) => {
+                  onChangeText={(text: string) => {
                     // Auto-insertar / después de DD y MM
                     const digits = text.replace(/\D/g, '')
                     let formatted = digits
@@ -349,7 +349,7 @@ export default function RegisterInstructorScreen({ navigation }: Props) {
             {selectedProfile && (
               <View style={styles.claimBanner}>
                 <Text style={{ fontSize: 16 }}>✓</Text>
-                <Text style={[styles.infoText, { flex: 1, color: colors.success }]}>
+                <Text style={[styles.infoText, { flex: 1, color: colors.sage }]}>
                   Vas a reclamar el perfil de{' '}
                   <Text style={{ fontFamily: 'DM_Sans-SemiBold' }}>{selectedProfile.full_name}</Text>
                 </Text>
@@ -425,7 +425,7 @@ const styles = StyleSheet.create({
   },
   claimBanner: {
     flexDirection: 'row', alignItems: 'center', gap: spacing.sm,
-    backgroundColor: colors.successBg, borderRadius: radius.md,
+    backgroundColor: colors.sageLighter, borderRadius: radius.md,
     padding: spacing.md, marginBottom: spacing.lg,
   },
   infoText: { ...typography.small, color: colors.mid, lineHeight: 18 },
@@ -444,7 +444,7 @@ const styles = StyleSheet.create({
   neighborhoodChipActive: { backgroundColor: colors.lavDark, borderColor: colors.lavDark },
   neighborhoodText: { ...typography.small, color: colors.mid },
   neighborhoodTextActive: { color: colors.white, fontFamily: 'DM_Sans-SemiBold' },
-  errorText: { ...typography.small, color: colors.danger, marginTop: 4, marginBottom: spacing.sm },
+  errorText: { ...typography.small, color: colors.redTx, marginTop: 4, marginBottom: spacing.sm },
   searchRow: { flexDirection: 'row', alignItems: 'flex-end', marginBottom: spacing.md },
   resultCard: { flexDirection: 'row', alignItems: 'center', padding: spacing.md, marginBottom: spacing.sm },
   resultName: { fontFamily: 'DM_Sans-SemiBold', fontSize: 14, color: colors.dark },

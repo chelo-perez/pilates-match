@@ -4,7 +4,7 @@ import { useQuery } from '@tanstack/react-query'
 import { supabase } from '../../lib/supabase'
 import { useAuthStore } from '../../store'
 
-import { colors, spacing, typography } from '../../components/ui'
+import { Card, Avatar, Badge, ScoreDisplay, LoadingScreen, colors, spacing, radius, typography } from '../../components/ui'
 import { Feather } from '@expo/vector-icons'
 
 export default function InstructorDashboardScreen({ navigation }: any) {

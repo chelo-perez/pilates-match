@@ -25,7 +25,7 @@ const DAYS_ES: Record<string, string> = {
 }
 
 export default function InstructorProfileScreen({ navigation, route }: Props) {
-  const { instructorId } = route.params
+  const { instructorId } = (route.params || {}) as any
   const [tab, setTab] = useState<Tab>('perfil')
   const { data: instructor, isLoading } = useInstructor(instructorId)
   const { data: studio } = useMyStudio()
@@ -113,7 +113,7 @@ export default function InstructorProfileScreen({ navigation, route }: Props) {
                     ${row.studio.toLocaleString('es-AR')}
                   </Text>
                   <View style={styles.tariffCell}>
-                    <TariffMatchPill status={row.status} compact />
+                    <TariffMatchPill status={row.status}  />
                   </View>
                 </View>
               ))}

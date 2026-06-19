@@ -90,15 +90,15 @@ export default function RootNavigator() {
             <Stack.Screen name="InstructorRates" component={InstructorRatesScreen} />
             <Stack.Screen name="EvaluateStudio" component={EvaluateStudioScreen} />
           </>
-        ) : user.role === 'studio' ? (
+        ) : user.role === 'estudio' ? (
           // ── Studio ────────────────────────────────────
           <>
-            <Stack.Screen name="StudioTabs" component={StudioHomeScreen} />
+            <Stack.Screen name="EstudioHome" component={StudioHomeScreen} />
             <Stack.Screen name="Search" component={SearchScreen} />
             <Stack.Screen name="InstructorProfile" component={InstructorProfileScreen} />
             <Stack.Screen name="RequestMatch" component={RequestMatchScreen} />
             <Stack.Screen name="EvaluateInstructor" component={EvaluateInstructorScreen} />
-            <Stack.Screen name="StudioHistory" component={StudioHistoryScreen} />
+            <Stack.Screen name="HistoryList" component={StudioHistoryScreen} />
             <Stack.Screen name="MembershipPaywall" component={MembershipPaywallScreen} />
             <Stack.Screen name="PendingEvaluations" component={PendingEvaluationsScreen} />
           </>

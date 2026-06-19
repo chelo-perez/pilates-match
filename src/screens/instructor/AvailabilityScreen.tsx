@@ -115,7 +115,7 @@ export default function AvailabilityScreen() {
               <Badge label={slot.type === 'regular' ? 'Regular' : 'Reemplazo'}
                 color={slot.type === 'regular' ? 'sage' : 'blush'} />
               <TouchableOpacity onPress={() => removeSlot(slots.indexOf(slot))}>
-                <Text style={{ color: colors.danger, fontSize: 18, padding: spacing.xs }}>✕</Text>
+                <Text style={{ color: colors.redTx, fontSize: 18, padding: spacing.xs }}>✕</Text>
               </TouchableOpacity>
             </View>
           ))}

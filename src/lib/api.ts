@@ -23,7 +23,7 @@ export const authAPI = {
   },
 
   signUp: async (email: string, password: string, role: string, name: string) => {
-    console.log('signUp - URL usada:', supabase.supabaseUrl ?? 'NO URL')
+    console.log('signUp - URL usada:', (process.env.EXPO_PUBLIC_SUPABASE_URL ?? '') ?? 'NO URL')
     console.log('signUp - email:', email, 'role:', role)
     const { data, error } = await supabase.auth.signUp({
       email,
