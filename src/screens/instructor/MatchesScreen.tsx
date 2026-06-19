@@ -349,7 +349,7 @@ export default function InstructorMatchesScreen() {
 const styles = StyleSheet.create({
   container:         { flex: 1, backgroundColor: colors.cream },
   header:            { flexDirection: 'row', alignItems: 'center', paddingHorizontal: spacing.md, paddingTop: spacing.lg, paddingBottom: spacing.sm, gap: spacing.sm },
-  title:             { fontFamily: 'PlayfairDisplay-Medium', fontSize: 22, color: colors.dark },
+  title:             { fontFamily: 'Nunito-Bold', fontSize: 22, color: colors.dark },
   badge:             { backgroundColor: colors.sage, borderRadius: 10, paddingHorizontal: 8, paddingVertical: 2 },
   badgeText:         { color: colors.white, fontFamily: 'DM_Sans-SemiBold', fontSize: 12 },
   tabs:              { flexDirection: 'row', marginHorizontal: spacing.md, marginBottom: spacing.sm, backgroundColor: colors.white, borderRadius: radius.md, padding: 3, borderWidth: 0.5, borderColor: colors.border },
@@ -381,7 +381,7 @@ const styles = StyleSheet.create({
   // Modal
   modalOverlay:      { flex: 1, backgroundColor: 'rgba(0,0,0,0.45)', justifyContent: 'flex-end' },
   modalBox:          { backgroundColor: colors.white, borderTopLeftRadius: 20, borderTopRightRadius: 20, padding: spacing.xl, paddingBottom: spacing.xxxl },
-  modalTitle:        { fontFamily: 'PlayfairDisplay-Medium', fontSize: 20, color: colors.dark, marginBottom: spacing.xs },
+  modalTitle:        { fontFamily: 'Nunito-Bold', fontSize: 20, color: colors.dark, marginBottom: spacing.xs },
   modalSub:          { ...typography.body, color: colors.mid, marginBottom: spacing.lg },
   noteInputLabel:    { ...typography.small, color: colors.mid, fontFamily: 'DM_Sans-SemiBold', marginBottom: spacing.xs },
   noteInput:         { backgroundColor: colors.cream, borderRadius: radius.md, padding: spacing.md, ...typography.body, color: colors.dark, minHeight: 80, textAlignVertical: 'top', borderWidth: 0.5, borderColor: colors.border, marginBottom: spacing.lg },
