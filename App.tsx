@@ -35,6 +35,8 @@ export default function App() {
           .from('users').select('*').eq('id', session.user.id).single()
         setUser(profile)
         registerPushToken(session.user.id).catch(console.error)
+      } else {
+        setUser(null)
       }
       setLoading(false)
     })
