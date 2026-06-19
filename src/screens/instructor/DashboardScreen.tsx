@@ -44,7 +44,7 @@ export default function InstructorDashboardScreen({ navigation }: any) {
         <Card style={styles.profileCard}>
           <Avatar source={instructor?.avatar_url} name={instructor?.first_name} size={70} />
           <Text style={styles.name}>{instructor?.first_name} {instructor?.last_name}</Text>
-          <View style={styles.badgeRow}><Badge label={instructor?.verification_status === 'verified' ? 'Verificado' : 'Pendiente de Validaci�n'} color={instructor?.verification_status === 'verified' ? 'sage' : 'gold'} /></View>
+          <View style={styles.badgeRow}><Badge label={instructor?.verification_status === 'verified' ? 'Verificado' : 'Pendiente de Validación'} color={instructor?.verification_status === 'verified' ? 'sage' : 'gold'} /></View>
           <ScoreDisplay score={instructor?.score ?? 0} size="large" style={{ marginTop: spacing.sm }} />
         </Card>
         <View style={styles.statsRow}>
@@ -59,8 +59,8 @@ export default function InstructorDashboardScreen({ navigation }: any) {
           </View>
         </View>
         <View style={styles.section}>
-          <View style={styles.sectionHeader}><Text style={styles.sectionTitle}>�ltimo feedback recibido</Text></View>
-          {recentEvals.length === 0 ? <Text style={styles.emptyText}>A�n no ten�s evaluaciones registradas.</Text> : (
+          <View style={styles.sectionHeader}><Text style={styles.sectionTitle}>Último feedback recibido</Text></View>
+          {recentEvals.length === 0 ? <Text style={styles.emptyText}>Aún no tenés evaluaciones registradas.</Text> : (
             recentEvals.map((item: any) => (
               <View key={item.id} style={styles.evalRow}>
                 <View style={{ flex: 1, marginRight: spacing.sm }}><Text style={styles.evalStudio}>{item.studio?.name}</Text><Text style={styles.evalDate}>{new Date(item.class_date).toLocaleDateString('es-AR')}</Text>{item.comments && <Text style={styles.evalComment}>"{item.comments}"</Text>}</View>
