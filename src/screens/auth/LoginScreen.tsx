@@ -46,10 +46,9 @@ export default function LoginScreen({ navigation }: any) {
 
       const role = profile.role
       if (role === 'instructor') navigation.replace('InstructorTabs')
-      else if (role === 'studio') navigation.replace('StudioTabs')
+      else if (role === 'studio' || role === 'estudio') navigation.replace('EstudioHome')
       else if (role === 'camara_admin') navigation.replace('CamaraTabs')
       else if (role === 'super_admin') navigation.replace('AdminTabs')
-      else Alert.alert('Error', 'Rol no reconocido')
 
     } catch (err: any) {
       Alert.alert('Error al iniciar sesión', err.message || 'Verificá tu email y contraseña')
