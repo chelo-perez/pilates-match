@@ -122,7 +122,7 @@ export default function LoginScreen({ navigation }: any) {
           {/* Registro */}
           <TouchableOpacity
             style={s.registerLink}
-            onPress={() => navigation.navigate('Register')}
+            onPress={() => navigation.navigate('RegisterRole')}
           >
             <Text style={s.registerTxt}>
               ¿No tenés cuenta?{' '}

@@ -1,7 +1,7 @@
 // src/types/database.ts
 // Auto-generado desde el schema de Supabase
 
-export type UserRole = 'estudio' | 'instructor' | 'camara_admin'
+export type UserRole = 'estudio' | 'instructor' | 'camara_admin' | 'super_admin'
 export type VerificationStatus = 'pendiente' | 'verificado' | 'rechazado' | 'inactivo'
 export type MembershipStatus = 'activa' | 'vencida' | 'cancelada'
 export type ClassType = 'regular' | 'reemplazo'
