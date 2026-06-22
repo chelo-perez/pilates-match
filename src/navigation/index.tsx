@@ -49,11 +49,11 @@ const LIGHT = '#9A9A9A'
 
 const tabBarStyle = {
   backgroundColor: '#FFFFFF',
-  borderTopWidth: 1,
+  borderTopWidth: 0.5,
   borderTopColor: '#E2E2DE',
-  paddingBottom: 16,
-  paddingTop: 8,
-  height: 80,
+  paddingBottom: 4,
+  paddingTop: 6,
+  height: 60,
 }
 
 function Loading() {
@@ -69,11 +69,11 @@ function InstructorTabs() {
   return (
     <Tab.Navigator screenOptions={{ headerShown: false, tabBarStyle, tabBarActiveTintColor: SAGE,
       tabBarActiveBackgroundColor: '#F2F5F2', tabBarInactiveTintColor: LIGHT, tabBarLabelStyle: { fontFamily: 'Nunito-Bold', fontSize: 10 } }}>
-      <Tab.Screen name="InstructorInicio" component={InstructorDashboardScreen} options={{ tabBarIcon: ({ color }) => <Feather name="home" size={22} color={color} /> }} />
-      <Tab.Screen name="InstructorPropuestas" component={InstructorMatchesScreen} options={{ tabBarIcon: ({ color }) => <Feather name="inbox" size={22} color={color} /> }} />
-      <Tab.Screen name="InstructorDisponibilidad" component={InstructorAvailabilityScreen} options={{ tabBarIcon: ({ color }) => <Feather name="calendar" size={22} color={color} /> }} />
-      <Tab.Screen name="InstructorTarifas" component={InstructorRatesScreen} options={{ tabBarIcon: ({ color }) => <Feather name="dollar-sign" size={22} color={color} /> }} />
-      <Tab.Screen name="InstructorPerfil" component={InstructorProfileEditScreen} options={{ tabBarIcon: ({ color }) => <Feather name="user" size={22} color={color} /> }} />
+      <Tab.Screen name="InstructorInicio" component={InstructorDashboardScreen} options={{ tabBarLabel: "Inicio", tabBarIcon: ({ color }) => <Feather name="home" size={22} color={color} /> }} />
+      <Tab.Screen name="InstructorPropuestas" component={InstructorMatchesScreen} options={{ tabBarLabel: "Propuestas", tabBarIcon: ({ color }) => <Feather name="inbox" size={22} color={color} /> }} />
+      <Tab.Screen name="InstructorDisponibilidad" component={InstructorAvailabilityScreen} options={{ tabBarLabel: "Horarios", tabBarIcon: ({ color }) => <Feather name="calendar" size={22} color={color} /> }} />
+      <Tab.Screen name="InstructorTarifas" component={InstructorRatesScreen} options={{ tabBarLabel: "Tarifas", tabBarIcon: ({ color }) => <Feather name="dollar-sign" size={22} color={color} /> }} />
+      <Tab.Screen name="InstructorPerfil" component={InstructorProfileEditScreen} options={{ tabBarLabel: "Perfil", tabBarIcon: ({ color }) => <Feather name="user" size={22} color={color} /> }} />
     </Tab.Navigator>
   )
 }
