@@ -155,7 +155,7 @@ const styles = StyleSheet.create({
   container:            { flex: 1, backgroundColor: colors.cream },
   banner:               { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, backgroundColor: '#FFF6E0', padding: spacing.md, borderBottomWidth: 0.5, borderColor: '#EF9F27' },
   bannerText:           { fontFamily: 'Nunito-SemiBold', fontSize: 13, color: '#633806', flex: 1 },
-  list:                 { padding: spacing.md, paddingBottom: spacing.xxxl },
+  list:                 { padding: spacing.md, paddingBottom: spacing.xxl },
   card:                 { marginBottom: spacing.sm, padding: spacing.md },
   row:                  { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, marginBottom: spacing.sm },
   avatar:               { width: 44, height: 44, borderRadius: 22, backgroundColor: colors.sageLight, alignItems: 'center', justifyContent: 'center', borderWidth: 0.5, borderColor: colors.border },

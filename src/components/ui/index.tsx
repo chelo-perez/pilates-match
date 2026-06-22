@@ -339,7 +339,7 @@ const s = StyleSheet.create({
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
-    paddingVertical: spacing.xxxl,
+    paddingVertical: spacing.xxl,
     paddingHorizontal: spacing.xl,
   },
   emptyTitle: {
@@ -361,7 +361,7 @@ const s = StyleSheet.create({
     paddingHorizontal: spacing.lg,
     paddingVertical: spacing.sm,
     backgroundColor: colors.sageLight,
-    borderRadius: radius.full,
+    borderRadius: 9999,
   },
   emptyActionText: {
     fontFamily: 'Nunito-SemiBold',

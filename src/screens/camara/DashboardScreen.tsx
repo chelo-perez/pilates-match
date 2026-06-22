@@ -41,7 +41,7 @@ export default function CamaraDashboardScreen({ navigation }: Props) {
     { value: stats?.member_studios ?? 0, label: 'Estudios miembros', color: colors.gold, bg: colors.goldLight },
     { value: stats?.verified_instructors ?? 0, label: 'Instructores verificados', color: colors.sage, bg: colors.sageLight },
     { value: stats?.pending_verifications ?? 0, label: 'Verificaciones pendientes', color: '#C4600A', bg: '#FFF0E0' },
-    { value: stats?.non_member_studios ?? 0, label: 'Estudios no socios', color: colors.lavDark, bg: colors.lavLight },
+    { value: stats?.non_member_studios ?? 0, label: 'Estudios no socios', color: colors.sage, bg: colors.sageLighter },
   ]
 
   return (
@@ -95,15 +95,15 @@ export default function CamaraDashboardScreen({ navigation }: Props) {
       {/* Potenciales socios */}
       {(stats?.non_member_studios ?? 0) > 0 && (
         <TouchableOpacity onPress={() => navigation.navigate('Estudios')}>
-          <Card style={[styles.alertCard, { borderColor: colors.lavender, backgroundColor: colors.lavLight }]}>
-            <Feather name="help-circle" size={20} color={colors.lavDark} style={{ marginRight: spacing.md }} />
+          <Card style={[styles.alertCard, { borderColor: colors.sage, backgroundColor: colors.sageLighter }]}>
+            <Feather name="help-circle" size={20} color={colors.sage} style={{ marginRight: spacing.md }} />
             <View style={{ flex: 1 }}>
-              <Text style={[styles.alertTitle, { color: colors.lavDark }]}>
+              <Text style={[styles.alertTitle, { color: colors.sage }]}>
                 {stats?.non_member_studios} estudios potenciales socios
               </Text>
               <Text style={styles.alertSub}>Con actividad en la app este mes</Text>
             </View>
-            <Feather name="chevron-right" size={16} color={colors.lavDark} />
+            <Feather name="chevron-right" size={16} color={colors.sage} />
           </Card>
         </TouchableOpacity>
       )}
@@ -129,22 +129,22 @@ export default function CamaraDashboardScreen({ navigation }: Props) {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.cream },
-  content: { padding: spacing.lg, paddingBottom: spacing.xxxl },
+  content: { padding: spacing.lg, paddingBottom: spacing.xxl },
   header: { marginBottom: spacing.lg },
   badgeWrapper: { flexDirection: 'row', alignItems: 'center' },
   logoutButton: { flexDirection: 'row', alignItems: 'center' },
-  title: { fontFamily: 'Playfair_Display-Medium', fontSize: 24, color: colors.dark, marginTop: spacing.xs },
+  title: { fontFamily: 'Nunito-Bold', fontSize: 24, color: colors.dark, marginTop: spacing.xs },
   sub: { ...typography.small, color: colors.mid, marginTop: 2, textTransform: 'capitalize' },
   kpiGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm, marginBottom: spacing.lg },
   kpiCard: { width: '47%', borderRadius: radius.md, padding: spacing.md },
-  kpiValue: { fontFamily: 'DM_Sans-SemiBold', fontSize: 28, lineHeight: 32 },
+  kpiValue: { fontFamily: 'Nunito-SemiBold', fontSize: 28, lineHeight: 32 },
   kpiLabel: { ...typography.small, color: colors.mid, marginTop: 4 },
   alertCard: {
     flexDirection: 'row', alignItems: 'center', padding: spacing.md,
     marginBottom: spacing.sm, backgroundColor: colors.goldLight,
     borderColor: colors.gold, borderWidth: 0.5,
   },
-  alertTitle: { fontFamily: 'DM_Sans-SemiBold', fontSize: 13, color: colors.gold },
+  alertTitle: { fontFamily: 'Nunito-SemiBold', fontSize: 13, color: colors.gold },
   alertSub: { ...typography.small, color: colors.mid, marginTop: 2 },
   sectionTitle: { ...typography.label, color: colors.dark, marginBottom: spacing.md, marginTop: spacing.md },
   actionsGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm },
@@ -153,5 +153,5 @@ const styles = StyleSheet.create({
     padding: spacing.lg, alignItems: 'center', borderWidth: 0.5, borderColor: colors.border,
   },
   actionIconContainer: { marginBottom: spacing.xs, height: 32, justifyContent: 'center', alignItems: 'center' },
-  actionLabel: { ...typography.small, color: colors.dark, textAlign: 'center', fontFamily: 'DM_Sans-Medium' },
+  actionLabel: { ...typography.small, color: colors.dark, textAlign: 'center', fontFamily: 'Nunito-Medium' },
 })

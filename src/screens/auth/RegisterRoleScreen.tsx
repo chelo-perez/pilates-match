@@ -19,8 +19,8 @@ const ROLES = [
     icon: '🧘',
     title: 'Soy instructor/a',
     desc: 'Ofrezco clases y reemplazos en estudios',
-    bg: colors.lavLight,
-    border: colors.lavender,
+    bg: colors.sageLighter,
+    border: colors.sage,
     next: 'RegisterInstructor',
   },
 ]
@@ -57,7 +57,7 @@ export default function RegisterRoleScreen({ navigation }: Props) {
 
       <TouchableOpacity style={styles.loginLink} onPress={() => navigation.navigate('Login')}>
         <Text style={styles.loginText}>
-          ¿Ya tenés cuenta? <Text style={{ color: colors.sage, fontFamily: 'DM_Sans-SemiBold' }}>Iniciá sesión</Text>
+          ¿Ya tenés cuenta? <Text style={{ color: colors.sage, fontFamily: 'Nunito-SemiBold' }}>Iniciá sesión</Text>
         </Text>
       </TouchableOpacity>
     </ScrollView>
@@ -68,7 +68,7 @@ const styles = StyleSheet.create({
   container: { flexGrow: 1, backgroundColor: colors.cream, padding: spacing.xl },
   backBtn: { marginBottom: spacing.xl },
   backText: { ...typography.body, color: colors.mid },
-  title: { fontFamily: 'Playfair_Display-Medium', fontSize: 26, color: colors.dark, marginBottom: spacing.sm },
+  title: { fontFamily: 'Nunito-Bold', fontSize: 26, color: colors.dark, marginBottom: spacing.sm },
   sub: { ...typography.body, color: colors.mid, marginBottom: spacing.xl },
   roles: { gap: spacing.md },
   roleCard: {
@@ -76,7 +76,7 @@ const styles = StyleSheet.create({
     padding: spacing.lg, borderRadius: radius.lg, borderWidth: 1,
   },
   roleIcon: { fontSize: 28 },
-  roleTitle: { fontFamily: 'DM_Sans-SemiBold', fontSize: 15, color: colors.dark },
+  roleTitle: { fontFamily: 'Nunito-SemiBold', fontSize: 15, color: colors.dark },
   roleDesc: { ...typography.small, color: colors.mid, marginTop: 2 },
   loginLink: { alignItems: 'center', marginTop: spacing.xl },
   loginText: { ...typography.body, color: colors.mid },

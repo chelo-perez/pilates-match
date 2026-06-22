@@ -209,9 +209,9 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.06, shadowRadius: 8, elevation: 2,
   },
   cardHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: spacing.md },
-  cardTitle: { fontFamily: 'DM_Sans-SemiBold', fontSize: 16, color: colors.dark },
+  cardTitle: { fontFamily: 'Nunito-SemiBold', fontSize: 16, color: colors.dark },
   badgePill: { paddingVertical: 4, paddingHorizontal: 10, borderRadius: 99, borderWidth: 1 },
-  badgeText: { fontSize: 12, fontFamily: 'DM_Sans-SemiBold' },
+  badgeText: { fontSize: 12, fontFamily: 'Nunito-SemiBold' },
 
   valueDisplay: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
@@ -225,33 +225,33 @@ const styles = StyleSheet.create({
   },
   stepIcon: { fontSize: 22, lineHeight: 26, fontWeight: '300' },
   valueCenter: { alignItems: 'center', flex: 1 },
-  valueAmount: { fontFamily: 'DM_Sans-SemiBold', fontSize: 30, lineHeight: 34 },
+  valueAmount: { fontFamily: 'Nunito-SemiBold', fontSize: 30, lineHeight: 34 },
   valueUnit: { ...typography.small, color: colors.light, marginTop: 2 },
 
   sliderSection: { borderTopWidth: 0.5, borderTopColor: colors.borderLight, paddingTop: spacing.md },
   sliderLabel: { ...typography.small, color: colors.light, textAlign: 'center', marginBottom: 4, fontStyle: 'italic' },
   rangeRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: spacing.xs },
-  rangeValue: { fontFamily: 'DM_Sans-SemiBold', fontSize: 12, color: colors.dark },
+  rangeValue: { fontFamily: 'Nunito-SemiBold', fontSize: 12, color: colors.dark },
   rangeName: { fontSize: 10, color: colors.light, marginTop: 1 },
   rangeCenterPill: { paddingVertical: 4, paddingHorizontal: 10, borderRadius: 6 },
-  rangeCenterText: { fontSize: 10, fontFamily: 'DM_Sans-Medium' },
+  rangeCenterText: { fontSize: 10, fontFamily: 'Nunito-Medium' },
 
   diffBox: {
     backgroundColor: colors.sageLight, borderRadius: 10, padding: spacing.md,
     marginBottom: spacing.md, borderWidth: 0.5, borderColor: colors.sageMid + '50',
   },
   diffBoxInvalid: { backgroundColor: colors.redBg, borderColor: colors.redTx + '30' },
-  diffText: { ...typography.small, color: colors.sage, fontFamily: 'DM_Sans-Medium', textAlign: 'center' },
+  diffText: { ...typography.small, color: colors.sage, fontFamily: 'Nunito-Medium', textAlign: 'center' },
   diffTextInvalid: { color: colors.redTx },
 
   privacyRow: {
     flexDirection: 'row', alignItems: 'flex-start', gap: spacing.sm,
-    backgroundColor: colors.lavLight, borderRadius: 10, padding: spacing.md, marginBottom: spacing.xl,
+    backgroundColor: colors.sageLighter, borderRadius: 10, padding: spacing.md, marginBottom: spacing.xl,
   },
   lockIcon: { fontSize: 14, marginTop: 1 },
   privacyText: { ...typography.small, color: colors.mid, flex: 1, lineHeight: 18 },
 
   saveBtn: { backgroundColor: colors.sage, borderRadius: 99, paddingVertical: 15, alignItems: 'center' },
   saveBtnDisabled: { opacity: 0.5 },
-  saveBtnText: { fontFamily: 'DM_Sans-SemiBold', fontSize: 16, color: colors.white },
+  saveBtnText: { fontFamily: 'Nunito-SemiBold', fontSize: 16, color: colors.white },
 })

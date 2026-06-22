@@ -240,7 +240,7 @@ export default function EvaluateStudioScreen({ navigation, route }: Props) {
 
 const styles = StyleSheet.create({
   container:    { flex: 1, backgroundColor: colors.cream },
-  content:      { padding: spacing.md, paddingBottom: spacing.xxxl },
+  content:      { padding: spacing.md, paddingBottom: spacing.xxl },
   studioCard:   { marginBottom: spacing.md, padding: spacing.md },
   studioRow:    { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, marginBottom: spacing.sm },
   studioAvatar: { width: 44, height: 44, borderRadius: 8, backgroundColor: colors.sageLight, alignItems: 'center', justifyContent: 'center' },

@@ -154,7 +154,7 @@ export default function RateRangesScreen() {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.cream },
-  content: { padding: spacing.lg, paddingBottom: spacing.xxxl },
+  content: { padding: spacing.lg, paddingBottom: spacing.xxl },
   info: {
     flexDirection: 'row', alignItems: 'flex-start',
     backgroundColor: colors.sageLight, borderRadius: radius.md,
@@ -163,12 +163,12 @@ const styles = StyleSheet.create({
   infoText: { ...typography.small, color: colors.mid, flex: 1, lineHeight: 18 },
   card: { padding: spacing.lg, marginBottom: spacing.md, backgroundColor: colors.white },
   cardHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: spacing.lg },
-  cardTitle: { fontFamily: 'DM_Sans-SemiBold', fontSize: 16, color: colors.dark },
+  cardTitle: { fontFamily: 'Nunito-SemiBold', fontSize: 16, color: colors.dark },
   fieldLabel: { ...typography.label, color: colors.mid, marginBottom: spacing.xs },
   sliderRow: { flexDirection: 'row', justifyContent: 'flex-end', marginBottom: spacing.xs },
-  sliderVal: { fontFamily: 'DM_Sans-SemiBold', fontSize: 18, color: colors.dark },
+  sliderVal: { fontFamily: 'Nunito-SemiBold', fontSize: 18, color: colors.dark },
   rangeSummary: { backgroundColor: colors.sageLight, borderRadius: radius.sm, padding: spacing.sm, marginTop: spacing.sm },
-  rangeText: { ...typography.small, color: colors.sage, textAlign: 'center', fontFamily: 'DM_Sans-Medium' },
+  rangeText: { ...typography.small, color: colors.sage, textAlign: 'center', fontFamily: 'Nunito-Medium' },
   warning: { backgroundColor: colors.warnBg, borderRadius: radius.sm, padding: spacing.sm, marginTop: spacing.sm },
   warningText: { ...typography.small, color: colors.warnTx, lineHeight: 18 },
   lastUpdate: { ...typography.small, color: colors.light, textAlign: 'center', marginTop: spacing.lg },

@@ -149,9 +149,9 @@ export default function RequestMatchScreen({ navigation, route }: Props) {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.cream },
-  content: { padding: spacing.lg, paddingBottom: spacing.xxxl },
+  content: { padding: spacing.lg, paddingBottom: spacing.xxl },
   instructorCard: { flexDirection: 'row', alignItems: 'center', padding: spacing.lg, marginBottom: spacing.md, backgroundColor: colors.white },
-  instructorName: { fontFamily: 'DM_Sans-SemiBold', fontSize: 15, color: colors.dark },
+  instructorName: { fontFamily: 'Nunito-SemiBold', fontSize: 15, color: colors.dark },
   instructorMeta: { ...typography.small, color: colors.mid, marginTop: 2 },
   card: { padding: spacing.lg, marginBottom: spacing.md, backgroundColor: colors.white },
   cardLabel: { ...typography.label, color: colors.mid, marginBottom: spacing.sm },

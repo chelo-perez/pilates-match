@@ -218,7 +218,7 @@ const styles = StyleSheet.create({
   progress: { flexDirection: 'row', gap: spacing.xs, marginBottom: spacing.xl },
   progressDot: { flex: 1, height: 3, borderRadius: 2, backgroundColor: colors.sageMid },
   progressDotActive: { backgroundColor: colors.sage },
-  title: { fontFamily: 'Playfair_Display-Medium', fontSize: 24, color: colors.dark, marginBottom: 4 },
+  title: { fontFamily: 'Nunito-Bold', fontSize: 24, color: colors.dark, marginBottom: 4 },
   sub: { ...typography.small, color: colors.mid, marginBottom: spacing.xl },
   fieldLabel: { ...typography.label, color: colors.mid, marginBottom: spacing.sm },
   chipGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.xs, marginBottom: spacing.md },

@@ -58,7 +58,7 @@ export default function InstructorProfileScreen({ navigation, route }: Props) {
       <ScrollView>
         {/* Hero header */}
         <View style={[styles.hero, isFullMatch && styles.heroMatch]}>
-          <Avatar name={instructor.full_name} size={56} color={isFullMatch ? colors.sageMid : colors.lavender} />
+          <Avatar name={instructor.full_name} size={56} color={isFullMatch ? colors.sageMid : colors.sage} />
           <View style={{ flex: 1, marginLeft: spacing.md }}>
             <Text style={styles.name}>{instructor.full_name}</Text>
             {instructor.neighborhood && (
@@ -96,7 +96,7 @@ export default function InstructorProfileScreen({ navigation, route }: Props) {
             <View style={styles.tariffTable}>
               <View style={styles.tariffHeader}>
                 <Text style={[styles.tariffCol, { flex: 1.5 }]}>Tipo</Text>
-                <Text style={[styles.tariffCol, { color: colors.lavDark }]}>Instructora</Text>
+                <Text style={[styles.tariffCol, { color: colors.sage }]}>Instructora</Text>
                 <Text style={[styles.tariffCol, { color: colors.sage }]}>Tu oferta</Text>
                 <Text style={styles.tariffCol}>Estado</Text>
               </View>
@@ -106,10 +106,10 @@ export default function InstructorProfileScreen({ navigation, route }: Props) {
               ].map(row => (
                 <View key={row.type} style={styles.tariffRow}>
                   <Text style={[styles.tariffCell, { flex: 1.5 }]}>{row.type}</Text>
-                  <Text style={[styles.tariffCell, { color: colors.lavDark, fontFamily: 'DM_Sans-SemiBold' }]}>
+                  <Text style={[styles.tariffCell, { color: colors.sage, fontFamily: 'Nunito-SemiBold' }]}>
                     ${row.ins.toLocaleString('es-AR')}
                   </Text>
-                  <Text style={[styles.tariffCell, { color: colors.sage, fontFamily: 'DM_Sans-SemiBold' }]}>
+                  <Text style={[styles.tariffCell, { color: colors.sage, fontFamily: 'Nunito-SemiBold' }]}>
                     ${row.studio.toLocaleString('es-AR')}
                   </Text>
                   <View style={styles.tariffCell}>
@@ -256,11 +256,11 @@ export default function InstructorProfileScreen({ navigation, route }: Props) {
 const styles = StyleSheet.create({
   hero: { backgroundColor: colors.sageLight, padding: spacing.lg, flexDirection: 'row', alignItems: 'flex-start' },
   heroMatch: { backgroundColor: '#F0F7F0' },
-  name: { fontFamily: 'Playfair_Display-Medium', fontSize: 20, color: colors.dark },
+  name: { fontFamily: 'Nunito-Bold', fontSize: 20, color: colors.dark },
   zone: { ...typography.small, color: colors.mid, marginTop: 2 },
   statsRow: { flexDirection: 'row', backgroundColor: colors.white, borderBottomWidth: 0.5, borderColor: colors.border },
   statItem: { flex: 1, alignItems: 'center', padding: spacing.md },
-  statValue: { fontFamily: 'DM_Sans-SemiBold', fontSize: 18, color: colors.dark },
+  statValue: { fontFamily: 'Nunito-SemiBold', fontSize: 18, color: colors.dark },
   statLabel: { ...typography.small, color: colors.mid, marginTop: 2 },
   tariffCard: { margin: spacing.lg, padding: spacing.md, backgroundColor: colors.white },
   tariffCardMatch: { borderColor: '#B5D4B7', backgroundColor: '#F4FAF4' },
@@ -273,27 +273,27 @@ const styles = StyleSheet.create({
   tab: { flex: 1, paddingVertical: spacing.md, alignItems: 'center' },
   tabActive: { borderBottomWidth: 2, borderColor: colors.sage },
   tabText: { ...typography.small, color: colors.mid },
-  tabTextActive: { color: colors.sage, fontFamily: 'DM_Sans-SemiBold' },
+  tabTextActive: { color: colors.sage, fontFamily: 'Nunito-SemiBold' },
   section: { padding: spacing.md, marginBottom: spacing.md, backgroundColor: colors.white },
   sectionTitle: { ...typography.label, color: colors.dark, marginBottom: spacing.md },
   bioText: { ...typography.body, color: colors.mid, lineHeight: 22 },
   chipRow: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.xs },
   scoreRow: { flexDirection: 'row', alignItems: 'center', marginBottom: spacing.sm },
   scoreName: { ...typography.small, color: colors.mid, width: 80 },
-  scoreBar: { flex: 1, height: 5, backgroundColor: colors.lavLight, borderRadius: 3, marginHorizontal: spacing.sm },
-  scoreBarFill: { height: '100%', backgroundColor: colors.lavender, borderRadius: 3 },
-  scoreVal: { fontFamily: 'DM_Sans-SemiBold', fontSize: 12, color: colors.dark, width: 28, textAlign: 'right' },
+  scoreBar: { flex: 1, height: 5, backgroundColor: colors.sageLighter, borderRadius: 3, marginHorizontal: spacing.sm },
+  scoreBarFill: { height: '100%', backgroundColor: colors.sage, borderRadius: 3 },
+  scoreVal: { fontFamily: 'Nunito-SemiBold', fontSize: 12, color: colors.dark, width: 28, textAlign: 'right' },
   certRow: { flexDirection: 'row', alignItems: 'flex-start', paddingVertical: spacing.sm, borderBottomWidth: 0.5, borderColor: colors.borderLight },
-  certName: { fontFamily: 'DM_Sans-Medium', fontSize: 13, color: colors.dark },
+  certName: { fontFamily: 'Nunito-Medium', fontSize: 13, color: colors.dark },
   certMeta: { ...typography.small, color: colors.mid, marginTop: 2 },
   emptyText: { ...typography.body, color: colors.light, textAlign: 'center', padding: spacing.lg },
   daysStrip: { flexDirection: 'row', gap: spacing.xs, padding: spacing.lg, paddingBottom: 0 },
   dayPill: { flex: 1, alignItems: 'center', paddingVertical: spacing.sm, borderRadius: radius.md, backgroundColor: colors.cream, borderWidth: 0.5, borderColor: colors.border },
   dayPillActive: { backgroundColor: colors.sageLight, borderColor: colors.sageMid },
   dayLabel: { fontSize: 10, color: colors.light },
-  dayLabelActive: { color: colors.sage, fontFamily: 'DM_Sans-Medium' },
+  dayLabelActive: { color: colors.sage, fontFamily: 'Nunito-Medium' },
   dayDot: { width: 5, height: 5, borderRadius: 3, backgroundColor: colors.sage, marginTop: 3 },
-  dayTitle: { fontFamily: 'DM_Sans-SemiBold', fontSize: 13, color: colors.dark, marginBottom: spacing.xs },
+  dayTitle: { fontFamily: 'Nunito-SemiBold', fontSize: 13, color: colors.dark, marginBottom: spacing.xs },
   slot: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingVertical: spacing.xs },
   slotTime: { ...typography.body, color: colors.dark },
   cta: { padding: spacing.lg, backgroundColor: colors.white, borderTopWidth: 0.5, borderColor: colors.border },

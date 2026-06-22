@@ -39,14 +39,14 @@ const styles = StyleSheet.create({
     padding: 24,
   },
   title: {
-    fontFamily: 'Playfair_Display-Medium',
+    fontFamily: 'Nunito-Bold',
     fontSize: 28,
     color: '#4A5D4E', // Verde oliva corporativo
     marginBottom: 8,
     textAlign: 'center',
   },
   subtitle: {
-    fontFamily: 'DM_Sans-Regular',
+    fontFamily: 'Nunito-Regular',
     fontSize: 14,
     color: '#666666',
     marginBottom: 32,
@@ -68,13 +68,13 @@ const styles = StyleSheet.create({
     shadowRadius: 3,
   },
   cardText: {
-    fontFamily: 'DM_Sans-SemiBold',
+    fontFamily: 'Nunito-SemiBold',
     fontSize: 15,
     color: '#4A5D4E',
     marginBottom: 8,
   },
   subCardText: {
-    fontFamily: 'DM_Sans-Regular',
+    fontFamily: 'Nunito-Regular',
     fontSize: 13,
     color: '#666666',
     textAlign: 'center',

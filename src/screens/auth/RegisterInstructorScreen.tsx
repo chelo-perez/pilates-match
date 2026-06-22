@@ -162,7 +162,7 @@ export default function RegisterInstructorScreen({ navigation }: Props) {
           {Array.from({ length: TOTAL_STEPS }).map((_, i) => (
             <View key={i} style={[
               styles.progressDot,
-              { backgroundColor: i + 1 <= step ? colors.lavDark : colors.lavender }
+              { backgroundColor: i + 1 <= step ? colors.sage : colors.sage }
             ]} />
           ))}
         </View>
@@ -190,7 +190,7 @@ export default function RegisterInstructorScreen({ navigation }: Props) {
 
             {searchResults.map(r => (
               <Card key={r.id} style={styles.resultCard} onPress={() => claimProfile(r)}>
-                <Avatar name={r.full_name} size={36} color={colors.lavender} />
+                <Avatar name={r.full_name} size={36} color={colors.sage} />
                 <View style={{ flex: 1, marginLeft: spacing.sm }}>
                   <Text style={styles.resultName}>{r.full_name}</Text>
                   <Text style={styles.resultMeta}>{r.neighborhood}</Text>
@@ -351,7 +351,7 @@ export default function RegisterInstructorScreen({ navigation }: Props) {
                 <Text style={{ fontSize: 16 }}>✓</Text>
                 <Text style={[styles.infoText, { flex: 1, color: colors.sage }]}>
                   Vas a reclamar el perfil de{' '}
-                  <Text style={{ fontFamily: 'DM_Sans-SemiBold' }}>{selectedProfile.full_name}</Text>
+                  <Text style={{ fontFamily: 'Nunito-SemiBold' }}>{selectedProfile.full_name}</Text>
                 </Text>
               </View>
             )}
@@ -401,7 +401,7 @@ export default function RegisterInstructorScreen({ navigation }: Props) {
           <TouchableOpacity style={styles.loginLink} onPress={() => navigation.navigate('Login')}>
             <Text style={styles.loginText}>
               ¿Ya tenés cuenta?{' '}
-              <Text style={{ color: colors.lavDark, fontFamily: 'DM_Sans-SemiBold' }}>Iniciá sesión</Text>
+              <Text style={{ color: colors.sage, fontFamily: 'Nunito-SemiBold' }}>Iniciá sesión</Text>
             </Text>
           </TouchableOpacity>
         )}
@@ -415,7 +415,7 @@ const styles = StyleSheet.create({
   container: { flexGrow: 1, backgroundColor: colors.cream, padding: spacing.xl },
   progress: { flexDirection: 'row', gap: spacing.xs, marginBottom: spacing.xl },
   progressDot: { flex: 1, height: 3, borderRadius: 2 },
-  title: { fontFamily: 'Playfair_Display-Medium', fontSize: 24, color: colors.dark, marginBottom: 4 },
+  title: { fontFamily: 'Nunito-Bold', fontSize: 24, color: colors.dark, marginBottom: 4 },
   sub: { ...typography.small, color: colors.mid, marginBottom: spacing.xl },
   infoBanner: {
     flexDirection: 'row', alignItems: 'flex-start',
@@ -430,7 +430,7 @@ const styles = StyleSheet.create({
   },
   infoText: { ...typography.small, color: colors.mid, lineHeight: 18 },
   infoBox: {
-    backgroundColor: colors.lavLight, borderRadius: radius.md,
+    backgroundColor: colors.sageLighter, borderRadius: radius.md,
     padding: spacing.md, marginTop: spacing.sm,
   },
   infoBoxText: { ...typography.small, color: colors.mid, lineHeight: 18 },
@@ -438,16 +438,16 @@ const styles = StyleSheet.create({
   neighborhoodGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.xs, marginBottom: spacing.sm },
   neighborhoodChip: {
     paddingVertical: 7, paddingHorizontal: 14,
-    borderRadius: radius.full, backgroundColor: colors.white,
+    borderRadius: 9999, backgroundColor: colors.white,
     borderWidth: 0.5, borderColor: colors.border,
   },
-  neighborhoodChipActive: { backgroundColor: colors.lavDark, borderColor: colors.lavDark },
+  neighborhoodChipActive: { backgroundColor: colors.sage, borderColor: colors.sage },
   neighborhoodText: { ...typography.small, color: colors.mid },
-  neighborhoodTextActive: { color: colors.white, fontFamily: 'DM_Sans-SemiBold' },
+  neighborhoodTextActive: { color: colors.white, fontFamily: 'Nunito-SemiBold' },
   errorText: { ...typography.small, color: colors.redTx, marginTop: 4, marginBottom: spacing.sm },
   searchRow: { flexDirection: 'row', alignItems: 'flex-end', marginBottom: spacing.md },
   resultCard: { flexDirection: 'row', alignItems: 'center', padding: spacing.md, marginBottom: spacing.sm },
-  resultName: { fontFamily: 'DM_Sans-SemiBold', fontSize: 14, color: colors.dark },
+  resultName: { fontFamily: 'Nunito-SemiBold', fontSize: 14, color: colors.dark },
   resultMeta: { ...typography.small, color: colors.mid },
   divider: { flexDirection: 'row', alignItems: 'center', marginVertical: spacing.lg },
   dividerLine: { flex: 1, height: 0.5, backgroundColor: colors.border },

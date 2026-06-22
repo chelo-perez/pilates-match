@@ -49,11 +49,11 @@ const LIGHT = '#9A9A9A'
 
 const tabBarStyle = {
   backgroundColor: '#FFFFFF',
-  borderTopWidth: 0.5,
+  borderTopWidth: 1,
   borderTopColor: '#E2E2DE',
-  paddingBottom: 8,
-  paddingTop: 4,
-  height: 62,
+  paddingBottom: 16,
+  paddingTop: 8,
+  height: 80,
 }
 
 function Loading() {
@@ -67,7 +67,8 @@ function Loading() {
 // ── INSTRUCTOR TABS ───────────────────────────────────────────
 function InstructorTabs() {
   return (
-    <Tab.Navigator screenOptions={{ headerShown: false, tabBarStyle, tabBarActiveTintColor: SAGE, tabBarInactiveTintColor: LIGHT, tabBarLabelStyle: { fontFamily: 'Nunito-SemiBold', fontSize: 10 } }}>
+    <Tab.Navigator screenOptions={{ headerShown: false, tabBarStyle, tabBarActiveTintColor: SAGE,
+      tabBarActiveBackgroundColor: '#F2F5F2', tabBarInactiveTintColor: LIGHT, tabBarLabelStyle: { fontFamily: 'Nunito-Bold', fontSize: 10 } }}>
       <Tab.Screen name="InstructorInicio" component={InstructorDashboardScreen} options={{ tabBarIcon: ({ color }) => <Feather name="home" size={22} color={color} /> }} />
       <Tab.Screen name="InstructorPropuestas" component={InstructorMatchesScreen} options={{ tabBarIcon: ({ color }) => <Feather name="inbox" size={22} color={color} /> }} />
       <Tab.Screen name="InstructorDisponibilidad" component={InstructorAvailabilityScreen} options={{ tabBarIcon: ({ color }) => <Feather name="calendar" size={22} color={color} /> }} />
@@ -80,7 +81,8 @@ function InstructorTabs() {
 // ── STUDIO TABS ───────────────────────────────────────────────
 function StudioTabs() {
   return (
-    <Tab.Navigator screenOptions={{ headerShown: false, tabBarStyle, tabBarActiveTintColor: SAGE, tabBarInactiveTintColor: LIGHT, tabBarLabelStyle: { fontFamily: 'Nunito-SemiBold', fontSize: 10 } }}>
+    <Tab.Navigator screenOptions={{ headerShown: false, tabBarStyle, tabBarActiveTintColor: SAGE,
+      tabBarActiveBackgroundColor: '#F2F5F2', tabBarInactiveTintColor: LIGHT, tabBarLabelStyle: { fontFamily: 'Nunito-Bold', fontSize: 10 } }}>
       <Tab.Screen name="EstudioHome" component={StudioHomeScreen} options={{ tabBarIcon: ({ color }) => <Feather name="home" size={22} color={color} /> }} />
       <Tab.Screen name="Search" component={SearchScreen} options={{ tabBarIcon: ({ color }) => <Feather name="search" size={22} color={color} /> }} />
       <Tab.Screen name="HistoryList" component={StudioHistoryScreen} options={{ tabBarIcon: ({ color }) => <Feather name="clock" size={22} color={color} /> }} />
@@ -92,7 +94,8 @@ function StudioTabs() {
 // ── CAMARA TABS ───────────────────────────────────────────────
 function CamaraTabs() {
   return (
-    <Tab.Navigator screenOptions={{ headerShown: false, tabBarStyle, tabBarActiveTintColor: SAGE, tabBarInactiveTintColor: LIGHT, tabBarLabelStyle: { fontFamily: 'Nunito-SemiBold', fontSize: 10 } }}>
+    <Tab.Navigator screenOptions={{ headerShown: false, tabBarStyle, tabBarActiveTintColor: SAGE,
+      tabBarActiveBackgroundColor: '#F2F5F2', tabBarInactiveTintColor: LIGHT, tabBarLabelStyle: { fontFamily: 'Nunito-Bold', fontSize: 10 } }}>
       <Tab.Screen name="CamaraTabs" component={CamaraDashboardScreen} options={{ tabBarIcon: ({ color }) => <Feather name="home" size={22} color={color} /> }} />
       <Tab.Screen name="Directorio" component={CamaraDirectoryScreen} options={{ tabBarIcon: ({ color }) => <Feather name="users" size={22} color={color} /> }} />
       <Tab.Screen name="Estudios" component={CamaraStudiosScreen} options={{ tabBarIcon: ({ color }) => <Feather name="briefcase" size={22} color={color} /> }} />

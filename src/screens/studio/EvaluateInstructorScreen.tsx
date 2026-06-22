@@ -129,15 +129,15 @@ export default function EvaluateInstructorScreen({ navigation, route }: Props) {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.cream || '#F9F9F6' },
-  content: { padding: spacing.lg, paddingTop: 50, paddingBottom: spacing.xxxl },
-  mainTitle: { fontFamily: 'Playfair_Display-Medium', fontSize: 26, color: colors.dark || '#333', marginBottom: spacing.lg },
+  content: { padding: spacing.lg, paddingTop: 50, paddingBottom: spacing.xxl },
+  mainTitle: { fontFamily: 'Nunito-Bold', fontSize: 26, color: colors.dark || '#333', marginBottom: spacing.lg },
   instructorCard: { flexDirection: 'row', alignItems: 'center', padding: spacing.lg, marginBottom: spacing.md, backgroundColor: colors.white || '#FFF' },
-  instructorName: { fontFamily: 'DM_Sans-SemiBold', fontSize: 16, color: colors.dark || '#333' },
+  instructorName: { fontFamily: 'Nunito-SemiBold', fontSize: 16, color: colors.dark || '#333' },
   instructorMeta: { ...typography.small, color: colors.mid || '#666', marginTop: 2 },
   criteriaCard: { padding: spacing.lg, marginBottom: spacing.md, backgroundColor: colors.white || '#FFF' },
   sectionTitle: { ...typography.label, color: colors.dark || '#333', marginBottom: spacing.lg },
   averageCard: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', padding: spacing.lg, marginBottom: spacing.md, backgroundColor: '#EAEFEA' },
-  averageLabel: { fontFamily: 'DM_Sans-Medium', fontSize: 13, color: '#4A5D4E', letterSpacing: 0.5 },
-  averageScore: { fontFamily: 'DM_Sans-SemiBold', fontSize: 30, color: '#4A5D4E' },
+  averageLabel: { fontFamily: 'Nunito-Medium', fontSize: 13, color: '#4A5D4E', letterSpacing: 0.5 },
+  averageScore: { fontFamily: 'Nunito-SemiBold', fontSize: 30, color: '#4A5D4E' },
   loadingCenter: { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: colors.cream || '#F9F9F6' }
 })

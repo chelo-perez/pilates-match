@@ -61,7 +61,7 @@ export default function InstructorDashboardScreen({ navigation }: any) {
   if (isLoading) return <LoadingScreen />
   if (!instructor) return (
     <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', padding: spacing.xl }}>
-      <Text style={{ fontFamily: 'Playfair_Display-Medium', fontSize: 20, color: colors.dark, textAlign: 'center', marginBottom: spacing.md }}>
+      <Text style={{ fontFamily: 'Nunito-Bold', fontSize: 20, color: colors.dark, textAlign: 'center', marginBottom: spacing.md }}>
         Tu perfil está siendo procesado
       </Text>
       <Text style={{ ...typography.body, color: colors.mid, textAlign: 'center', marginBottom: spacing.xl }}>
@@ -77,7 +77,7 @@ export default function InstructorDashboardScreen({ navigation }: any) {
     <ScrollView style={styles.container} contentContainerStyle={[styles.content, { paddingTop: insets.top + 16 }]}>
       {/* Header */}
       <View style={styles.header}>
-        <Avatar name={instructor.full_name} size={56} color={colors.lavender} />
+        <Avatar name={instructor.full_name} size={56} color={colors.sage} />
         <View style={{ flex: 1, marginLeft: spacing.md }}>
           <Text style={styles.name}>{instructor.full_name}</Text>
           <Text style={styles.neighborhood}>{instructor.neighborhood}</Text>
@@ -163,24 +163,24 @@ export default function InstructorDashboardScreen({ navigation }: any) {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.cream },
-  content: { padding: spacing.lg, paddingBottom: spacing.xxxl },
-  header: { flexDirection: 'row', alignItems: 'flex-start', backgroundColor: colors.lavLight, borderRadius: radius.lg, padding: spacing.lg, marginBottom: spacing.md },
-  name: { fontFamily: 'Playfair_Display-Medium', fontSize: 18, color: colors.dark },
+  content: { padding: spacing.lg, paddingBottom: spacing.xxl },
+  header: { flexDirection: 'row', alignItems: 'flex-start', backgroundColor: colors.sageLighter, borderRadius: radius.lg, padding: spacing.lg, marginBottom: spacing.md },
+  name: { fontFamily: 'Nunito-Bold', fontSize: 18, color: colors.dark },
   neighborhood: { ...typography.small, color: colors.mid, marginTop: 2 },
   statsRow: { flexDirection: 'row', gap: spacing.sm, marginBottom: spacing.md },
   statCard: { flex: 1, padding: spacing.md, alignItems: 'center', backgroundColor: colors.white },
-  statVal: { fontFamily: 'DM_Sans-SemiBold', fontSize: 20, color: colors.dark },
+  statVal: { fontFamily: 'Nunito-SemiBold', fontSize: 20, color: colors.dark },
   statLabel: { ...typography.small, color: colors.mid, marginTop: 2 },
   section: { padding: spacing.md, marginBottom: spacing.md, backgroundColor: colors.white },
   sectionHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: spacing.md },
-  sectionTitle: { fontFamily: 'DM_Sans-SemiBold', fontSize: 14, color: colors.dark },
-  editLink: { ...typography.small, color: colors.lavDark, fontFamily: 'DM_Sans-Medium' },
+  sectionTitle: { fontFamily: 'Nunito-SemiBold', fontSize: 14, color: colors.dark },
+  editLink: { ...typography.small, color: colors.sage, fontFamily: 'Nunito-Medium' },
   ratesRow: { flexDirection: 'row', gap: spacing.sm },
-  rateItem: { flex: 1, backgroundColor: colors.lavLight, borderRadius: radius.sm, padding: spacing.md },
+  rateItem: { flex: 1, backgroundColor: colors.sageLighter, borderRadius: radius.sm, padding: spacing.md },
   rateLabel: { ...typography.small, color: colors.mid },
-  rateVal: { fontFamily: 'DM_Sans-SemiBold', fontSize: 18, color: colors.lavDark, marginTop: 4 },
+  rateVal: { fontFamily: 'Nunito-SemiBold', fontSize: 18, color: colors.sage, marginTop: 4 },
   evalRow: { flexDirection: 'row', alignItems: 'flex-start', paddingVertical: spacing.sm, borderBottomWidth: 0.5, borderColor: colors.borderLight },
-  evalStudio: { fontFamily: 'DM_Sans-Medium', fontSize: 13, color: colors.dark },
+  evalStudio: { fontFamily: 'Nunito-Medium', fontSize: 13, color: colors.dark },
   evalDate: { ...typography.small, color: colors.light },
   evalComment: { ...typography.small, color: colors.mid, marginTop: 4, fontStyle: 'italic', lineHeight: 17 },
 })

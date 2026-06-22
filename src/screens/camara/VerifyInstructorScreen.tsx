@@ -272,7 +272,7 @@ export default function VerifyInstructorScreen({ navigation, route }: any) {
 
 const s = StyleSheet.create({
   container:         { flex: 1, backgroundColor: colors.cream },
-  content:           { padding: spacing.md, paddingBottom: spacing.xxxl },
+  content:           { padding: spacing.md, paddingBottom: spacing.xxl },
   profileCard:       { marginBottom: spacing.md, padding: spacing.md },
   profileRow:        { flexDirection: 'row', alignItems: 'flex-start', gap: spacing.sm, marginBottom: spacing.sm },
   avatar:            { width: 52, height: 52, borderRadius: 26, backgroundColor: colors.sageLight, alignItems: 'center', justifyContent: 'center' },
@@ -298,7 +298,7 @@ const s = StyleSheet.create({
   verifyBtn:         { flex: 2, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: spacing.xs, backgroundColor: colors.sage, borderRadius: radius.md, paddingVertical: spacing.md },
   verifyText:        { fontFamily: 'Nunito-SemiBold', fontSize: 14, color: colors.white },
   modalOverlay:      { flex: 1, backgroundColor: 'rgba(0,0,0,0.45)', justifyContent: 'flex-end' },
-  modalBox:          { backgroundColor: colors.white, borderTopLeftRadius: 20, borderTopRightRadius: 20, padding: spacing.xl, paddingBottom: spacing.xxxl },
+  modalBox:          { backgroundColor: colors.white, borderTopLeftRadius: 20, borderTopRightRadius: 20, padding: spacing.xl, paddingBottom: spacing.xxl },
   modalTitle:        { fontFamily: 'Nunito-Bold', fontSize: 20, color: colors.dark, marginBottom: spacing.xs },
   modalSub:          { fontFamily: 'Nunito-Regular', fontSize: 13, color: colors.mid, marginBottom: spacing.lg, lineHeight: 20 },
   reasonList:        { marginBottom: spacing.md },

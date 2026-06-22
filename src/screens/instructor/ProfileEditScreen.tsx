@@ -105,7 +105,7 @@ export default function ProfileEditScreen({ navigation }: any) {
       {/* Avatar */}
       <View style={styles.avatarSection}>
         <TouchableOpacity onPress={pickAvatar} disabled={uploading}>
-          <Avatar name={instructor?.full_name ?? 'IO'} size={72} color={colors.lavender}
+          <Avatar name={instructor?.full_name ?? 'IO'} size={72} color={colors.sage}
             imageUrl={instructor?.avatar_url} />
           <View style={styles.editBadge}><Text style={{ fontSize: 14 }}>📷</Text></View>
         </TouchableOpacity>
@@ -161,11 +161,11 @@ const styles = StyleSheet.create({
     alignItems: 'center', justifyContent: 'center',
     borderWidth: 0.5, borderColor: colors.border,
   },
-  profileName: { fontFamily: 'Playfair_Display-Medium', fontSize: 18, color: colors.dark, marginBottom: spacing.xs },
+  profileName: { fontFamily: 'Nunito-Bold', fontSize: 18, color: colors.dark, marginBottom: spacing.xs },
   sectionTitle: { ...typography.label, color: colors.mid, marginBottom: spacing.sm },
   specialtiesGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.xs, marginBottom: spacing.md },
   specChip: { paddingVertical: 7, paddingHorizontal: 14, borderRadius: 999, backgroundColor: colors.white, borderWidth: 0.5, borderColor: colors.border },
-  specChipActive: { backgroundColor: colors.lavender, borderColor: colors.lavDark },
+  specChipActive: { backgroundColor: colors.sage, borderColor: colors.sage },
   specText: { ...typography.small, color: colors.mid },
-  specTextActive: { color: colors.lavDark, fontFamily: 'DM_Sans-SemiBold' },
+  specTextActive: { color: colors.sage, fontFamily: 'Nunito-SemiBold' },
 })

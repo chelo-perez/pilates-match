@@ -54,7 +54,7 @@ export default function MembershipPaywallScreen({ navigation }: Props) {
           <View key={i} style={[styles.tableRow, i % 2 === 1 && styles.tableRowAlt]}>
             <Text style={[styles.tdCell, { flex: 2 }]}>{f.label}</Text>
             <Text style={[styles.tdCell, { color: colors.light }]}>{f.free}</Text>
-            <Text style={[styles.tdCell, { color: colors.sage, fontFamily: 'DM_Sans-SemiBold' }]}>{f.member}</Text>
+            <Text style={[styles.tdCell, { color: colors.sage, fontFamily: 'Nunito-SemiBold' }]}>{f.member}</Text>
           </View>
         ))}
       </View>
@@ -86,10 +86,10 @@ export default function MembershipPaywallScreen({ navigation }: Props) {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.cream },
-  content: { padding: spacing.xl, paddingBottom: spacing.xxxl },
+  content: { padding: spacing.xl, paddingBottom: spacing.xxl },
   header: { alignItems: 'center', marginBottom: spacing.xl },
   icon: { fontSize: 48, marginBottom: spacing.md },
-  title: { fontFamily: 'Playfair_Display-Medium', fontSize: 22, color: colors.dark, textAlign: 'center', marginBottom: spacing.sm },
+  title: { fontFamily: 'Nunito-Bold', fontSize: 22, color: colors.dark, textAlign: 'center', marginBottom: spacing.sm },
   sub: { ...typography.body, color: colors.mid, textAlign: 'center', lineHeight: 22 },
   table: { backgroundColor: colors.white, borderRadius: radius.lg, overflow: 'hidden', marginBottom: spacing.xl, borderWidth: 0.5, borderColor: colors.border },
   tableHeader: { flexDirection: 'row', backgroundColor: colors.sageLight, padding: spacing.md },

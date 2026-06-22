@@ -133,30 +133,30 @@ const styles = StyleSheet.create({
   backButton: { marginRight: spacing.sm },
   inputContainer: { flex: 1, flexDirection: 'row', alignItems: 'center', backgroundColor: colors.cream || '#F9F9F6', borderRadius: radius.md, paddingHorizontal: spacing.sm, height: 44 },
   searchIcon: { marginRight: spacing.xs },
-  input: { flex: 1, fontFamily: 'DM_Sans-Regular', fontSize: 14, color: colors.dark || '#333' },
+  input: { flex: 1, fontFamily: 'Nunito-Regular', fontSize: 14, color: colors.dark || '#333' },
   filterButton: { marginLeft: spacing.sm, width: 44, height: 44, backgroundColor: colors.cream || '#F9F9F6', borderRadius: radius.md, justifyContent: 'center', alignItems: 'center' },
   loadingArea: { flex: 1, justifyContent: 'center', alignItems: 'center' },
-  loadingText: { fontFamily: 'DM_Sans-Medium', fontSize: 14, color: colors.mid || '#666', marginTop: spacing.md },
+  loadingText: { fontFamily: 'Nunito-Medium', fontSize: 14, color: colors.mid || '#666', marginTop: spacing.md },
   listContent: { padding: spacing.lg },
   resultCard: { padding: spacing.lg, backgroundColor: colors.white || '#FFF', marginBottom: spacing.md },
   cardTop: { flexDirection: 'row', alignItems: 'center', marginBottom: spacing.md },
   metaArea: { flex: 1, marginLeft: spacing.md },
-  nameText: { fontFamily: 'DM_Sans-SemiBold', fontSize: 15, color: colors.dark || '#333' },
+  nameText: { fontFamily: 'Nunito-SemiBold', fontSize: 15, color: colors.dark || '#333' },
   subText: { ...typography.small, color: colors.mid || '#666', marginTop: 2 },
   tariffRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, paddingTop: spacing.md, borderTopWidth: 0.5, borderColor: colors.borderLight || '#EEE' },
   tariffBox: { flex: 1, backgroundColor: colors.cream || '#F9F9F6', borderRadius: radius.sm, padding: spacing.sm },
-  tariffLabel: { fontSize: 9, fontFamily: 'DM_Sans-Medium', color: colors.light || '#999', letterSpacing: 0.5 },
-  tariffValue: { fontFamily: 'DM_Sans-SemiBold', fontSize: 13, color: colors.dark || '#333', marginTop: 2 }
+  tariffLabel: { fontSize: 9, fontFamily: 'Nunito-Medium', color: colors.light || '#999', letterSpacing: 0.5 },
+  tariffValue: { fontFamily: 'Nunito-SemiBold', fontSize: 13, color: colors.dark || '#333', marginTop: 2 }
 })
 
 const filtersStyles = StyleSheet.create({
   header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', padding: spacing.lg, borderBottomWidth: 0.5, borderColor: colors.borderLight || '#EEE', paddingTop: 50 },
-  title: { fontFamily: 'Playfair_Display-Medium', fontSize: 22, color: colors.dark || '#333' },
+  title: { fontFamily: 'Nunito-Bold', fontSize: 22, color: colors.dark || '#333' },
   content: { padding: spacing.lg },
   sectionLabel: { ...typography.label, color: colors.dark || '#333', marginBottom: spacing.sm },
   chipGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm },
-  chip: { paddingVertical: 8, paddingHorizontal: 14, borderRadius: radius.full, backgroundColor: colors.cream || '#F9F9F6', borderWidth: 0.5, borderColor: colors.borderLight || '#EEE' },
+  chip: { paddingVertical: 8, paddingHorizontal: 14, borderRadius: 9999, backgroundColor: colors.cream || '#F9F9F6', borderWidth: 0.5, borderColor: colors.borderLight || '#EEE' },
   chipActive: { backgroundColor: '#4A5D4E', borderColor: '#4A5D4E' },
-  chipText: { fontFamily: 'DM_Sans-Regular', fontSize: 13, color: colors.dark || '#333' },
-  chipTextActive: { color: '#FFF', fontFamily: 'DM_Sans-Medium' }
+  chipText: { fontFamily: 'Nunito-Regular', fontSize: 13, color: colors.dark || '#333' },
+  chipTextActive: { color: '#FFF', fontFamily: 'Nunito-Medium' }
 })
