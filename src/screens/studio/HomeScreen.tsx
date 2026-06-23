@@ -13,6 +13,7 @@ import {
   Card, Badge, Avatar, ScoreDisplay, Button,
   EmptyState, LoadingScreen, colors, spacing, radius, typography
 } from '../../components/ui'
+import { useAuthStore } from '../../store'
 import { useMyStudio, useStudioStats, usePendingEvaluations, useEvaluationHistory } from '../../hooks'
 import type { NativeStackScreenProps } from '@react-navigation/native-stack'
 
@@ -87,11 +88,18 @@ export default function HomeScreen({ navigation }: Props) {
       >
         {/* Header */}
         <View style={styles.header}>
-          <Text style={styles.studioName}>{studio?.name ?? 'Mi estudio'}</Text>
-          <Text style={styles.studioMeta}>
+          <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+            <View>
+              <Text style={styles.studioName}>{studio?.name ?? 'Mi estudio'}</Text>
+              <Text style={styles.studioMeta}>
             {studio?.neighborhood}
             {membership?.status === 'activa' ? ' · Socia Cámara' : ''}
-          </Text>
+              </Text>
+            </View>
+            <TouchableOpacity onPress={async () => { await supabase.auth.signOut() }} style={{ padding: 8 }}>
+              <Feather name="log-out" size={20} color="#9A9A9A" />
+            </TouchableOpacity>
+          </View>
         </View>
 
         {/* Banner de bloqueo */}

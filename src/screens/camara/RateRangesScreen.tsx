@@ -7,19 +7,26 @@ import { camaraAPI } from '../../lib/api'
 import { Card, Button, Badge, LoadingScreen, colors, spacing, typography, radius } from '../../components/ui'
 
 
-function RangeInput({ value, onChange }: { label: string; value: number; onChange: (v: number) => void }) {
+function RangeInput({ value, onChange, min = 1, max = 20 }: { label: string; value: number; onChange: (v: number) => void; min?: number; max?: number }) {
+  const fmt = (n: number) => '$' + (n * 1000).toLocaleString('es-AR')
   return (
-    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginVertical: 6 }}>
-      {[1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20].map(n => (
-        <TouchableOpacity
-          key={n}
-          onPress={() => onChange(n)}
-          style={{
-            width: 14, height: 14, borderRadius: 7,
-            backgroundColor: n <= value ? colors.sage : colors.borderLight,
-          }}
-        />
-      ))}
+    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12, marginVertical: 8 }}>
+      <TouchableOpacity
+        onPress={() => onChange(Math.max(min, value - 1))}
+        style={{ width: 44, height: 44, borderRadius: 22, backgroundColor: colors.sageLight, alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: colors.sage }}
+      >
+        <Text style={{ fontSize: 22, color: colors.sage, fontFamily: 'Nunito-Bold' }}>−</Text>
+      </TouchableOpacity>
+      <View style={{ flex: 1, alignItems: 'center' }}>
+        <Text style={{ fontFamily: 'Nunito-Bold', fontSize: 22, color: colors.dark }}>{fmt(value)}</Text>
+        <Text style={{ fontFamily: 'Nunito-Regular', fontSize: 11, color: colors.mid }}>por hora</Text>
+      </View>
+      <TouchableOpacity
+        onPress={() => onChange(Math.min(max, value + 1))}
+        style={{ width: 44, height: 44, borderRadius: 22, backgroundColor: colors.sageLight, alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: colors.sage }}
+      >
+        <Text style={{ fontSize: 22, color: colors.sage, fontFamily: 'Nunito-Bold' }}>+</Text>
+      </TouchableOpacity>
     </View>
   )
 }

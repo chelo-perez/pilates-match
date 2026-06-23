@@ -90,11 +90,13 @@ export default function ProfileEditScreen({ navigation }: any) {
   const toggleSpecialty = (key: string) =>
     setSelectedSpecialties(prev => prev.includes(key) ? prev.filter(s => s !== key) : [...prev, key])
 
+  const { reset } = useAuthStore()
   const handleSignOut = async () => {
     Alert.alert('Cerrar sesión', '¿Seguro que querés salir?', [
       { text: 'Cancelar', style: 'cancel' },
       { text: 'Salir', style: 'destructive', onPress: async () => {
         await supabase.auth.signOut()
+        reset()
       }},
     ])
   }
