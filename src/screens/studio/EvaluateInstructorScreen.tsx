@@ -9,6 +9,7 @@ import {
   colors, spacing, radius, typography
 } from '../../components/ui'
 import type { NativeStackScreenProps } from '@react-navigation/native-stack'
+import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { Feather } from '@expo/vector-icons'
 import { TouchableOpacity as TO } from 'react-native'
 
@@ -29,6 +30,7 @@ function SimpleSlider({ value, onValueChange, min = 1, max = 10, step = 1 }: any
 type Props = NativeStackScreenProps<any, 'EvaluateInstructor'>
 
 export default function EvaluateInstructorScreen({ navigation, route }: Props) {
+  const insets = useSafeAreaInsets()
   const { instructorId, classDate, classType } = (route.params || {}) as any
   const { data: instructor, isLoading } = useInstructor(instructorId)
   const createEval = useCreateEvaluation()
@@ -129,7 +131,7 @@ export default function EvaluateInstructorScreen({ navigation, route }: Props) {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.cream || '#F9F9F6' },
-  content: { padding: spacing.lg, paddingTop: 50, paddingBottom: spacing.xxl },
+  content: { padding: spacing.lg, paddingTop: 52, paddingBottom: spacing.xxl },
   mainTitle: { fontFamily: 'Nunito-Bold', fontSize: 26, color: colors.dark || '#333', marginBottom: spacing.lg },
   instructorCard: { flexDirection: 'row', alignItems: 'center', padding: spacing.lg, marginBottom: spacing.md, backgroundColor: colors.white || '#FFF' },
   instructorName: { fontFamily: 'Nunito-SemiBold', fontSize: 16, color: colors.dark || '#333' },

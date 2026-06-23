@@ -9,6 +9,7 @@ import {
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { db } from '../../lib/supabase'
 import { Card, Badge, EmptyState, LoadingScreen, colors, spacing, radius, typography } from '../../components/ui'
+import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { Feather } from '@expo/vector-icons'
 
 type Filter = 'todos' | 'miembro' | 'no_miembro'
@@ -240,7 +241,7 @@ export default function CamaraStudiosScreen() {
 
 const styles = StyleSheet.create({
   container:       { flex: 1, backgroundColor: colors.cream },
-  header:          { paddingHorizontal: spacing.md, paddingTop: spacing.lg, paddingBottom: spacing.sm },
+  header:          { paddingHorizontal: spacing.md, paddingTop: 52, paddingBottom: spacing.sm },
   title:           { fontFamily: 'Nunito-Bold', fontSize: 22, color: colors.dark },
   count:           { ...typography.small, color: colors.mid, marginTop: 2 },
   searchRow:       { flexDirection: 'row', alignItems: 'center', marginHorizontal: spacing.md, marginBottom: spacing.sm, backgroundColor: colors.white, borderRadius: radius.md, paddingHorizontal: spacing.md, paddingVertical: spacing.sm, borderWidth: 0.5, borderColor: colors.border },

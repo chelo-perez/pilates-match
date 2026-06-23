@@ -210,7 +210,7 @@ export default function ReportsScreen({ navigation }: any) {
 
 const styles = StyleSheet.create({
   container:         { flex: 1, backgroundColor: colors.cream },
-  content:           { padding: spacing.md, paddingBottom: spacing.xxl },
+  content:           { padding: spacing.md, paddingTop: 52, paddingBottom: spacing.xxl },
   periodRow:         { flexDirection: 'row', gap: spacing.xs, marginBottom: spacing.md },
   periodBtn:         { flex: 1, paddingVertical: spacing.sm, borderRadius: 9999, backgroundColor: colors.white, borderWidth: 0.5, borderColor: colors.border, alignItems: 'center' },
   periodActive:      { backgroundColor: colors.sage, borderColor: colors.sage },

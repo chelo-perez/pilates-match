@@ -12,6 +12,7 @@ import { useFocusEffect } from '@react-navigation/native'
 import { supabase, db } from '../../lib/supabase'
 import { useAuthStore } from '../../store'
 import { Card, Badge, EmptyState, LoadingScreen, Button, colors, spacing, radius, typography } from '../../components/ui'
+import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { Feather } from '@expo/vector-icons'
 
 type Tab = 'pendientes' | 'historial'
@@ -348,7 +349,7 @@ export default function InstructorMatchesScreen() {
 
 const styles = StyleSheet.create({
   container:         { flex: 1, backgroundColor: colors.cream },
-  header:            { flexDirection: 'row', alignItems: 'center', paddingHorizontal: spacing.md, paddingTop: spacing.lg, paddingBottom: spacing.sm, gap: spacing.sm },
+  header:            { flexDirection: 'row', alignItems: 'center', paddingHorizontal: spacing.md, paddingTop: 52, paddingBottom: spacing.sm, gap: spacing.sm },
   title:             { fontFamily: 'Nunito-Bold', fontSize: 22, color: colors.dark },
   badge:             { backgroundColor: colors.sage, borderRadius: 10, paddingHorizontal: 8, paddingVertical: 2 },
   badgeText:         { color: colors.white, fontFamily: 'Nunito-SemiBold', fontSize: 12 },

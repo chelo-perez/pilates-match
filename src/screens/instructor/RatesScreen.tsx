@@ -6,6 +6,7 @@ import { supabase } from '../../lib/supabase'
 import { instructorAPI } from '../../lib/api'
 import { useAuthStore } from '../../store'
 import { colors, spacing, typography, radius } from '../../components/ui'
+import { useSafeAreaInsets } from 'react-native-safe-area-context'
 
 export default function InstructorRatesScreen({ navigation }: any) {
   const user = useAuthStore(s => s.user)

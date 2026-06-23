@@ -81,7 +81,7 @@ export default function HistoryScreen({ navigation }: Props) {
 }
 
 const styles = StyleSheet.create({
-  filterRow: { flexDirection: 'row', gap: spacing.sm, padding: spacing.lg, paddingBottom: spacing.sm },
+  filterRow: { flexDirection: 'row', gap: spacing.sm, padding: spacing.lg, paddingTop: 52, paddingBottom: spacing.sm },
   filterChip: { paddingVertical: 6, paddingHorizontal: 14, borderRadius: 999, backgroundColor: colors.white, borderWidth: 0.5, borderColor: colors.border },
   filterChipActive: { backgroundColor: colors.sage, borderColor: colors.sage },
   filterText: { ...typography.small, color: colors.mid },

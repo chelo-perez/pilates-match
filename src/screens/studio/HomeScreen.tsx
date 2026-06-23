@@ -237,7 +237,7 @@ export default function HomeScreen({ navigation }: Props) {
 const styles = StyleSheet.create({
   container:      { flex: 1, backgroundColor: colors.cream },
   scroll:         { flex: 1 },
-  content:        { padding: spacing.md, paddingBottom: spacing.xxl },
+  content:        { padding: spacing.md, paddingBottom: spacing.xxl, paddingTop: 52 },
   header:         { marginBottom: spacing.md },
   studioName:     { fontFamily: 'Nunito-Bold', fontSize: 24, color: colors.dark },
   studioMeta:     { ...typography.small, color: colors.mid, marginTop: 3 },

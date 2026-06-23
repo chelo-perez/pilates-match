@@ -12,11 +12,13 @@ import {
 } from '../../components/ui'
 import type { InstructorSearchResult } from '../../types/database'
 import type { NativeStackScreenProps } from '@react-navigation/native-stack'
+import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { Feather } from '@expo/vector-icons'
 
 type Props = NativeStackScreenProps<any, 'Search'>
 
 export default function SearchScreen({ navigation }: Props) {
+  const insets = useSafeAreaInsets()
   const { data: studio } = useMyStudio()
   const { filters, setFilter, clearFilters } = useSearchStore()
   const [showFilters, setShowFilters] = useState(false)
@@ -129,7 +131,7 @@ export default function SearchScreen({ navigation }: Props) {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.cream || '#F9F9F6' },
-  searchHeader: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: spacing.lg, paddingTop: 50, paddingBottom: spacing.md, backgroundColor: colors.white || '#FFF', borderBottomWidth: 0.5, borderColor: colors.borderLight || '#EEE' },
+  searchHeader: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: spacing.lg, paddingTop: 52, paddingBottom: spacing.md, backgroundColor: colors.white || '#FFF', borderBottomWidth: 0.5, borderColor: colors.borderLight || '#EEE' },
   backButton: { marginRight: spacing.sm },
   inputContainer: { flex: 1, flexDirection: 'row', alignItems: 'center', backgroundColor: colors.cream || '#F9F9F6', borderRadius: radius.md, paddingHorizontal: spacing.sm, height: 44 },
   searchIcon: { marginRight: spacing.xs },
@@ -150,7 +152,7 @@ const styles = StyleSheet.create({
 })
 
 const filtersStyles = StyleSheet.create({
-  header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', padding: spacing.lg, borderBottomWidth: 0.5, borderColor: colors.borderLight || '#EEE', paddingTop: 50 },
+  header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', padding: spacing.lg, borderBottomWidth: 0.5, borderColor: colors.borderLight || '#EEE', paddingTop: 52 },
   title: { fontFamily: 'Nunito-Bold', fontSize: 22, color: colors.dark || '#333' },
   content: { padding: spacing.lg },
   sectionLabel: { ...typography.label, color: colors.dark || '#333', marginBottom: spacing.sm },

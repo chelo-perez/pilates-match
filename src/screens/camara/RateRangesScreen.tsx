@@ -161,7 +161,7 @@ export default function RateRangesScreen() {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.cream },
-  content: { padding: spacing.lg, paddingBottom: spacing.xxl },
+  content: { padding: spacing.lg, paddingTop: 52, paddingBottom: spacing.xxl },
   info: {
     flexDirection: 'row', alignItems: 'flex-start',
     backgroundColor: colors.sageLight, borderRadius: radius.md,

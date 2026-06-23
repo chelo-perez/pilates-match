@@ -65,7 +65,7 @@ export default function CamaraDashboardScreen({ navigation }: Props) {
         </View>
         <Text style={styles.title}>Panel de gestión</Text>
         {/* Corrección global: se quitó la localización fija "Buenos Aires" */}
-        <Text style={styles.sub}>{new Date().toLocaleDateString('es-AR', { month: 'long', year: 'numeric' })}</Text>
+        <Text style={styles.sub}>{new Date().toLocaleDateString('es-AR', { month: 'long', year: 'numeric' }).toLowerCase().replace(/\b\w/g, (l: string) => l.toLowerCase())}</Text>
       </View>
 
       {/* KPIs */}

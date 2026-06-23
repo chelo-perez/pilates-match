@@ -13,6 +13,7 @@ import {
   Card, Button, Input, LoadingScreen,
   colors, spacing, radius, typography
 } from '../../components/ui'
+import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { Feather } from '@expo/vector-icons'
 
 type Props = {

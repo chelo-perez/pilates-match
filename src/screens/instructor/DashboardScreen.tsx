@@ -5,6 +5,7 @@ import { useQuery } from '@tanstack/react-query'
 import { supabase } from '../../lib/supabase'
 import { useAuthStore } from '../../store'
 import { Card, Badge, LoadingScreen, colors, spacing, radius, typography } from '../../components/ui'
+import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { Feather } from '@expo/vector-icons'
 
 export default function InstructorDashboardScreen({ navigation }: any) {
@@ -150,7 +151,7 @@ export default function InstructorDashboardScreen({ navigation }: any) {
 
 const s = StyleSheet.create({
   container:    { flex: 1, backgroundColor: colors.cream },
-  content:      { padding: spacing.md, paddingBottom: 100, paddingTop: spacing.lg },
+  content:      { padding: spacing.md, paddingBottom: 100, paddingTop: 56 },
   header:       { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: spacing.md },
   greeting:     { fontFamily: 'Nunito-Bold', fontSize: 24, color: colors.dark },
   sub:          { fontFamily: 'Nunito-Regular', fontSize: 12, color: colors.mid, marginTop: 3 },
