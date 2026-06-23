@@ -1,5 +1,6 @@
 // src/navigation/index.tsx — navegación completa con bottom tabs
 import React from 'react'
+import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { View, Text, TouchableOpacity, ActivityIndicator } from 'react-native'
 import { NavigationContainer } from '@react-navigation/native'
 import { createNativeStackNavigator } from '@react-navigation/native-stack'
@@ -66,8 +67,10 @@ function Loading() {
 
 // ── INSTRUCTOR TABS ───────────────────────────────────────────
 function InstructorTabs() {
+  const insets = useSafeAreaInsets()
+  const tabStyle = { backgroundColor: '#FFFFFF', borderTopWidth: 0.5, borderTopColor: '#E2E2DE', paddingBottom: insets.bottom + 4, paddingTop: 6, height: 56 + insets.bottom }
   return (
-    <Tab.Navigator screenOptions={{ headerShown: false, tabBarStyle, tabBarActiveTintColor: SAGE,
+    <Tab.Navigator screenOptions={{ headerShown: false, tabBarStyle: tabStyle, tabBarActiveTintColor: SAGE,
       tabBarActiveBackgroundColor: '#F2F5F2', tabBarInactiveTintColor: LIGHT, tabBarLabelStyle: { fontFamily: 'Nunito-Bold', fontSize: 10 } }}>
       <Tab.Screen name="InstructorInicio" component={InstructorDashboardScreen} options={{ tabBarLabel: "Inicio", tabBarIcon: ({ color }) => <Feather name="home" size={22} color={color} /> }} />
       <Tab.Screen name="InstructorPropuestas" component={InstructorMatchesScreen} options={{ tabBarLabel: "Propuestas", tabBarIcon: ({ color }) => <Feather name="inbox" size={22} color={color} /> }} />
@@ -80,8 +83,10 @@ function InstructorTabs() {
 
 // ── STUDIO TABS ───────────────────────────────────────────────
 function StudioTabs() {
+  const insets = useSafeAreaInsets()
+  const tabStyle = { backgroundColor: '#FFFFFF', borderTopWidth: 0.5, borderTopColor: '#E2E2DE', paddingBottom: insets.bottom + 4, paddingTop: 6, height: 56 + insets.bottom }
   return (
-    <Tab.Navigator screenOptions={{ headerShown: false, tabBarStyle, tabBarActiveTintColor: SAGE,
+    <Tab.Navigator screenOptions={{ headerShown: false, tabBarStyle: tabStyle, tabBarActiveTintColor: SAGE,
       tabBarActiveBackgroundColor: '#F2F5F2', tabBarInactiveTintColor: LIGHT, tabBarLabelStyle: { fontFamily: 'Nunito-Bold', fontSize: 10 } }}>
       <Tab.Screen name="EstudioHome" component={StudioHomeScreen} options={{ tabBarIcon: ({ color }) => <Feather name="home" size={22} color={color} /> }} />
       <Tab.Screen name="Search" component={SearchScreen} options={{ tabBarIcon: ({ color }) => <Feather name="search" size={22} color={color} /> }} />
@@ -93,8 +98,10 @@ function StudioTabs() {
 
 // ── CAMARA TABS ───────────────────────────────────────────────
 function CamaraTabs() {
+  const insets = useSafeAreaInsets()
+  const tabStyle = { backgroundColor: '#FFFFFF', borderTopWidth: 0.5, borderTopColor: '#E2E2DE', paddingBottom: insets.bottom + 4, paddingTop: 6, height: 56 + insets.bottom }
   return (
-    <Tab.Navigator screenOptions={{ headerShown: false, tabBarStyle, tabBarActiveTintColor: SAGE,
+    <Tab.Navigator screenOptions={{ headerShown: false, tabBarStyle: tabStyle, tabBarActiveTintColor: SAGE,
       tabBarActiveBackgroundColor: '#F2F5F2', tabBarInactiveTintColor: LIGHT, tabBarLabelStyle: { fontFamily: 'Nunito-Bold', fontSize: 10 } }}>
       <Tab.Screen name="CamaraTabs" component={CamaraDashboardScreen} options={{ tabBarIcon: ({ color }) => <Feather name="home" size={22} color={color} /> }} />
       <Tab.Screen name="Directorio" component={CamaraDirectoryScreen} options={{ tabBarIcon: ({ color }) => <Feather name="users" size={22} color={color} /> }} />
