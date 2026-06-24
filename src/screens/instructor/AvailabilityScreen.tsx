@@ -7,6 +7,7 @@ import { instructorAPI } from '../../lib/api'
 import { useAuthStore } from '../../store'
 import { Card, Button, Badge, colors, spacing, typography, radius } from '../../components/ui'
 import { Feather } from '@expo/vector-icons'
+import ZonasCABA from '../../components/ZonasCABA'
 
 type DayOfWeek = 'lunes' | 'martes' | 'miercoles' | 'jueves' | 'viernes' | 'sabado' | 'domingo'
 type ClassType = 'regular' | 'reemplazo'
@@ -96,9 +97,12 @@ export default function AvailabilityScreen() {
   }
 
   const removeSlot = (idx: number) => setSlots(prev => prev.filter((_, i) => i !== idx))
-  const toggleZone = (z: string) => setSelectedZones(prev =>
-    prev.includes(z) ? prev.filter(x => x !== z) : [...prev, z]
-  )
+  const ALL_NEIGHBORHOODS = ['Agronomía','Almagro','Balvanera','Barracas','Belgrano','Boedo','Caballito','Chacarita','Colegiales','Flores','Floresta','La Boca','Liniers','Mataderos','Monte Castro','Montserrat','Nueva Pompeya','Núñez','Palermo','Parque Chacabuco','Parque Patricios','Paternal','Puerto Madero','Recoleta','Retiro','San Cristóbal','San Nicolás','San Telmo','Versalles','Villa Crespo','Villa del Parque','Villa Devoto','Villa Lugano','Villa Luro','Villa Ortúzar','Villa Pueyrredón','Villa Real','Villa Urquiza']
+  const toggleZone = (z: string) => {
+    if (z === '__all__') { setSelectedZones(ALL_NEIGHBORHOODS); return }
+    if (z === '__clear__') { setSelectedZones([]); return }
+    setSelectedZones(prev => prev.includes(z) ? prev.filter(x => x !== z) : [...prev, z])
+  }
 
   const openAdd = (day: DayOfWeek) => {
     setAddingDay(day)
@@ -159,8 +163,8 @@ export default function AvailabilityScreen() {
                       const globalIdx = slots.indexOf(slot)
                       return (
                         <View key={i} style={s.slotRow}>
-                          <View style={[s.slotType, { backgroundColor: slot.type === 'regular' ? colors.sageLight : colors.warnBg }]}>
-                            <Text style={[s.slotTypeText, { color: slot.type === 'regular' ? colors.sage : colors.warnTx }]}>
+                          <View style={[s.slotType, { backgroundColor: slot.type === 'regular' ? colors.sageLight : colors.goldLight }]}>
+                            <Text style={[s.slotTypeText, { color: slot.type === 'regular' ? colors.sage : colors.gold }]}>
                               {slot.type === 'regular' ? 'Regular' : 'Reemplazo'}
                             </Text>
                           </View>
@@ -180,21 +184,7 @@ export default function AvailabilityScreen() {
 
         {activeTab === 'zonas' && (
           <>
-            <Text style={s.zoneInfo}>
-              Seleccioná los barrios de CABA donde estás disponible para trabajar.
-              {selectedZones.length > 0 ? ` Seleccionados: ${selectedZones.length}` : ''}
-            </Text>
-            <View style={s.zonesGrid}>
-              {NEIGHBORHOODS.map(n => (
-                <TouchableOpacity
-                  key={n}
-                  style={[s.zoneChip, selectedZones.includes(n) && s.zoneChipActive]}
-                  onPress={() => toggleZone(n)}
-                >
-                  <Text style={[s.zoneText, selectedZones.includes(n) && s.zoneTextActive]}>{n}</Text>
-                </TouchableOpacity>
-              ))}
-            </View>
+            <ZonasCABA selected={selectedZones} onToggle={toggleZone} />
           </>
         )}
 

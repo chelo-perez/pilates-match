@@ -102,7 +102,7 @@ export default function InstructorDashboardScreen({ navigation }: any) {
           </View>
           <View style={s.ratesRow}>
             <View style={s.rateCard}>
-              <Text style={s.rateLabel}>Estudio Socio</Text>
+              <Text style={s.rateLabel}>Clase regular</Text>
               <Text style={s.rateVal}>
                 {instructor?.rates?.rate_regular
                   ? '$' + instructor.rates.rate_regular.toLocaleString('es-AR')
@@ -110,7 +110,7 @@ export default function InstructorDashboardScreen({ navigation }: any) {
               </Text>
             </View>
             <View style={s.rateCard}>
-              <Text style={s.rateLabel}>Estudio No Socio</Text>
+              <Text style={s.rateLabel}>Reemplazo</Text>
               <Text style={s.rateVal}>
                 {instructor?.rates?.rate_replacement
                   ? '$' + instructor.rates.rate_replacement.toLocaleString('es-AR')

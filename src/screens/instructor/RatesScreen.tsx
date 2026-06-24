@@ -122,7 +122,7 @@ export default function InstructorRatesScreen({ navigation }: any) {
                 <Text style={styles.rangeName}>Mínimo</Text>
               </View>
               <View style={[styles.rangeCenterPill, { backgroundColor: accentColor + '12' }]}>
-                <Text style={[styles.rangeCenterText, { color: accentColor }]}>🏛️ Rango Cámara</Text>
+                <Text style={[styles.rangeCenterText, { color: accentColor }]}>Rango Cámara</Text>
               </View>
               <View style={{ alignItems: 'flex-end' }}>
                 <Text style={styles.rangeValue}>{fmt(rangeData.max_ars)}</Text>
@@ -161,8 +161,8 @@ export default function InstructorRatesScreen({ navigation }: any) {
         value={rateReplacement}
         setValue={setRateReplacement}
         rangeData={replacement}
-        accentColor={colors.redTx}
-        accentBg="#F5E8E8"
+        accentColor={colors.gold}
+        accentBg={colors.goldLight}
       />
 
       {/* Diferencia */}
@@ -177,7 +177,7 @@ export default function InstructorRatesScreen({ navigation }: any) {
 
       {/* Privacidad */}
       <View style={styles.privacyRow}>
-        <Text style={styles.lockIcon}>🔒</Text>
+        <Text style={styles.lockIcon}></Text>
         <Text style={styles.privacyText}>
           Tus valores son privados y solo se comparten cuando hay match con el presupuesto del estudio.
         </Text>
@@ -200,7 +200,7 @@ export default function InstructorRatesScreen({ navigation }: any) {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#F6F4F0' },
-  content: { padding: spacing.lg, paddingBottom: 40 },
+  content: { padding: spacing.lg, paddingTop: 52, paddingBottom: 40 },
   intro: { ...typography.body, color: colors.mid, lineHeight: 22, marginBottom: spacing.lg },
 
   card: {
@@ -249,7 +249,6 @@ const styles = StyleSheet.create({
     flexDirection: 'row', alignItems: 'flex-start', gap: spacing.sm,
     backgroundColor: colors.sageLighter, borderRadius: 10, padding: spacing.md, marginBottom: spacing.xl,
   },
-  lockIcon: { fontSize: 14, marginTop: 1 },
   privacyText: { ...typography.small, color: colors.mid, flex: 1, lineHeight: 18 },
 
   saveBtn: { backgroundColor: colors.sage, borderRadius: 99, paddingVertical: 15, alignItems: 'center' },

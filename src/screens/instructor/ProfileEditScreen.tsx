@@ -98,12 +98,20 @@ export default function ProfileEditScreen({ navigation }: any) {
     try {
       setUploading(true)
       const uri = result.assets[0].uri
-      const blob = await (await fetch(uri)).blob()
-      const url = await storage.uploadAvatar(user!.id, blob)
+      const ext = uri.split('.').pop() ?? 'jpg'
+      const path = `${user!.id}/avatar.${ext}`
+      const formData = new FormData()
+      formData.append('file', { uri, name: `avatar.${ext}`, type: `image/${ext}` } as any)
+      const { error: uploadError } = await supabase.storage
+        .from('avatars')
+        .upload(path, formData, { upsert: true, contentType: `image/${ext}` })
+      if (uploadError) throw uploadError
+      const url = supabase.storage.from('avatars').getPublicUrl(path).data.publicUrl
       await supabase.from('instructors').update({ avatar_url: url }).eq('id', instructor!.id)
       qc.invalidateQueries({ queryKey: ['my-instructor-profile'] })
+      Alert.alert('✓ Foto actualizada')
     } catch (e: any) {
-      Alert.alert('Error', e.message)
+      Alert.alert('Error al subir foto', e.message)
     } finally {
       setUploading(false)
     }
@@ -117,35 +125,36 @@ export default function ProfileEditScreen({ navigation }: any) {
     try {
       setUploadingCert(true)
 
-      // Subir archivo del certificado (PDF o imagen)
+      // Primero crear el registro para obtener el ID
+      const { data: certData, error: certError } = await supabase.from('certifications').insert({
+        instructor_id: instructor!.id,
+        name: certName.trim(),
+        institution: certInstitution.trim() || null,
+        year: certYear ? parseInt(certYear) : null,
+        verified: false,
+      }).select().single()
+
+      if (certError) throw certError
+
+      // Subir archivo usando storage.uploadCertification
       const docResult = await DocumentPicker.getDocumentAsync({
         type: ['application/pdf', 'image/*'],
         copyToCacheDirectory: true,
       })
 
-      let fileUrl = null
-      if (!docResult.canceled && docResult.assets?.[0]) {
-        const asset = docResult.assets[0]
-        const blob = await (await fetch(asset.uri)).blob()
-        const ext = asset.name.split('.').pop() ?? 'pdf'
-        const path = `certifications/${instructor!.id}/${Date.now()}.${ext}`
-        const { error: uploadError } = await supabase.storage
-          .from('documents')
-          .upload(path, blob, { contentType: asset.mimeType ?? 'application/pdf' })
-        if (!uploadError) {
-          const { data: urlData } = supabase.storage.from('documents').getPublicUrl(path)
-          fileUrl = urlData.publicUrl
+      if (!docResult.canceled && docResult.assets?.[0] && certData) {
+        try {
+          const asset = docResult.assets[0]
+          const blob = await (await fetch(asset.uri)).blob()
+          const fileUrl = await storage.uploadCertification(instructor!.id, certData.id, blob)
+          if (fileUrl) {
+            await supabase.from('certifications').update({ file_url: fileUrl }).eq('id', certData.id)
+          }
+        } catch (uploadErr) {
+          console.log('Error subiendo archivo:', uploadErr)
+          // El certificado se guardó igual, solo sin archivo
         }
       }
-
-      await supabase.from('certifications').insert({
-        instructor_id: instructor!.id,
-        name: certName.trim(),
-        institution: certInstitution.trim() || null,
-        year: certYear ? parseInt(certYear) : null,
-        file_url: fileUrl,
-        verified: false,
-      })
 
       qc.invalidateQueries({ queryKey: ['my-instructor-profile'] })
       setCertName('')
