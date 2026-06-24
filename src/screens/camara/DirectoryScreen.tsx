@@ -158,13 +158,13 @@ export default function DirectoryScreen({ navigation }: any) {
 }
 
 const styles = StyleSheet.create({
-  searchBox: { backgroundColor: colors.cream, padding: spacing.lg, paddingTop: 52, paddingBottom: spacing.sm },
+  searchBox: { backgroundColor: colors.white, padding: spacing.md, paddingTop: 52, paddingBottom: spacing.sm, borderBottomWidth: 0.5, borderColor: colors.borderLight },
   searchInput: { backgroundColor: colors.white, borderRadius: radius.md, padding: spacing.md, ...typography.body, color: colors.dark, borderWidth: 0.5, borderColor: colors.border },
-  filtersRow: { paddingVertical: spacing.sm },
+  filtersRow: { paddingVertical: spacing.xs, marginBottom: spacing.xs },
   chip: { paddingVertical: 6, paddingHorizontal: 14, borderRadius: 999, backgroundColor: colors.white, borderWidth: 0.5, borderColor: colors.border, marginRight: spacing.xs },
-  chipActive: { backgroundColor: colors.cream, borderColor: colors.cream },
+  chipActive: { backgroundColor: colors.sage, borderColor: colors.sage },
   chipText: { ...typography.small, color: colors.mid },
-  chipTextActive: { color: colors.dark, fontFamily: 'Nunito-SemiBold' },
+  chipTextActive: { color: colors.white, fontFamily: 'Nunito-SemiBold' },
   card: { flexDirection: 'row', alignItems: 'center', padding: spacing.md, backgroundColor: colors.white },
   name: { fontFamily: 'Nunito-SemiBold', fontSize: 14, color: colors.dark },
   meta: { ...typography.small, color: colors.mid, marginTop: 2 },

@@ -77,7 +77,6 @@ export default function RateRangesScreen() {
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
 
       <View style={styles.info}>
-        <Text style={{ fontSize: 18, marginRight: spacing.sm }}>💡</Text>
         <Text style={styles.infoText}>
           Estos rangos son visibles para todos los instructores y estudios como referencia del mercado. Actualizar regularmente según las condiciones actuales.
         </Text>

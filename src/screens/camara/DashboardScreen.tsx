@@ -54,10 +54,7 @@ export default function CamaraDashboardScreen({ navigation }: Props) {
       <View style={styles.header}>
         <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
           {/* Reemplazado el emoji del Badge por un ícono fino de templo/institución */}
-          <View style={styles.badgeWrapper}>
-            <Feather name="shield" size={12} color={colors.gold} style={{ marginRight: 4 }} />
-            <Badge label="Cámara de Pilates" color="gold" />
-          </View>
+          <Badge label="Cámara de Pilates" variant="gold" />
           <TouchableOpacity onPress={handleSignOut} style={styles.logoutButton}>
             <Feather name="log-out" size={13} color={colors.mid} style={{ marginRight: 4 }} />
             <Text style={{ fontSize: 12, color: colors.mid }}>Cerrar sesión</Text>
