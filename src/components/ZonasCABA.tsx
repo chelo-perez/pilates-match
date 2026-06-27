@@ -1,7 +1,7 @@
 // src/components/ZonasCABA.tsx
 import React from 'react'
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native'
-import { colors, spacing, radius } from './ui'
+import { colors, spacing, radius } from '../components/ui'
 
 const ZONAS: { nombre: string; barrios: string[] }[] = [
   { nombre: 'Norte', barrios: ['Belgrano','Núñez','Colegiales','Villa Urquiza','Villa Pueyrredón','Agronomía'] },

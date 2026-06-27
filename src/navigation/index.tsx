@@ -1,19 +1,35 @@
-// src/navigation/index.tsx
+// src/navigation/index.tsx — con íconos Lottie animados
 import React from 'react'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { View, Text, TouchableOpacity, ActivityIndicator, Alert } from 'react-native'
 import { NavigationContainer } from '@react-navigation/native'
 import { createNativeStackNavigator } from '@react-navigation/native-stack'
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs'
-import { Feather } from '@expo/vector-icons'
 import { useAuthStore } from '../store'
 import { supabase } from '../lib/supabase'
+import LottieTab from '../components/LottieTab'
 
+// Lottie assets
+const ICONS = {
+  home:     require('../../assets/lottie/tab-home.json'),
+  inbox:    require('../../assets/lottie/tab-inbox.json'),
+  calendar: require('../../assets/lottie/tab-calendar.json'),
+  rates:    require('../../assets/lottie/tab-rates.json'),
+  profile:  require('../../assets/lottie/tab-profile.json'),
+  search:   require('../../assets/lottie/tab-search.json'),
+  history:  require('../../assets/lottie/tab-history.json'),
+  star:     require('../../assets/lottie/tab-star.json'),
+  users:    require('../../assets/lottie/tab-users.json'),
+  reports:  require('../../assets/lottie/tab-reports.json'),
+}
+
+// Auth
 import LoginScreen from '../screens/auth/LoginScreen'
 import RegisterRoleScreen from '../screens/auth/RegisterRoleScreen'
 import RegisterInstructorScreen from '../screens/auth/RegisterInstructorScreen'
 import RegisterStudioScreen from '../screens/auth/RegisterStudioScreen'
 
+// Instructor
 import InstructorDashboardScreen from '../screens/instructor/DashboardScreen'
 import InstructorMatchesScreen from '../screens/instructor/MatchesScreen'
 import InstructorAvailabilityScreen from '../screens/instructor/AvailabilityScreen'
@@ -21,6 +37,7 @@ import InstructorProfileEditScreen from '../screens/instructor/ProfileEditScreen
 import InstructorRatesScreen from '../screens/instructor/RatesScreen'
 import EvaluateStudioScreen from '../screens/instructor/EvaluateStudioScreen'
 
+// Studio
 import StudioHomeScreen from '../screens/studio/HomeScreen'
 import SearchScreen from '../screens/studio/SearchScreen'
 import InstructorProfileScreen from '../screens/studio/InstructorProfileScreen'
@@ -30,6 +47,7 @@ import StudioHistoryScreen from '../screens/studio/HistoryScreen'
 import MembershipPaywallScreen from '../screens/studio/MembershipPaywallScreen'
 import PendingEvaluationsScreen from '../screens/studio/PendingEvaluationsScreen'
 
+// Camara
 import CamaraDashboardScreen from '../screens/camara/DashboardScreen'
 import CamaraDirectoryScreen from '../screens/camara/DirectoryScreen'
 import CamaraStudiosScreen from '../screens/camara/StudiosScreen'
@@ -59,14 +77,15 @@ function useTabStyle() {
     borderTopColor: '#E2E2DE',
     paddingBottom: insets.bottom || 8,
     paddingTop: 8,
-    height: 60 + (insets.bottom || 0),
+    height: 64 + (insets.bottom || 0),
   }
 }
 
-const tabOptions = (label: string, icon: string) => ({
-  tabBarLabel: label,
-  tabBarIcon: ({ color }: any) => <Feather name={icon as any} size={22} color={color} />,
-})
+function lottieIcon(source: any) {
+  return ({ focused }: { focused: boolean }) => (
+    <LottieTab source={source} focused={focused} size={26} />
+  )
+}
 
 const tabScreenOptions = (tabStyle: any) => ({
   headerShown: false,
@@ -86,17 +105,21 @@ function signOut(reset: () => void) {
   ])
 }
 
-// ── INSTRUCTOR TABS ───────────────────────────────────────────
+// ── INSTRUCTOR TABS ──────────────────────────────────────────
 function InstructorTabs() {
   const tabStyle = useTabStyle()
-  const { reset } = useAuthStore()
   return (
     <Tab.Navigator screenOptions={tabScreenOptions(tabStyle)}>
-      <Tab.Screen name="InstructorInicio" component={InstructorDashboardScreen} options={tabOptions('Inicio', 'home')} />
-      <Tab.Screen name="InstructorPropuestas" component={InstructorMatchesScreen} options={tabOptions('Propuestas', 'inbox')} />
-      <Tab.Screen name="InstructorHorarios" component={InstructorAvailabilityScreen} options={tabOptions('Horarios', 'calendar')} />
-      <Tab.Screen name="InstructorTarifas" component={InstructorRatesScreen} options={tabOptions('Tarifas', 'dollar-sign')} />
-      <Tab.Screen name="InstructorPerfil" component={InstructorProfileEditScreen} options={tabOptions('Perfil', 'user')} />
+      <Tab.Screen name="InstructorInicio" component={InstructorDashboardScreen}
+        options={{ tabBarLabel: 'Inicio', tabBarIcon: lottieIcon(ICONS.home) }} />
+      <Tab.Screen name="InstructorPropuestas" component={InstructorMatchesScreen}
+        options={{ tabBarLabel: 'Propuestas', tabBarIcon: lottieIcon(ICONS.inbox) }} />
+      <Tab.Screen name="InstructorHorarios" component={InstructorAvailabilityScreen}
+        options={{ tabBarLabel: 'Horarios', tabBarIcon: lottieIcon(ICONS.calendar) }} />
+      <Tab.Screen name="InstructorTarifas" component={InstructorRatesScreen}
+        options={{ tabBarLabel: 'Tarifas', tabBarIcon: lottieIcon(ICONS.rates) }} />
+      <Tab.Screen name="InstructorPerfil" component={InstructorProfileEditScreen}
+        options={{ tabBarLabel: 'Perfil', tabBarIcon: lottieIcon(ICONS.profile) }} />
     </Tab.Navigator>
   )
 }
@@ -106,10 +129,14 @@ function StudioTabs() {
   const tabStyle = useTabStyle()
   return (
     <Tab.Navigator screenOptions={tabScreenOptions(tabStyle)}>
-      <Tab.Screen name="EstudioHome" component={StudioHomeScreen} options={tabOptions('Inicio', 'home')} />
-      <Tab.Screen name="Search" component={SearchScreen} options={tabOptions('Buscar', 'search')} />
-      <Tab.Screen name="HistoryList" component={StudioHistoryScreen} options={tabOptions('Historial', 'clock')} />
-      <Tab.Screen name="PendingEvaluations" component={PendingEvaluationsScreen} options={tabOptions('Evaluar', 'star')} />
+      <Tab.Screen name="EstudioHome" component={StudioHomeScreen}
+        options={{ tabBarLabel: 'Inicio', tabBarIcon: lottieIcon(ICONS.home) }} />
+      <Tab.Screen name="Search" component={SearchScreen}
+        options={{ tabBarLabel: 'Buscar', tabBarIcon: lottieIcon(ICONS.search) }} />
+      <Tab.Screen name="HistoryList" component={StudioHistoryScreen}
+        options={{ tabBarLabel: 'Historial', tabBarIcon: lottieIcon(ICONS.history) }} />
+      <Tab.Screen name="PendingEvaluations" component={PendingEvaluationsScreen}
+        options={{ tabBarLabel: 'Evaluar', tabBarIcon: lottieIcon(ICONS.star) }} />
     </Tab.Navigator>
   )
 }
@@ -119,16 +146,21 @@ function CamaraTabs() {
   const tabStyle = useTabStyle()
   return (
     <Tab.Navigator screenOptions={tabScreenOptions(tabStyle)}>
-      <Tab.Screen name="CamaraTabs" component={CamaraDashboardScreen} options={tabOptions('Inicio', 'home')} />
-      <Tab.Screen name="Directorio" component={CamaraDirectoryScreen} options={tabOptions('Directorio', 'users')} />
-      <Tab.Screen name="Estudios" component={CamaraStudiosScreen} options={tabOptions('Estudios', 'briefcase')} />
-      <Tab.Screen name="Tarifas" component={CamaraRateRangesScreen} options={tabOptions('Tarifas', 'dollar-sign')} />
-      <Tab.Screen name="Reportes" component={CamaraReportsScreen} options={tabOptions('Reportes', 'bar-chart-2')} />
+      <Tab.Screen name="CamaraTabs" component={CamaraDashboardScreen}
+        options={{ tabBarLabel: 'Inicio', tabBarIcon: lottieIcon(ICONS.home) }} />
+      <Tab.Screen name="Directorio" component={CamaraDirectoryScreen}
+        options={{ tabBarLabel: 'Directorio', tabBarIcon: lottieIcon(ICONS.users) }} />
+      <Tab.Screen name="Estudios" component={CamaraStudiosScreen}
+        options={{ tabBarLabel: 'Estudios', tabBarIcon: lottieIcon(ICONS.history) }} />
+      <Tab.Screen name="Tarifas" component={CamaraRateRangesScreen}
+        options={{ tabBarLabel: 'Tarifas', tabBarIcon: lottieIcon(ICONS.rates) }} />
+      <Tab.Screen name="Reportes" component={CamaraReportsScreen}
+        options={{ tabBarLabel: 'Reportes', tabBarIcon: lottieIcon(ICONS.reports) }} />
     </Tab.Navigator>
   )
 }
 
-// ── ADMIN ─────────────────────────────────────────────────────
+// ── ADMIN ──────────────────────────────────────────────────────
 function AdminHome() {
   const { reset } = useAuthStore()
   return (
@@ -144,7 +176,7 @@ function AdminHome() {
   )
 }
 
-// ── ROOT NAVIGATOR ────────────────────────────────────────────
+// ── ROOT NAVIGATOR ─────────────────────────────────────────────
 export default function RootNavigator() {
   const { user, isLoading } = useAuthStore()
   if (isLoading) return <Loading />

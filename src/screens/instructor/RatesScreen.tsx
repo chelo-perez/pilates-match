@@ -177,7 +177,6 @@ export default function InstructorRatesScreen({ navigation }: any) {
 
       {/* Privacidad */}
       <View style={styles.privacyRow}>
-        <Text style={styles.lockIcon}></Text>
         <Text style={styles.privacyText}>
           Tus valores son privados y solo se comparten cuando hay match con el presupuesto del estudio.
         </Text>
