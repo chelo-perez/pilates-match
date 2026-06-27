@@ -1,0 +1,525 @@
+]633;E;for f in src/screens/camara/DashboardScreen.tsx src/screens/camara/DirectoryScreen.tsx src/screens/camara/RateRangesScreen.tsx;a05d9d57-8644-4467-a2fb-c73be66f58e9]633;C===FILE:src/screens/camara/DashboardScreen.tsx===
+// src/screens/camara/DashboardScreen.tsx
+import React from 'react'
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, RefreshControl, Alert } from 'react-native'
+import { useSafeAreaInsets } from 'react-native-safe-area-context'
+import { supabase } from '../../lib/supabase'
+import { useQueryClient } from '@tanstack/react-query'
+import { useCamaraDashboard, usePendingInstructors } from '../../hooks'
+import { Card, Badge, LoadingScreen, colors, spacing, radius, typography } from '../../components/ui'
+import type { NativeStackScreenProps } from '@react-navigation/native-stack'
+
+// IMPORTACIÓN DE ICONOS VECTORIALES PREMIUM
+import { Feather } from '@expo/vector-icons'
+
+type Props = NativeStackScreenProps<any, 'CamaraTabs'>
+
+export default function CamaraDashboardScreen({ navigation }: Props) {
+  const qc = useQueryClient()
+  const { data: stats, isLoading } = useCamaraDashboard()
+  const { data: pending = [] } = usePendingInstructors()
+  const [refreshing, setRefreshing] = React.useState(false)
+  const insets = useSafeAreaInsets()
+
+  const handleSignOut = () => {
+    Alert.alert('Cerrar sesión', '¿Seguro que querés salir?', [
+      { text: 'Cancelar', style: 'cancel' },
+      { text: 'Salir', style: 'destructive', onPress: async () => {
+        await supabase.auth.signOut()
+      }},
+    ])
+  }
+
+  const onRefresh = async () => {
+    setRefreshing(true)
+    await qc.invalidateQueries()
+    setRefreshing(false)
+  }
+
+  if (isLoading) return <LoadingScreen message="Cargando panel..." />
+
+  const KPIS = [
+    { value: stats?.member_studios ?? 0, label: 'Estudios miembros', color: colors.gold, bg: colors.goldLight },
+    { value: stats?.verified_instructors ?? 0, label: 'Instructores verificados', color: colors.sage, bg: colors.sageLight },
+    { value: stats?.pending_verifications ?? 0, label: 'Verificaciones pendientes', color: '#C4600A', bg: '#FFF0E0' },
+    { value: stats?.non_member_studios ?? 0, label: 'Estudios no socios', color: colors.sage, bg: colors.sageLighter },
+  ]
+
+  return (
+    <ScrollView
+      style={styles.container}
+      contentContainerStyle={[styles.content, { paddingTop: insets.top + 16 }]}
+      refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.gold} />}
+    >
+      {/* Header */}
+      <View style={styles.header}>
+        <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+          {/* Reemplazado el emoji del Badge por un ícono fino de templo/institución */}
+          <Badge label="Cámara de Pilates" variant="gold" />
+          <TouchableOpacity onPress={handleSignOut} style={styles.logoutButton}>
+            <Feather name="log-out" size={13} color={colors.mid} style={{ marginRight: 4 }} />
+            <Text style={{ fontSize: 12, color: colors.mid }}>Cerrar sesión</Text>
+          </TouchableOpacity>
+        </View>
+        <Text style={styles.title}>Panel de gestión</Text>
+        {/* Corrección global: se quitó la localización fija "Buenos Aires" */}
+        <Text style={styles.sub}>{new Date().toLocaleDateString('es-AR', { month: 'long', year: 'numeric' }).toLowerCase().replace(/\b\w/g, (l: string) => l.toLowerCase())}</Text>
+      </View>
+
+      {/* KPIs */}
+      <View style={styles.kpiGrid}>
+        {KPIS.map((kpi, i) => (
+          <View key={i} style={[styles.kpiCard, { backgroundColor: kpi.bg }]}>
+            <Text style={[styles.kpiValue, { color: kpi.color }]}>{kpi.value}</Text>
+            <Text style={styles.kpiLabel}>{kpi.label}</Text>
+          </View>
+        ))}
+      </View>
+
+      {/* Alertas */}
+      {pending.length > 0 && (
+        <TouchableOpacity onPress={() => navigation.navigate('Directorio')}>
+          <Card style={styles.alertCard}>
+            <Feather name="clock" size={20} color={colors.gold} style={{ marginRight: spacing.md }} />
+            <View style={{ flex: 1 }}>
+              <Text style={styles.alertTitle}>{pending.length} instructores pendientes</Text>
+              <Text style={styles.alertSub}>Esperando validación de documentación</Text>
+            </View>
+            <Feather name="chevron-right" size={16} color={colors.gold} />
+          </Card>
+        </TouchableOpacity>
+      )}
+
+      {/* Potenciales socios */}
+      {(stats?.non_member_studios ?? 0) > 0 && (
+        <TouchableOpacity onPress={() => navigation.navigate('Estudios')}>
+          <Card style={[styles.alertCard, { borderColor: colors.sage, backgroundColor: colors.sageLighter }]}>
+            <Feather name="help-circle" size={20} color={colors.sage} style={{ marginRight: spacing.md }} />
+            <View style={{ flex: 1 }}>
+              <Text style={[styles.alertTitle, { color: colors.sage }]}>
+                {stats?.non_member_studios} estudios potenciales socios
+              </Text>
+              <Text style={styles.alertSub}>Con actividad en la app este mes</Text>
+            </View>
+            <Feather name="chevron-right" size={16} color={colors.sage} />
+          </Card>
+        </TouchableOpacity>
+      )}
+
+      {/* Acciones rápidas */}
+      <Text style={styles.sectionTitle}>Acciones rápidas</Text>
+      <View style={styles.actionsGrid}>
+        {[
+          { icon: <Feather name="user-plus" size={24} color={colors.dark} />, label: 'Agregar instructor', screen: 'Directorio' },
+          { icon: <Feather name="check-circle" size={24} color={colors.dark} />, label: 'Verificar pendientes', screen: 'Directorio' },
+          { icon: <Feather name="briefcase" size={24} color={colors.dark} />, label: 'Ver estudios', screen: 'Estudios' },
+          { icon: <Feather name="dollar-sign" size={24} color={colors.dark} />, label: 'Valores por Hora', screen: 'Tarifas' },
+        ].map((a, i) => (
+          <TouchableOpacity key={i} style={styles.actionCard} onPress={() => navigation.navigate(a.screen)}>
+            <View style={styles.actionIconContainer}>{a.icon}</View>
+            <Text style={styles.actionLabel}>{a.label}</Text>
+          </TouchableOpacity>
+        ))}
+      </View>
+    </ScrollView>
+  )
+}
+
+const styles = StyleSheet.create({
+  container: { flex: 1, backgroundColor: colors.cream },
+  content: { padding: spacing.lg, paddingBottom: spacing.xxl },
+  header: { marginBottom: spacing.lg },
+  badgeWrapper: { flexDirection: 'row', alignItems: 'center' },
+  logoutButton: { flexDirection: 'row', alignItems: 'center' },
+  title: { fontFamily: 'Nunito-Bold', fontSize: 24, color: colors.dark, marginTop: spacing.xs },
+  sub: { ...typography.small, color: colors.mid, marginTop: 2, textTransform: 'capitalize' },
+  kpiGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm, marginBottom: spacing.lg },
+  kpiCard: { width: '47%', borderRadius: radius.md, padding: spacing.md },
+  kpiValue: { fontFamily: 'Nunito-SemiBold', fontSize: 28, lineHeight: 32 },
+  kpiLabel: { ...typography.small, color: colors.mid, marginTop: 4 },
+  alertCard: {
+    flexDirection: 'row', alignItems: 'center', padding: spacing.md,
+    marginBottom: spacing.sm, backgroundColor: colors.goldLight,
+    borderColor: colors.gold, borderWidth: 0.5,
+  },
+  alertTitle: { fontFamily: 'Nunito-SemiBold', fontSize: 13, color: colors.gold },
+  alertSub: { ...typography.small, color: colors.mid, marginTop: 2 },
+  sectionTitle: { ...typography.label, color: colors.dark, marginBottom: spacing.md, marginTop: spacing.md },
+  actionsGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm },
+  actionCard: {
+    width: '47%', backgroundColor: colors.white, borderRadius: radius.md,
+    padding: spacing.lg, alignItems: 'center', borderWidth: 0.5, borderColor: colors.border,
+  },
+  actionIconContainer: { marginBottom: spacing.xs, height: 32, justifyContent: 'center', alignItems: 'center' },
+  actionLabel: { ...typography.small, color: colors.dark, textAlign: 'center', fontFamily: 'Nunito-Medium' },
+})===END===
+===FILE:src/screens/camara/DirectoryScreen.tsx===
+// src/screens/camara/DirectoryScreen.tsx
+import React, { useState } from 'react'
+import {
+  View, Text, StyleSheet, FlatList, TextInput, TouchableOpacity, Modal, ScrollView, Alert
+} from 'react-native'
+import { usePendingInstructors, useVerifyInstructor } from '../../hooks'
+import { useQuery } from '@tanstack/react-query'
+import { db } from '../../lib/supabase'
+import { Card, Avatar, Badge, Button, EmptyState, LoadingScreen, colors, spacing, radius, typography } from '../../components/ui'
+import type { NativeStackScreenProps } from '@react-navigation/native-stack'
+
+type Filter = 'todos' | 'verificado' | 'pendiente' | 'inactivo'
+
+export default function DirectoryScreen({ navigation }: any) {
+  const [filter, setFilter] = useState<Filter>('todos')
+  const [search, setSearch] = useState('')
+  const [selectedInstructor, setSelectedInstructor] = useState<any>(null)
+  const verifyMutation = useVerifyInstructor()
+
+  const { data: allInstructors = [], isLoading, refetch } = useQuery({
+    queryKey: ['camara-instructors', filter],
+    queryFn: async () => {
+      let q = db.instructors()
+        .select(`*, certifications(*)`)
+        .order('created_at', { ascending: false })
+      if (filter !== 'todos') q = q.eq('verification_status', filter)
+      const { data, error } = await q
+      if (error) throw error
+      return data
+    },
+  })
+
+  const filtered = search
+    ? allInstructors.filter((i: any) => i.full_name.toLowerCase().includes(search.toLowerCase()))
+    : allInstructors
+
+  const handleVerify = async (id: string, approved: boolean) => {
+    Alert.alert(
+      approved ? '¿Verificar instructor?' : '¿Rechazar instructor?',
+      approved
+        ? 'Se activará su perfil público y recibirá una notificación.'
+        : 'El instructor recibirá una notificación de rechazo.',
+      [
+        { text: 'Cancelar', style: 'cancel' },
+        {
+          text: approved ? 'Verificar' : 'Rechazar',
+          style: approved ? 'default' : 'destructive',
+          onPress: async () => {
+            await verifyMutation.mutateAsync({ id, approved })
+            setSelectedInstructor(null)
+            refetch()
+          },
+        },
+      ]
+    )
+  }
+
+  const BADGE_COLOR: Record<string, any> = {
+    verificado: 'success', pendiente: 'warning', rechazado: 'danger', inactivo: 'sand',
+  }
+  const BADGE_LABEL: Record<string, string> = {
+    verificado: '✓ Verificado', pendiente: '⏳ Pendiente', rechazado: '✗ Rechazado', inactivo: 'Inactivo',
+  }
+
+  return (
+    <View style={{ flex: 1, backgroundColor: colors.cream }}>
+      {/* Search */}
+      <View style={styles.searchBox}>
+        <TextInput style={styles.searchInput} placeholder="Buscar instructor..."
+          placeholderTextColor={colors.light} value={search} onChangeText={setSearch} />
+      </View>
+
+      {/* Filters */}
+      <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.filtersRow} contentContainerStyle={{ paddingHorizontal: spacing.lg }}>
+        {(['todos', 'verificado', 'pendiente', 'inactivo'] as Filter[]).map(f => (
+          <TouchableOpacity key={f} style={[styles.chip, filter === f && styles.chipActive]} onPress={() => setFilter(f)}>
+            <Text style={[styles.chipText, filter === f && styles.chipTextActive]}>
+              {f.charAt(0).toUpperCase() + f.slice(1)}
+            </Text>
+          </TouchableOpacity>
+        ))}
+      </ScrollView>
+
+      {isLoading ? <LoadingScreen /> : (
+        <FlatList
+          data={filtered}
+          keyExtractor={(item: any) => item.id}
+          contentContainerStyle={{ padding: spacing.lg }}
+          ItemSeparatorComponent={() => <View style={{ height: spacing.sm }} />}
+          ListEmptyComponent={<EmptyState title="Sin instructores" subtitle="No hay resultados para este filtro." />}
+          renderItem={({ item }: any) => (
+            <Card style={styles.card} onPress={() => setSelectedInstructor(item)}>
+              <Avatar name={item.full_name} size={36} color={colors.sageMid} />
+              <View style={{ flex: 1, marginLeft: spacing.sm }}>
+                <Text style={styles.name}>{item.full_name}</Text>
+                <Text style={styles.meta}>{item.neighborhood} · DNI {item.dni}</Text>
+              </View>
+              <Badge label={BADGE_LABEL[item.verification_status]} color={BADGE_COLOR[item.verification_status]} />
+            </Card>
+          )}
+        />
+      )}
+
+      {/* FAB agregar */}
+      <TouchableOpacity style={styles.fab} onPress={() => navigation.navigate('AddInstructor')}>
+        <Text style={{ fontSize: 24, color: colors.white }}>+</Text>
+      </TouchableOpacity>
+
+      {/* Modal verificación */}
+      <Modal visible={!!selectedInstructor} animationType="slide" presentationStyle="pageSheet">
+        {selectedInstructor && (
+          <ScrollView style={{ flex: 1, backgroundColor: colors.cream }}>
+            <View style={styles.modalHeader}>
+              <View style={{ flex: 1 }}>
+                <Badge label={BADGE_LABEL[selectedInstructor.verification_status]}
+                  color={BADGE_COLOR[selectedInstructor.verification_status]} />
+                <Text style={styles.modalTitle}>{selectedInstructor.full_name}</Text>
+                <Text style={styles.modalSub}>
+                  {selectedInstructor.email} · {selectedInstructor.neighborhood}
+                </Text>
+              </View>
+              <TouchableOpacity onPress={() => setSelectedInstructor(null)}>
+                <Text style={{ fontSize: 22, color: colors.mid }}>✕</Text>
+              </TouchableOpacity>
+            </View>
+
+            <View style={{ padding: spacing.lg }}>
+              <Text style={styles.sectionTitle}>Certificaciones a validar</Text>
+              {(selectedInstructor.certifications ?? []).length === 0 ? (
+                <Text style={{ ...typography.body, color: colors.light }}>Sin certificaciones cargadas</Text>
+              ) : (selectedInstructor.certifications ?? []).map((cert: any) => (
+                <Card key={cert.id} style={styles.certCard}>
+                  <View style={{ flex: 1 }}>
+                    <Text style={styles.certName}>{cert.name}</Text>
+                    <Text style={styles.certMeta}>{cert.institution} · {cert.year}</Text>
+                  </View>
+                  {cert.verified
+                    ? <Badge label="✓ Verificada" color="success" />
+                    : <Badge label="Pendiente" color="warning" />
+                  }
+                </Card>
+              ))}
+
+              {selectedInstructor.verification_status === 'pendiente' && (
+                <View style={styles.verifyActions}>
+                  <Button label="✓ Verificar instructor" onPress={() => handleVerify(selectedInstructor.id, true)}
+                    isLoading={verifyMutation.isPending} fullWidth size="lg" style={{ marginBottom: spacing.sm }} />
+                  <Button label="Rechazar" variant="danger" onPress={() => handleVerify(selectedInstructor.id, false)}
+                    fullWidth />
+                </View>
+              )}
+            </View>
+          </ScrollView>
+        )}
+      </Modal>
+    </View>
+  )
+}
+
+const styles = StyleSheet.create({
+  searchBox: { backgroundColor: colors.white, padding: spacing.md, paddingTop: 52, paddingBottom: spacing.sm, borderBottomWidth: 0.5, borderColor: colors.borderLight },
+  searchInput: { backgroundColor: colors.white, borderRadius: radius.md, padding: spacing.md, ...typography.body, color: colors.dark, borderWidth: 0.5, borderColor: colors.border },
+  filtersRow: { paddingVertical: spacing.xs, marginBottom: spacing.xs },
+  chip: { paddingVertical: 6, paddingHorizontal: 14, borderRadius: 999, backgroundColor: colors.white, borderWidth: 0.5, borderColor: colors.border, marginRight: spacing.xs },
+  chipActive: { backgroundColor: colors.sage, borderColor: colors.sage },
+  chipText: { ...typography.small, color: colors.mid },
+  chipTextActive: { color: colors.white, fontFamily: 'Nunito-SemiBold' },
+  card: { flexDirection: 'row', alignItems: 'center', padding: spacing.md, backgroundColor: colors.white },
+  name: { fontFamily: 'Nunito-SemiBold', fontSize: 14, color: colors.dark },
+  meta: { ...typography.small, color: colors.mid, marginTop: 2 },
+  fab: {
+    position: 'absolute', bottom: spacing.xl, right: spacing.xl,
+    width: 52, height: 52, borderRadius: 26,
+    backgroundColor: colors.cream, alignItems: 'center', justifyContent: 'center',
+    shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.15, shadowRadius: 8, elevation: 8,
+  },
+  modalHeader: { flexDirection: 'row', alignItems: 'flex-start', padding: spacing.xl, backgroundColor: colors.goldLight },
+  modalTitle: { fontFamily: 'Nunito-Bold', fontSize: 20, color: colors.dark, marginTop: spacing.xs },
+  modalSub: { ...typography.small, color: colors.mid, marginTop: 2 },
+  sectionTitle: { ...typography.label, color: colors.dark, marginBottom: spacing.md },
+  certCard: { flexDirection: 'row', alignItems: 'center', padding: spacing.md, marginBottom: spacing.sm, backgroundColor: colors.white },
+  certName: { fontFamily: 'Nunito-Medium', fontSize: 13, color: colors.dark },
+  certMeta: { ...typography.small, color: colors.mid, marginTop: 2 },
+  verifyActions: { marginTop: spacing.xl },
+})
+===END===
+===FILE:src/screens/camara/RateRangesScreen.tsx===
+// src/screens/camara/RateRangesScreen.tsx
+import React, { useState, useEffect } from 'react'
+import { View, TouchableOpacity, Text, StyleSheet, ScrollView, Alert } from 'react-native'
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
+import { db } from '../../lib/supabase'
+import { camaraAPI } from '../../lib/api'
+import { Card, Button, Badge, LoadingScreen, colors, spacing, typography, radius } from '../../components/ui'
+
+
+function RangeInput({ value, onChange, min = 1, max = 20 }: { label: string; value: number; onChange: (v: number) => void; min?: number; max?: number }) {
+  const fmt = (n: number) => '$' + (n * 1000).toLocaleString('es-AR')
+  return (
+    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12, marginVertical: 8 }}>
+      <TouchableOpacity
+        onPress={() => onChange(Math.max(min, value - 1))}
+        style={{ width: 44, height: 44, borderRadius: 22, backgroundColor: colors.sageLight, alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: colors.sage }}
+      >
+        <Text style={{ fontSize: 22, color: colors.sage, fontFamily: 'Nunito-Bold' }}>−</Text>
+      </TouchableOpacity>
+      <View style={{ flex: 1, alignItems: 'center' }}>
+        <Text style={{ fontFamily: 'Nunito-Bold', fontSize: 22, color: colors.dark }}>{fmt(value)}</Text>
+        <Text style={{ fontFamily: 'Nunito-Regular', fontSize: 11, color: colors.mid }}>por hora</Text>
+      </View>
+      <TouchableOpacity
+        onPress={() => onChange(Math.min(max, value + 1))}
+        style={{ width: 44, height: 44, borderRadius: 22, backgroundColor: colors.sageLight, alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: colors.sage }}
+      >
+        <Text style={{ fontSize: 22, color: colors.sage, fontFamily: 'Nunito-Bold' }}>+</Text>
+      </TouchableOpacity>
+    </View>
+  )
+}
+
+export default function RateRangesScreen() {
+  const qc = useQueryClient()
+  const { data: ranges, isLoading } = useQuery({
+    queryKey: ['rate-ranges'],
+    queryFn: async () => {
+      const { data, error } = await db.rateRanges().select('*')
+      if (error) throw error
+      return data
+    },
+  })
+
+  const regular = ranges?.find((r: any) => r.class_type === 'regular')
+  const replacement = ranges?.find((r: any) => r.class_type === 'reemplazo')
+
+  const [regMin, setRegMin] = useState(6000)
+  const [regMax, setRegMax] = useState(9000)
+  const [repMin, setRepMin] = useState(9000)
+  const [repMax, setRepMax] = useState(14000)
+
+  useEffect(() => {
+    if (regular) { setRegMin(regular.min_ars); setRegMax(regular.max_ars) }
+    if (replacement) { setRepMin(replacement.min_ars); setRepMax(replacement.max_ars) }
+  }, [regular, replacement])
+
+  const updateMutation = useMutation({
+    mutationFn: async () => {
+      await Promise.all([
+        camaraAPI.updateRateRanges('regular', regMin, regMax),
+        camaraAPI.updateRateRanges('reemplazo', repMin, repMax),
+      ])
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['rate-ranges'] })
+      Alert.alert('✓ Guardado', 'Los rangos de referencia se actualizaron.')
+    },
+    onError: (e: any) => Alert.alert('Error', e.message),
+  })
+
+  if (isLoading) return <LoadingScreen />
+
+  const formatARS = (n: number) => `$${n.toLocaleString('es-AR')}`
+
+  return (
+    <ScrollView style={styles.container} contentContainerStyle={styles.content}>
+
+      <View style={styles.info}>
+        <Text style={styles.infoText}>
+          Estos rangos son visibles para todos los instructores y estudios como referencia del mercado. Actualizar regularmente según las condiciones actuales.
+        </Text>
+      </View>
+
+      {/* Clases Regulares */}
+      <Card style={styles.card}>
+        <View style={styles.cardHeader}>
+          <Text style={styles.cardTitle}>Clases regulares</Text>
+          <Badge label="Clases Regulares" color="sage" />
+        </View>
+
+        <Text style={styles.fieldLabel}>MÍNIMO</Text>
+        <View style={styles.sliderRow}>
+          <Text style={styles.sliderVal}>{formatARS(regMin)}</Text>
+        </View>
+        <RangeInput label="" value={Math.round(regMin / 1000)} onChange={v => setRegMin(v * 1000)} />
+
+        <Text style={styles.fieldLabel}>MÁXIMO</Text>
+        <View style={styles.sliderRow}>
+          <Text style={styles.sliderVal}>{formatARS(regMax)}</Text>
+        </View>
+        <RangeInput label="" value={Math.round(regMax / 1000)} onChange={v => setRegMax(v * 1000)} />
+
+        <View style={styles.rangeSummary}>
+          <Text style={styles.rangeText}>Rango actual: {formatARS(regMin)} – {formatARS(regMax)}</Text>
+        </View>
+      </Card>
+
+      {/* Reemplazos */}
+      <Card style={styles.card}>
+        <View style={styles.cardHeader}>
+          <Text style={styles.cardTitle}>Reemplazo</Text>
+          <Badge label="Reemplazos" color="blush" />
+        </View>
+
+        <Text style={styles.fieldLabel}>MÍNIMO</Text>
+        <View style={styles.sliderRow}>
+          <Text style={styles.sliderVal}>{formatARS(repMin)}</Text>
+        </View>
+        <RangeInput label="" value={Math.round(repMin / 1000)} onChange={v => setRepMin(v * 1000)} />
+
+        <Text style={styles.fieldLabel}>MÁXIMO</Text>
+        <View style={styles.sliderRow}>
+          <Text style={styles.sliderVal}>{formatARS(repMax)}</Text>
+        </View>
+        <RangeInput label="" value={Math.round(repMax / 1000)} onChange={v => setRepMax(v * 1000)} />
+
+        <View style={styles.rangeSummary}>
+          <Text style={styles.rangeText}>Rango actual: {formatARS(repMin)} – {formatARS(repMax)}</Text>
+        </View>
+
+        {repMin < regMin && (
+          <View style={styles.warning}>
+            <Text style={styles.warningText}>
+              ⚠️ El mínimo de reemplazo ({formatARS(repMin)}) es menor al de clase regular ({formatARS(regMin)}). El reemplazo siempre debe ser mayor.
+            </Text>
+          </View>
+        )}
+      </Card>
+
+      <Button
+        label="Guardar rangos"
+        onPress={() => updateMutation.mutate()}
+        isLoading={updateMutation.isPending}
+        disabled={repMin < regMin}
+        fullWidth size="lg"
+        style={{ marginTop: spacing.md }}
+      />
+
+      <Text style={styles.lastUpdate}>
+        Última actualización:{' '}
+        {regular?.updated_at
+          ? new Date(regular.updated_at).toLocaleDateString('es-AR', { day: 'numeric', month: 'long', year: 'numeric' })
+          : 'Nunca'
+        }
+      </Text>
+    </ScrollView>
+  )
+}
+
+const styles = StyleSheet.create({
+  container: { flex: 1, backgroundColor: colors.cream },
+  content: { padding: spacing.lg, paddingTop: 52, paddingBottom: spacing.xxl },
+  info: {
+    flexDirection: 'row', alignItems: 'flex-start',
+    backgroundColor: colors.sageLight, borderRadius: radius.md,
+    padding: spacing.md, marginBottom: spacing.lg,
+  },
+  infoText: { ...typography.small, color: colors.mid, flex: 1, lineHeight: 18 },
+  card: { padding: spacing.lg, marginBottom: spacing.md, backgroundColor: colors.white },
+  cardHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: spacing.lg },
+  cardTitle: { fontFamily: 'Nunito-SemiBold', fontSize: 16, color: colors.dark },
+  fieldLabel: { ...typography.label, color: colors.mid, marginBottom: spacing.xs },
+  sliderRow: { flexDirection: 'row', justifyContent: 'flex-end', marginBottom: spacing.xs },
+  sliderVal: { fontFamily: 'Nunito-SemiBold', fontSize: 18, color: colors.dark },
+  rangeSummary: { backgroundColor: colors.sageLight, borderRadius: radius.sm, padding: spacing.sm, marginTop: spacing.sm },
+  rangeText: { ...typography.small, color: colors.sage, textAlign: 'center', fontFamily: 'Nunito-Medium' },
+  warning: { backgroundColor: colors.warnBg, borderRadius: radius.sm, padding: spacing.sm, marginTop: spacing.sm },
+  warningText: { ...typography.small, color: colors.warnTx, lineHeight: 18 },
+  lastUpdate: { ...typography.small, color: colors.light, textAlign: 'center', marginTop: spacing.lg },
+})
+===END===

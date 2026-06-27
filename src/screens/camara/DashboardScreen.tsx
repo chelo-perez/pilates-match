@@ -62,7 +62,7 @@ export default function CamaraDashboardScreen({ navigation }: Props) {
         </View>
         <Text style={styles.title}>Panel de gestión</Text>
         {/* Corrección global: se quitó la localización fija "Buenos Aires" */}
-        <Text style={styles.sub}>{new Date().toLocaleDateString('es-AR', { month: 'long', year: 'numeric' }).toLowerCase().replace(/\b\w/g, (l: string) => l.toLowerCase())}</Text>
+        <Text style={styles.sub}>{new Date().toLocaleDateString('es-AR', { month: 'long', year: 'numeric' }).replace(/\b(\w)/g, (l: string) => l.toLowerCase())}</Text>
       </View>
 
       {/* KPIs */}
@@ -109,14 +109,14 @@ export default function CamaraDashboardScreen({ navigation }: Props) {
       <Text style={styles.sectionTitle}>Acciones rápidas</Text>
       <View style={styles.actionsGrid}>
         {[
-          { icon: <Feather name="user-plus" size={24} color={colors.dark} />, label: 'Agregar instructor', screen: 'Directorio' },
-          { icon: <Feather name="check-circle" size={24} color={colors.dark} />, label: 'Verificar pendientes', screen: 'Directorio' },
-          { icon: <Feather name="briefcase" size={24} color={colors.dark} />, label: 'Ver estudios', screen: 'Estudios' },
-          { icon: <Feather name="dollar-sign" size={24} color={colors.dark} />, label: 'Valores por Hora', screen: 'Tarifas' },
+          { label: 'Directorio de instructores', screen: 'Directorio' },
+          { label: 'Verificar pendientes', screen: 'Directorio' },
+          { label: 'Estudios registrados', screen: 'Estudios' },
+          { label: 'Rangos de tarifas', screen: 'Tarifas' },
         ].map((a, i) => (
           <TouchableOpacity key={i} style={styles.actionCard} onPress={() => navigation.navigate(a.screen)}>
-            <View style={styles.actionIconContainer}>{a.icon}</View>
             <Text style={styles.actionLabel}>{a.label}</Text>
+            <Text style={styles.actionArrow}>→</Text>
           </TouchableOpacity>
         ))}
       </View>
@@ -147,8 +147,9 @@ const styles = StyleSheet.create({
   actionsGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm },
   actionCard: {
     width: '47%', backgroundColor: colors.white, borderRadius: radius.md,
-    padding: spacing.lg, alignItems: 'center', borderWidth: 0.5, borderColor: colors.border,
+    padding: spacing.md, borderWidth: 0.5, borderColor: colors.border,
+    flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
   },
-  actionIconContainer: { marginBottom: spacing.xs, height: 32, justifyContent: 'center', alignItems: 'center' },
-  actionLabel: { ...typography.small, color: colors.dark, textAlign: 'center', fontFamily: 'Nunito-Medium' },
+  actionLabel: { fontFamily: 'Nunito-Medium', fontSize: 12, color: colors.dark, flex: 1 },
+  actionArrow: { fontFamily: 'Nunito-Regular', fontSize: 16, color: colors.light, marginLeft: 4 },
 })

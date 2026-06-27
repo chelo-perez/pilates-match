@@ -90,15 +90,9 @@ export default function RateRangesScreen() {
         </View>
 
         <Text style={styles.fieldLabel}>MÍNIMO</Text>
-        <View style={styles.sliderRow}>
-          <Text style={styles.sliderVal}>{formatARS(regMin)}</Text>
-        </View>
         <RangeInput label="" value={Math.round(regMin / 1000)} onChange={v => setRegMin(v * 1000)} />
 
         <Text style={styles.fieldLabel}>MÁXIMO</Text>
-        <View style={styles.sliderRow}>
-          <Text style={styles.sliderVal}>{formatARS(regMax)}</Text>
-        </View>
         <RangeInput label="" value={Math.round(regMax / 1000)} onChange={v => setRegMax(v * 1000)} />
 
         <View style={styles.rangeSummary}>
@@ -110,19 +104,13 @@ export default function RateRangesScreen() {
       <Card style={styles.card}>
         <View style={styles.cardHeader}>
           <Text style={styles.cardTitle}>Reemplazo</Text>
-          <Badge label="Reemplazos" color="blush" />
+          <Badge label="Reemplazos" color="gold" />
         </View>
 
         <Text style={styles.fieldLabel}>MÍNIMO</Text>
-        <View style={styles.sliderRow}>
-          <Text style={styles.sliderVal}>{formatARS(repMin)}</Text>
-        </View>
         <RangeInput label="" value={Math.round(repMin / 1000)} onChange={v => setRepMin(v * 1000)} />
 
         <Text style={styles.fieldLabel}>MÁXIMO</Text>
-        <View style={styles.sliderRow}>
-          <Text style={styles.sliderVal}>{formatARS(repMax)}</Text>
-        </View>
         <RangeInput label="" value={Math.round(repMax / 1000)} onChange={v => setRepMax(v * 1000)} />
 
         <View style={styles.rangeSummary}>
