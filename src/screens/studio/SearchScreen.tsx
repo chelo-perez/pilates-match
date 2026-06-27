@@ -112,7 +112,9 @@ export default function SearchScreen({ navigation }: Props) {
         <ScrollView style={filtersStyles.content}>
           <Text style={filtersStyles.sectionLabel}>BARRIO / ZONA</Text>
           <View style={filtersStyles.chipGrid}>
-            {['Palermo', 'Belgrano', 'Recoleta', 'San Isidro', 'Caballito'].map((b) => (
+            {['Palermo','Belgrano','Recoleta','Caballito','Almagro','Villa Crespo',
+              'Colegiales','Núñez','Flores','San Telmo','Barracas','Villa Urquiza',
+              'Chacarita','Boedo','Balvanera'].map((b) => (
               <TouchableOpacity
                 key={b}
                 style={[filtersStyles.chip, filters.neighborhood === b && filtersStyles.chipActive]}

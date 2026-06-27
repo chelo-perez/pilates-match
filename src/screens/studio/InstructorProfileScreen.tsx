@@ -62,7 +62,7 @@ export default function InstructorProfileScreen({ navigation, route }: Props) {
           <View style={{ flex: 1, marginLeft: spacing.md }}>
             <Text style={styles.name}>{instructor.full_name}</Text>
             {instructor.neighborhood && (
-              <Text style={styles.zone}>📍 {instructor.neighborhood}</Text>
+              <Text style={styles.zone}>{instructor.neighborhood}</Text>
             )}
             <View style={{ flexDirection: 'row', gap: spacing.xs, marginTop: spacing.xs, flexWrap: 'wrap' }}>
               {instructor.verification_status === 'verificado' && (
@@ -146,7 +146,7 @@ export default function InstructorProfileScreen({ navigation, route }: Props) {
                   <Text style={styles.sectionTitle}>Especialidades</Text>
                   <View style={styles.chipRow}>
                     {instructor.specialties.map((sp: any) => (
-                      <Badge key={sp.id} label={SPECIALTY_LABELS[sp.specialty] ?? sp.specialty} color="lavender" />
+                      <Badge key={sp.id} label={SPECIALTY_LABELS[sp.specialty] ?? sp.specialty} color="sage" />
                     ))}
                   </View>
                 </Card>
@@ -180,7 +180,6 @@ export default function InstructorProfileScreen({ navigation, route }: Props) {
                 <Text style={styles.emptyText}>Sin certificaciones cargadas</Text>
               ) : instructor.certifications.map((cert: any) => (
                 <View key={cert.id} style={styles.certRow}>
-                  <Text style={{ fontSize: 22, marginRight: spacing.sm }}>🎓</Text>
                   <View style={{ flex: 1 }}>
                     <Text style={styles.certName}>{cert.name}</Text>
                     <Text style={styles.certMeta}>{cert.institution} · {cert.year}</Text>
@@ -230,7 +229,7 @@ export default function InstructorProfileScreen({ navigation, route }: Props) {
                   <Text style={styles.sectionTitle}>Zonas donde trabaja</Text>
                   <View style={styles.chipRow}>
                     {instructor.zones.map((z: any) => (
-                      <Badge key={z.id} label={z.neighborhood} color="sand" />
+                      <Badge key={z.id} label={z.neighborhood} color="sage" />
                     ))}
                   </View>
                 </Card>

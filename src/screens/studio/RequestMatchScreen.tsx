@@ -64,7 +64,7 @@ export default function RequestMatchScreen({ navigation, route }: Props) {
             <Text style={styles.instructorName}>{instructorName}</Text>
             <Text style={styles.instructorMeta}>Disponible para este horario</Text>
           </View>
-          <Badge label="Disponible" color="success" />
+          <Badge label="Disponible" color="sage" />
         </Card>
 
         {/* Tipo de cobertura */}
@@ -129,7 +129,6 @@ export default function RequestMatchScreen({ navigation, route }: Props) {
 
         {/* Info privacidad tarifas */}
         <View style={styles.privacyNote}>
-          <Text style={{ fontSize: 14, marginRight: spacing.sm }}>🔒</Text>
           <Text style={styles.privacyText}>
             Al confirmar, ambas partes verán las tarifas acordadas. El instructor recibirá una notificación push.
           </Text>
@@ -149,7 +148,7 @@ export default function RequestMatchScreen({ navigation, route }: Props) {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.cream },
-  content: { padding: spacing.lg, paddingBottom: spacing.xxl },
+  content: { padding: spacing.lg, paddingTop: 52, paddingBottom: spacing.xxl },
   instructorCard: { flexDirection: 'row', alignItems: 'center', padding: spacing.lg, marginBottom: spacing.md, backgroundColor: colors.white },
   instructorName: { fontFamily: 'Nunito-SemiBold', fontSize: 15, color: colors.dark },
   instructorMeta: { ...typography.small, color: colors.mid, marginTop: 2 },

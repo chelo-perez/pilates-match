@@ -50,7 +50,7 @@ export default function HistoryScreen({ navigation }: Props) {
                 <Text style={styles.name}>{item.instructor?.full_name}</Text>
                 <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.xs, marginTop: 3 }}>
                   <Badge label={item.class_type === 'regular' ? 'Regular' : 'Reemplazo'}
-                    color={item.class_type === 'regular' ? 'sage' : 'blush'} />
+                    color={item.class_type === 'regular' ? 'sage' : 'gold'} />
                   <Text style={styles.date}>{item.class_date}</Text>
                 </View>
               </View>

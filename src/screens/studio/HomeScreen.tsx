@@ -20,6 +20,7 @@ import type { NativeStackScreenProps } from '@react-navigation/native-stack'
 type Props = NativeStackScreenProps<any, 'EstudioHome'>
 
 export default function HomeScreen({ navigation }: Props) {
+  const { reset } = useAuthStore()
   const qc = useQueryClient()
   const { data: studio, isLoading } = useMyStudio()
   const studioId = studio?.id
@@ -96,7 +97,7 @@ export default function HomeScreen({ navigation }: Props) {
             {membership?.status === 'activa' ? ' · Socia Cámara' : ''}
               </Text>
             </View>
-            <TouchableOpacity onPress={async () => { await supabase.auth.signOut() }} style={{ padding: 8 }}>
+            <TouchableOpacity onPress={async () => { await supabase.auth.signOut(); reset() }} style={{ padding: 8 }}>
               <Feather name="log-out" size={20} color="#9A9A9A" />
             </TouchableOpacity>
           </View>
