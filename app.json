@@ -2,7 +2,7 @@
   "expo": {
     "name": "Trabajo Más Fácil",
     "slug": "pilates-match",
-    "owner": "chelo.perez2",
+    "owner": "chelo.perez3",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
@@ -60,7 +60,7 @@
     ],
     "extra": {
       "eas": {
-        "projectId": "b4a4203f-9798-4618-9919-e783d7c8ef76"
+        "projectId": "55e2dd48-7479-44f9-812a-3ab2bd8a9861"
       }
     }
   }
