@@ -64,7 +64,7 @@ export default function RateRangesScreen() {
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['rate-ranges'] })
-      Alert.alert('✓ Guardado', 'Los rangos de referencia se actualizaron.')
+      showToast('Rangos actualizados correctamente')
     },
     onError: (e: any) => Alert.alert('Error', e.message),
   })

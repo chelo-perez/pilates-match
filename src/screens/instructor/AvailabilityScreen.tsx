@@ -6,6 +6,8 @@ import { supabase } from '../../lib/supabase'
 import { instructorAPI } from '../../lib/api'
 import { useAuthStore } from '../../store'
 import { Card, Button, Badge, colors, spacing, typography, radius } from '../../components/ui'
+import Toast from '../../components/Toast'
+import { useToast } from '../../hooks/useToast'
 import { Feather } from '@expo/vector-icons'
 import ZonasCABA from '../../components/ZonasCABA'
 
@@ -39,6 +41,7 @@ const NEIGHBORHOODS = [
 
 export default function AvailabilityScreen() {
   const user = useAuthStore(s => s.user)
+  const { toast, showToast, hideToast } = useToast()
   const qc = useQueryClient()
   const [slots, setSlots] = useState<Slot[]>([])
   const [selectedZones, setSelectedZones] = useState<string[]>([])
@@ -83,7 +86,7 @@ export default function AvailabilityScreen() {
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['my-instructor-availability'] })
-      Alert.alert('✓ Guardado', 'Tu disponibilidad se actualizó correctamente.')
+      showToast('Disponibilidad guardada correctamente')
     },
   })
 

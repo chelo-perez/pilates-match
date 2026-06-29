@@ -8,6 +8,8 @@ import { supabase } from '../../lib/supabase'
 import { storage } from '../../lib/supabase'
 import { useAuthStore } from '../../store'
 import { Avatar, Button, Input, colors, spacing, radius } from '../../components/ui'
+import Toast from '../../components/Toast'
+import { useToast } from '../../hooks/useToast'
 import { Feather } from '@expo/vector-icons'
 
 const SPECIALTIES = [
@@ -29,6 +31,8 @@ const NEIGHBORHOODS = [
 export default function ProfileEditScreen({ navigation }: any) {
   const user = useAuthStore(s => s.user)
   const { reset } = useAuthStore()
+  const { toast, showToast, hideToast } = useToast()
+  const { toast, showToast, hideToast } = useToast()
   const qc = useQueryClient()
   const [bio, setBio] = useState('')
   const [neighborhood, setNeighborhood] = useState('')
@@ -74,7 +78,7 @@ export default function ProfileEditScreen({ navigation }: any) {
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['my-instructor-profile'] })
-      Alert.alert('✓ Perfil actualizado')
+      showToast('Perfil actualizado correctamente')
     },
   })
 
@@ -97,7 +101,7 @@ export default function ProfileEditScreen({ navigation }: any) {
       const url = supabase.storage.from('avatars').getPublicUrl(path).data.publicUrl
       await supabase.from('instructors').update({ avatar_url: url }).eq('id', instructor!.id)
       qc.invalidateQueries({ queryKey: ['my-instructor-profile'] })
-      Alert.alert('✓ Foto actualizada')
+      showToast('Foto de perfil actualizada')
     } catch (e: any) {
       Alert.alert('Error al subir foto', e.message)
     } finally { setUploading(false) }
@@ -124,7 +128,7 @@ export default function ProfileEditScreen({ navigation }: any) {
       }
       qc.invalidateQueries({ queryKey: ['my-instructor-profile'] })
       setCertName(''); setCertInstitution(''); setCertYear(''); setShowAddCert(false)
-      Alert.alert('✓ Certificado agregado')
+      showToast('Certificado agregado correctamente')
     } catch (e: any) { Alert.alert('Error', e.message)
     } finally { setUploadingCert(false) }
   }

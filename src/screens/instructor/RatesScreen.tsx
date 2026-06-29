@@ -2,6 +2,8 @@
 import React, { useState, useEffect } from 'react'
 import { View, Text, StyleSheet, ScrollView, Alert, TouchableOpacity } from 'react-native'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
+import Toast from '../../components/Toast'
+import { useToast } from '../../hooks/useToast'
 import { supabase } from '../../lib/supabase'
 import { instructorAPI } from '../../lib/api'
 import { useAuthStore } from '../../store'
@@ -10,6 +12,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context'
 
 export default function InstructorRatesScreen({ navigation }: any) {
   const user = useAuthStore(s => s.user)
+  const { toast, showToast, hideToast } = useToast()
   const qc = useQueryClient()
 
   const { data: instructor } = useQuery({

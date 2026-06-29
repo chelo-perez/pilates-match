@@ -10,6 +10,8 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { db } from '../../lib/supabase'
 import { Card, Badge, EmptyState, LoadingScreen, colors, spacing, radius, typography } from '../../components/ui'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
+import Toast from '../../components/Toast'
+import { useToast } from '../../hooks/useToast'
 import { Feather } from '@expo/vector-icons'
 
 type Filter = 'todos' | 'miembro' | 'no_miembro'
@@ -20,6 +22,7 @@ function formatDate(dateStr: string | null) {
 }
 
 export default function CamaraStudiosScreen() {
+  const { toast, showToast, hideToast } = useToast()
   const qc = useQueryClient()
   const [filter, setFilter]   = useState<Filter>('todos')
   const [search, setSearch]   = useState('')
