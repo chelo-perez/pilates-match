@@ -1,24 +1,33 @@
+// src/screens/auth/LoginScreen.tsx
 import React, { useState } from 'react'
 import {
-  View, Text, TextInput, StyleSheet, TouchableOpacity,
-  KeyboardAvoidingView, Platform, ScrollView, ActivityIndicator, Alert
+  View, Text, StyleSheet, TouchableOpacity,
+  KeyboardAvoidingView, Platform, ScrollView, ActivityIndicator,
 } from 'react-native'
+import { LinearGradient } from 'expo-linear-gradient'
+import Svg, { Path } from 'react-native-svg'
 import { supabase } from '../../lib/supabase'
 import { useAuthStore } from '../../store'
+import { colors, spacing, radius, Input } from '../../components/ui'
+import Toast from '../../components/Toast'
+import { useToast } from '../../hooks/useToast'
+import { useSafeAreaInsets } from 'react-native-safe-area-context'
 
 export default function LoginScreen({ navigation }: any) {
-  const [email, setEmail] = useState('')
+  const [email,    setEmail]    = useState('')
   const [password, setPassword] = useState('')
-  const [loading, setLoading] = useState(false)
-  const [errors, setErrors] = useState<{ email?: string; password?: string }>({})
+  const [loading,  setLoading]  = useState(false)
+  const [errors,   setErrors]   = useState<{ email?: string; password?: string }>({})
   const { setUser, setSession } = useAuthStore()
+  const { toast, showToast, hideToast } = useToast()
+  const insets = useSafeAreaInsets()
 
   const validate = () => {
     const e: { email?: string; password?: string } = {}
-    if (!email.trim()) e.email = 'El email es obligatorio'
+    if (!email.trim())              e.email    = 'El email es obligatorio'
     else if (!/\S+@\S+\.\S+/.test(email)) e.email = 'Email inválido'
-    if (!password) e.password = 'La contraseña es obligatoria'
-    else if (password.length < 6) e.password = 'Mínimo 6 caracteres'
+    if (!password)                  e.password = 'La contraseña es obligatoria'
+    else if (password.length < 6)   e.password = 'Mínimo 6 caracteres'
     setErrors(e)
     return Object.keys(e).length === 0
   }
@@ -34,24 +43,20 @@ export default function LoginScreen({ navigation }: any) {
       if (error) throw error
 
       const { data: profile, error: profileError } = await supabase
-        .from('users')
-        .select('*')
-        .eq('id', authData.user.id)
-        .single()
-
+        .from('users').select('*').eq('id', authData.user.id).single()
       if (profileError) throw profileError
 
       setSession(authData.session)
       setUser(profile)
 
       const role = profile.role
-      if (role === 'instructor') navigation.replace('InstructorTabs')
+      if      (role === 'instructor')               navigation.replace('InstructorTabs')
       else if (role === 'studio' || role === 'estudio') navigation.replace('EstudioHome')
-      else if (role === 'camara_admin') navigation.replace('CamaraTabs')
-      else if (role === 'super_admin') navigation.replace('AdminTabs')
+      else if (role === 'camara_admin')             navigation.replace('CamaraTabs')
+      else if (role === 'super_admin')              navigation.replace('AdminTabs')
 
     } catch (err: any) {
-      Alert.alert('Error al iniciar sesión', err.message || 'Verificá tu email y contraseña')
+      showToast(err.message?.includes('Invalid') ? 'Email o contraseña incorrectos' : err.message ?? 'Error al iniciar sesión')
     } finally {
       setLoading(false)
     }
@@ -60,58 +65,55 @@ export default function LoginScreen({ navigation }: any) {
   return (
     <KeyboardAvoidingView
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-      style={{ flex: 1, backgroundColor: '#F9F9F6' }}
+      style={{ flex: 1, backgroundColor: colors.cream }}
     >
-      <ScrollView
-        contentContainerStyle={s.container}
-        keyboardShouldPersistTaps="handled"
-      >
-        {/* Logo */}
-        <View style={s.logoWrap}>
-          <View style={s.logoCircle}>
-            <Text style={s.logoText}>TF</Text>
-          </View>
-          <Text style={s.appName}>Trabajo Más Fácil</Text>
-          <Text style={s.appSub}>La comunidad de Pilates de Buenos Aires</Text>
-        </View>
+      <ScrollView contentContainerStyle={s.scroll} keyboardShouldPersistTaps="handled">
 
-        {/* Card */}
-        <View style={s.card}>
-          {/* Email */}
-          <View style={s.field}>
-            <Text style={s.label}>EMAIL</Text>
-            <TextInput
-              style={[s.input, errors.email ? s.inputError : null]}
-              value={email}
-              onChangeText={setEmail}
-              placeholder="hola@mipilates.com"
-              placeholderTextColor="#9A9A9A"
-              keyboardType="email-address"
-              autoCapitalize="none"
-              autoCorrect={false}
-            />
-            {errors.email ? <Text style={s.error}>{errors.email}</Text> : null}
+        {/* Hero con gradiente */}
+        <LinearGradient
+          colors={['#2D3F31', '#4A5D4E', '#5C7060']}
+          start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}
+          style={[s.hero, { paddingTop: insets.top + 24 }]}
+        >
+          <View style={s.hblob1} />
+          <View style={s.hblob2} />
+          <View style={s.heroInner}>
+            <View style={s.logoRing}>
+              <Text style={s.logoTxt}>TF</Text>
+            </View>
+            <Text style={s.appName}>Trabajo Más Fácil</Text>
+            <Text style={s.appSub}>La comunidad de Pilates de Buenos Aires</Text>
           </View>
+          <Svg width="100%" height={28} viewBox="0 0 375 28" preserveAspectRatio="none" style={s.wave}>
+            <Path d="M0,14 C93,28 187,0 280,14 C327,21 351,24 375,14 L375,28 L0,28 Z" fill={colors.cream} />
+          </Svg>
+        </LinearGradient>
 
-          {/* Password */}
-          <View style={s.field}>
-            <Text style={s.label}>CONTRASEÑA</Text>
-            <TextInput
-              style={[s.input, errors.password ? s.inputError : null]}
-              value={password}
-              onChangeText={setPassword}
-              placeholder="••••••••"
-              placeholderTextColor="#9A9A9A"
-              secureTextEntry
-            />
-            {errors.password ? <Text style={s.error}>{errors.password}</Text> : null}
-          </View>
+        {/* Formulario */}
+        <View style={s.form}>
+          <Input
+            label="Email"
+            placeholder="hola@mipilates.com"
+            value={email}
+            onChangeText={setEmail}
+            keyboardType="email-address"
+            autoCapitalize="none"
+            error={errors.email}
+          />
+          <Input
+            label="Contraseña"
+            placeholder="••••••••"
+            value={password}
+            onChangeText={setPassword}
+            secureTextEntry
+            error={errors.password}
+          />
 
-          {/* Botón */}
           <TouchableOpacity
             style={[s.btn, loading && s.btnDisabled]}
             onPress={handleLogin}
             disabled={loading}
+            activeOpacity={0.85}
           >
             {loading
               ? <ActivityIndicator color="#fff" />
@@ -119,11 +121,7 @@ export default function LoginScreen({ navigation }: any) {
             }
           </TouchableOpacity>
 
-          {/* Registro */}
-          <TouchableOpacity
-            style={s.registerLink}
-            onPress={() => navigation.navigate('RegisterRole')}
-          >
+          <TouchableOpacity style={s.registerLink} onPress={() => navigation.navigate('RegisterRole')}>
             <Text style={s.registerTxt}>
               ¿No tenés cuenta?{' '}
               <Text style={s.registerBold}>Registrate</Text>
@@ -133,30 +131,34 @@ export default function LoginScreen({ navigation }: any) {
 
         <Text style={s.footer}>Avalado por la Cámara de Pilates de Buenos Aires</Text>
       </ScrollView>
+
+      <Toast
+        visible={toast.visible}
+        message={toast.message}
+        type={toast.type}
+        onHide={hideToast}
+      />
     </KeyboardAvoidingView>
   )
 }
 
-const C = { sage: '#4A5D4E', sageLl: '#F2F5F2', cream: '#F9F9F6', dark: '#1A1A1A', mid: '#5C5C5C', light: '#9A9A9A', border: '#E2E2DE', red: '#C0392B' }
-
 const s = StyleSheet.create({
-  container:    { flexGrow: 1, backgroundColor: C.cream, alignItems: 'center', justifyContent: 'center', padding: 24 },
-  logoWrap:     { alignItems: 'center', marginBottom: 32 },
-  logoCircle:   { width: 72, height: 72, borderRadius: 36, backgroundColor: C.sage, alignItems: 'center', justifyContent: 'center', marginBottom: 14 },
-  logoText:     { fontSize: 24, fontFamily: 'Nunito-Bold', color: '#fff' },
-  appName:      { fontSize: 26, fontFamily: 'Nunito-Bold', color: C.dark, marginBottom: 6 },
-  appSub:       { fontSize: 13, fontFamily: 'Nunito-Regular', color: C.light, textAlign: 'center' },
-  card:         { width: '100%', backgroundColor: '#fff', borderRadius: 20, padding: 24, shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.06, shadowRadius: 12, elevation: 3 },
-  field:        { marginBottom: 16 },
-  label:        { fontSize: 10, fontFamily: 'Nunito-Bold', color: C.light, letterSpacing: 0.8, marginBottom: 6 },
-  input:        { backgroundColor: C.sageLl, borderRadius: 10, borderWidth: 0.5, borderColor: C.border, paddingHorizontal: 14, paddingVertical: 12, fontSize: 14, fontFamily: 'Nunito-Regular', color: C.dark },
-  inputError:   { borderColor: C.red },
-  error:        { fontSize: 11, fontFamily: 'Nunito-Regular', color: C.red, marginTop: 4 },
-  btn:          { backgroundColor: C.sage, borderRadius: 12, padding: 16, alignItems: 'center', marginTop: 8 },
-  btnDisabled:  { opacity: 0.7 },
-  btnTxt:       { fontSize: 15, fontFamily: 'Nunito-Bold', color: '#fff' },
-  registerLink: { alignItems: 'center', marginTop: 16 },
-  registerTxt:  { fontSize: 13, fontFamily: 'Nunito-Regular', color: C.mid },
-  registerBold: { fontFamily: 'Nunito-Bold', color: C.sage },
-  footer:       { fontSize: 11, fontFamily: 'Nunito-Regular', color: C.light, textAlign: 'center', marginTop: 24 },
+  scroll:       { flexGrow: 1, backgroundColor: colors.cream },
+  hero:         { paddingHorizontal: spacing.md, paddingBottom: 44, position: 'relative', overflow: 'hidden' },
+  hblob1:       { position: 'absolute', width: 200, height: 200, borderRadius: 100, backgroundColor: 'rgba(255,255,255,0.06)', top: -50, right: -50 },
+  hblob2:       { position: 'absolute', width: 120, height: 120, borderRadius: 60,  backgroundColor: 'rgba(255,255,255,0.04)', bottom: -30, left: -20 },
+  heroInner:    { alignItems: 'center', position: 'relative', zIndex: 1, paddingBottom: 8 },
+  wave:         { position: 'absolute', bottom: 0, left: 0, right: 0 },
+  logoRing:     { width: 68, height: 68, borderRadius: 34, backgroundColor: 'rgba(255,255,255,0.15)', borderWidth: 1.5, borderColor: 'rgba(255,255,255,0.28)', alignItems: 'center', justifyContent: 'center', marginBottom: 16 },
+  logoTxt:      { fontFamily: 'Nunito-Bold', fontSize: 22, color: '#fff' },
+  appName:      { fontFamily: 'Nunito-Bold', fontSize: 24, color: '#fff', letterSpacing: -0.3, marginBottom: 6 },
+  appSub:       { fontFamily: 'Nunito-SemiBold', fontSize: 12, color: 'rgba(255,255,255,0.55)', textAlign: 'center' },
+  form:         { padding: spacing.md, paddingTop: spacing.lg },
+  btn:          { backgroundColor: colors.sage, ...radius.md, height: 50, alignItems: 'center', justifyContent: 'center', marginTop: spacing.sm },
+  btnDisabled:  { opacity: 0.65 },
+  btnTxt:       { fontFamily: 'Nunito-Bold', fontSize: 15, color: '#fff' },
+  registerLink: { alignItems: 'center', marginTop: spacing.lg },
+  registerTxt:  { fontFamily: 'Nunito-Regular', fontSize: 13, color: colors.mid },
+  registerBold: { fontFamily: 'Nunito-Bold', color: colors.sage },
+  footer:       { fontFamily: 'Nunito-SemiBold', fontSize: 10, color: colors.light, textAlign: 'center', marginTop: spacing.sm, marginBottom: spacing.xl },
 })

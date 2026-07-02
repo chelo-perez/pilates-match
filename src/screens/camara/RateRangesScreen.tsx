@@ -151,7 +151,7 @@ const styles = StyleSheet.create({
   content: { padding: spacing.lg, paddingTop: 52, paddingBottom: spacing.xxl },
   info: {
     flexDirection: 'row', alignItems: 'flex-start',
-    backgroundColor: colors.sageLight, borderRadius: radius.md,
+    backgroundColor: colors.sageLight, borderTopLeftRadius: 14, borderTopRightRadius: 0, borderBottomLeftRadius: 0, borderBottomRightRadius: 14,
     padding: spacing.md, marginBottom: spacing.lg,
   },
   infoText: { ...typography.small, color: colors.mid, flex: 1, lineHeight: 18 },
@@ -161,9 +161,9 @@ const styles = StyleSheet.create({
   fieldLabel: { ...typography.label, color: colors.mid, marginBottom: spacing.xs },
   sliderRow: { flexDirection: 'row', justifyContent: 'flex-end', marginBottom: spacing.xs },
   sliderVal: { fontFamily: 'Nunito-SemiBold', fontSize: 18, color: colors.dark },
-  rangeSummary: { backgroundColor: colors.sageLight, borderRadius: radius.sm, padding: spacing.sm, marginTop: spacing.sm },
+  rangeSummary: { backgroundColor: colors.sageLight, borderTopLeftRadius: 8, borderTopRightRadius: 0, borderBottomLeftRadius: 0, borderBottomRightRadius: 8, padding: spacing.sm, marginTop: spacing.sm },
   rangeText: { ...typography.small, color: colors.sage, textAlign: 'center', fontFamily: 'Nunito-Medium' },
-  warning: { backgroundColor: colors.warnBg, borderRadius: radius.sm, padding: spacing.sm, marginTop: spacing.sm },
+  warning: { backgroundColor: colors.warnBg, borderTopLeftRadius: 8, borderTopRightRadius: 0, borderBottomLeftRadius: 0, borderBottomRightRadius: 8, padding: spacing.sm, marginTop: spacing.sm },
   warningText: { ...typography.small, color: colors.warnTx, lineHeight: 18 },
   lastUpdate: { ...typography.small, color: colors.light, textAlign: 'center', marginTop: spacing.lg },
 })

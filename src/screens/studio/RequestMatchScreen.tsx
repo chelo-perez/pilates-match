@@ -157,7 +157,7 @@ const styles = StyleSheet.create({
   typeRow: { flexDirection: 'row', gap: spacing.sm },
   privacyNote: {
     flexDirection: 'row', alignItems: 'flex-start',
-    backgroundColor: colors.sageLight, borderRadius: radius.md,
+    backgroundColor: colors.sageLight, borderTopLeftRadius: 14, borderTopRightRadius: 0, borderBottomLeftRadius: 0, borderBottomRightRadius: 14,
     padding: spacing.md, marginTop: spacing.md,
   },
   privacyText: { ...typography.small, color: colors.mid, flex: 1, lineHeight: 18 },

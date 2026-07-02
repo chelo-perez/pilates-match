@@ -419,18 +419,18 @@ const styles = StyleSheet.create({
   sub: { ...typography.small, color: colors.mid, marginBottom: spacing.xl },
   infoBanner: {
     flexDirection: 'row', alignItems: 'flex-start',
-    backgroundColor: colors.sageLight, borderRadius: radius.md,
+    backgroundColor: colors.sageLight, borderTopLeftRadius: 14, borderTopRightRadius: 0, borderBottomLeftRadius: 0, borderBottomRightRadius: 14,
     padding: spacing.md, marginBottom: spacing.lg,
     borderWidth: 0.5, borderColor: colors.sageMid,
   },
   claimBanner: {
     flexDirection: 'row', alignItems: 'center', gap: spacing.sm,
-    backgroundColor: colors.sageLighter, borderRadius: radius.md,
+    backgroundColor: colors.sageLighter, borderTopLeftRadius: 14, borderTopRightRadius: 0, borderBottomLeftRadius: 0, borderBottomRightRadius: 14,
     padding: spacing.md, marginBottom: spacing.lg,
   },
   infoText: { ...typography.small, color: colors.mid, lineHeight: 18 },
   infoBox: {
-    backgroundColor: colors.sageLighter, borderRadius: radius.md,
+    backgroundColor: colors.sageLighter, borderTopLeftRadius: 14, borderTopRightRadius: 0, borderBottomLeftRadius: 0, borderBottomRightRadius: 14,
     padding: spacing.md, marginTop: spacing.sm,
   },
   infoBoxText: { ...typography.small, color: colors.mid, lineHeight: 18 },

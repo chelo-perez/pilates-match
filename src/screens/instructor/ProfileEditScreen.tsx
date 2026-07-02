@@ -32,7 +32,6 @@ export default function ProfileEditScreen({ navigation }: any) {
   const user = useAuthStore(s => s.user)
   const { reset } = useAuthStore()
   const { toast, showToast, hideToast } = useToast()
-  const { toast, showToast, hideToast } = useToast()
   const qc = useQueryClient()
   const [bio, setBio] = useState('')
   const [neighborhood, setNeighborhood] = useState('')

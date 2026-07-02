@@ -135,10 +135,10 @@ const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.cream || '#F9F9F6' },
   searchHeader: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: spacing.lg, paddingTop: 52, paddingBottom: spacing.md, backgroundColor: colors.white || '#FFF', borderBottomWidth: 0.5, borderColor: colors.borderLight || '#EEE' },
   backButton: { marginRight: spacing.sm },
-  inputContainer: { flex: 1, flexDirection: 'row', alignItems: 'center', backgroundColor: colors.cream || '#F9F9F6', borderRadius: radius.md, paddingHorizontal: spacing.sm, height: 44 },
+  inputContainer: { flex: 1, flexDirection: 'row', alignItems: 'center', backgroundColor: colors.cream || '#F9F9F6', borderTopLeftRadius: 14, borderTopRightRadius: 0, borderBottomLeftRadius: 0, borderBottomRightRadius: 14, paddingHorizontal: spacing.sm, height: 44 },
   searchIcon: { marginRight: spacing.xs },
   input: { flex: 1, fontFamily: 'Nunito-Regular', fontSize: 14, color: colors.dark || '#333' },
-  filterButton: { marginLeft: spacing.sm, width: 44, height: 44, backgroundColor: colors.cream || '#F9F9F6', borderRadius: radius.md, justifyContent: 'center', alignItems: 'center' },
+  filterButton: { marginLeft: spacing.sm, width: 44, height: 44, backgroundColor: colors.cream || '#F9F9F6', borderTopLeftRadius: 14, borderTopRightRadius: 0, borderBottomLeftRadius: 0, borderBottomRightRadius: 14, justifyContent: 'center', alignItems: 'center' },
   loadingArea: { flex: 1, justifyContent: 'center', alignItems: 'center' },
   loadingText: { fontFamily: 'Nunito-Medium', fontSize: 14, color: colors.mid || '#666', marginTop: spacing.md },
   listContent: { padding: spacing.lg },
@@ -148,7 +148,7 @@ const styles = StyleSheet.create({
   nameText: { fontFamily: 'Nunito-SemiBold', fontSize: 15, color: colors.dark || '#333' },
   subText: { ...typography.small, color: colors.mid || '#666', marginTop: 2 },
   tariffRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, paddingTop: spacing.md, borderTopWidth: 0.5, borderColor: colors.borderLight || '#EEE' },
-  tariffBox: { flex: 1, backgroundColor: colors.cream || '#F9F9F6', borderRadius: radius.sm, padding: spacing.sm },
+  tariffBox: { flex: 1, backgroundColor: colors.cream || '#F9F9F6', borderTopLeftRadius: 8, borderTopRightRadius: 0, borderBottomLeftRadius: 0, borderBottomRightRadius: 8, padding: spacing.sm },
   tariffLabel: { fontSize: 9, fontFamily: 'Nunito-Medium', color: colors.light || '#999', letterSpacing: 0.5 },
   tariffValue: { fontFamily: 'Nunito-SemiBold', fontSize: 13, color: colors.dark || '#333', marginTop: 2 }
 })

@@ -51,6 +51,6 @@ export default function Toast({ message, type = 'success', visible, onHide }: To
 
 const s = StyleSheet.create({
   container: { position: 'absolute', bottom: 90, left: spacing.md, right: spacing.md, zIndex: 999, alignItems: 'center' },
-  toast:     { flexDirection: 'row', alignItems: 'center', gap: 10, paddingVertical: 12, paddingHorizontal: 16, borderRadius: radius.md, shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.3, shadowRadius: 8, elevation: 8, maxWidth: 360 },
+  toast:     { flexDirection: 'row', alignItems: 'center', gap: 10, paddingVertical: 12, paddingHorizontal: 16, borderTopLeftRadius: 14, borderTopRightRadius: 0, borderBottomLeftRadius: 0, borderBottomRightRadius: 14, shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.3, shadowRadius: 8, elevation: 8, maxWidth: 360 },
   message:   { fontFamily: 'Nunito-SemiBold', fontSize: 13, color: '#FFFFFF', flex: 1 },
 })
