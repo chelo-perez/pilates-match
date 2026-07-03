@@ -1,5 +1,5 @@
-import React, { useEffect } from 'react'
-import { View, ActivityIndicator } from 'react-native'
+import React, { useEffect, Component } from 'react'
+import { View, Text, ScrollView, ActivityIndicator, TouchableOpacity } from 'react-native'
 import { SafeAreaProvider } from 'react-native-safe-area-context'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { useFonts } from 'expo-font'
@@ -11,6 +11,40 @@ import { registerPushToken } from './src/lib/push'
 
 SplashScreen.preventAutoHideAsync()
 const queryClient = new QueryClient()
+
+// ── Error Boundary — muestra el error en pantalla en vez de crashear ──
+class ErrorBoundary extends Component<
+  { children: React.ReactNode },
+  { error: Error | null }
+> {
+  state = { error: null }
+  static getDerivedStateFromError(error: Error) { return { error } }
+  render() {
+    const { error } = this.state
+    if (error) {
+      return (
+        <ScrollView style={{ flex: 1, backgroundColor: '#1A1A1A', padding: 20, paddingTop: 60 }}>
+          <Text style={{ color: '#FF6B6B', fontSize: 16, fontWeight: 'bold', marginBottom: 12 }}>
+            ⚠️ Error en la app
+          </Text>
+          <Text style={{ color: '#FFD0D0', fontSize: 13, marginBottom: 16 }}>
+            {(error as any).message}
+          </Text>
+          <Text style={{ color: '#999', fontSize: 11, fontFamily: 'monospace' }}>
+            {(error as any).stack}
+          </Text>
+          <TouchableOpacity
+            onPress={() => this.setState({ error: null })}
+            style={{ marginTop: 24, backgroundColor: '#4A5D4E', padding: 12, borderRadius: 8, alignItems: 'center' }}
+          >
+            <Text style={{ color: '#fff', fontWeight: 'bold' }}>Reintentar</Text>
+          </TouchableOpacity>
+        </ScrollView>
+      )
+    }
+    return this.props.children
+  }
+}
 
 export default function App() {
   const { setUser, setSession, setLoading } = useAuthStore()
@@ -60,10 +94,12 @@ export default function App() {
   )
 
   return (
-    <QueryClientProvider client={queryClient}>
-      <SafeAreaProvider>
-        <RootNavigator />
-      </SafeAreaProvider>
-    </QueryClientProvider>
+    <ErrorBoundary>
+      <QueryClientProvider client={queryClient}>
+        <SafeAreaProvider>
+          <RootNavigator />
+        </SafeAreaProvider>
+      </QueryClientProvider>
+    </ErrorBoundary>
   )
 }
