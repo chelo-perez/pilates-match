@@ -2,6 +2,7 @@
 import React from 'react'
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, RefreshControl } from 'react-native'
 import { useQuery } from '@tanstack/react-query'
+import Svg, { Path } from 'react-native-svg'
 import { LinearGradient } from 'expo-linear-gradient'
 import { supabase } from '../../lib/supabase'
 import { useAuthStore } from '../../store'
@@ -102,10 +103,9 @@ export default function InstructorDashboardScreen({ navigation }: any) {
             </View>
           </View>
 
-          <View style={s.wave}>
-            <View style={s.waveLeft} />
-            <View style={s.waveRight} />
-          </View>
+          <Svg width="100%" height={28} viewBox="0 0 375 28" preserveAspectRatio="none" style={s.wave}>
+            <Path d="M0,14 C93,28 187,0 280,14 C327,21 351,24 375,14 L375,28 L0,28 Z" fill={colors.cream} />
+          </Svg>
         </LinearGradient>
 
         {/* ── KPI row flotante ── */}
@@ -228,9 +228,7 @@ const s = StyleSheet.create({
   scoreCircle:   { width: 30, height: 30, borderRadius: 15, backgroundColor: '#fff', alignItems: 'center', justifyContent: 'center' },
   scoreNum:      { fontFamily: 'Nunito-Bold', fontSize: 12, color: colors.sage },
   scoreLabel:    { fontFamily: 'Nunito-Bold', fontSize: 10, color: 'rgba(255,255,255,0.8)' },
-  wave:          { position: 'absolute', bottom: -1, left: 0, right: 0, height: 28, flexDirection: 'row' },
-  waveLeft:      { flex: 1, height: 28, backgroundColor: colors.cream, borderTopRightRadius: 40 },
-  waveRight:     { flex: 1, height: 28, backgroundColor: colors.cream, borderTopLeftRadius: 40 },
+  wave:          { position: 'absolute', bottom: 0, left: 0, right: 0 },
 
   // KPI
   kpiRow:        { flexDirection: 'row', gap: spacing.sm, marginHorizontal: spacing.md, marginTop: -20, marginBottom: spacing.md, zIndex: 2 },

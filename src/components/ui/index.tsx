@@ -102,14 +102,14 @@ export function BlobCard({
   useEffect(() => {
     Animated.loop(
       Animated.sequence([
-        Animated.timing(anim1, { toValue: 1, duration: 7000, easing: Easing.inOut(Easing.sin), useNativeDriver: true }),
-        Animated.timing(anim1, { toValue: 0, duration: 7000, easing: Easing.inOut(Easing.sin), useNativeDriver: true }),
+        Animated.timing(anim1, { toValue: 1, duration: 7000, easing: Easing.bezier(0.45, 0, 0.55, 1), useNativeDriver: true }),
+        Animated.timing(anim1, { toValue: 0, duration: 7000, easing: Easing.bezier(0.45, 0, 0.55, 1), useNativeDriver: true }),
       ])
     ).start()
     Animated.loop(
       Animated.sequence([
-        Animated.timing(anim2, { toValue: 1, duration: 10000, easing: Easing.inOut(Easing.sin), useNativeDriver: true }),
-        Animated.timing(anim2, { toValue: 0, duration: 10000, easing: Easing.inOut(Easing.sin), useNativeDriver: true }),
+        Animated.timing(anim2, { toValue: 1, duration: 10000, easing: Easing.bezier(0.45, 0, 0.55, 1), useNativeDriver: true }),
+        Animated.timing(anim2, { toValue: 0, duration: 10000, easing: Easing.bezier(0.45, 0, 0.55, 1), useNativeDriver: true }),
       ])
     ).start()
   }, [])

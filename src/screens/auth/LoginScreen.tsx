@@ -10,6 +10,7 @@ import { useAuthStore } from '../../store'
 import { colors, spacing, radius, Input } from '../../components/ui'
 import Toast from '../../components/Toast'
 import { useToast } from '../../hooks/useToast'
+import Svg, { Path } from 'react-native-svg'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 
 export default function LoginScreen({ navigation }: any) {
@@ -83,10 +84,9 @@ export default function LoginScreen({ navigation }: any) {
             <Text style={s.appName}>Trabajo Más Fácil</Text>
             <Text style={s.appSub}>La comunidad de Pilates de Buenos Aires</Text>
           </View>
-          <View style={s.wave}>
-            <View style={s.waveLeft} />
-            <View style={s.waveRight} />
-          </View>
+          <Svg width="100%" height={28} viewBox="0 0 375 28" preserveAspectRatio="none" style={s.wave}>
+            <Path d="M0,14 C93,28 187,0 280,14 C327,21 351,24 375,14 L375,28 L0,28 Z" fill={colors.cream} />
+          </Svg>
         </LinearGradient>
 
         {/* Formulario */}
@@ -148,7 +148,7 @@ const s = StyleSheet.create({
   hblob1:       { position: 'absolute', width: 200, height: 200, borderRadius: 100, backgroundColor: 'rgba(255,255,255,0.06)', top: -50, right: -50 },
   hblob2:       { position: 'absolute', width: 120, height: 120, borderRadius: 60,  backgroundColor: 'rgba(255,255,255,0.04)', bottom: -30, left: -20 },
   heroInner:    { alignItems: 'center', position: 'relative', zIndex: 1, paddingBottom: 8 },
-  wave:         { position: 'absolute', bottom: -1, left: 0, right: 0, height: 28, flexDirection: 'row' },
+  wave:         { position: 'absolute', bottom: 0, left: 0, right: 0 },
   logoRing:     { width: 68, height: 68, borderRadius: 34, backgroundColor: 'rgba(255,255,255,0.15)', borderWidth: 1.5, borderColor: 'rgba(255,255,255,0.28)', alignItems: 'center', justifyContent: 'center', marginBottom: 16 },
   logoTxt:      { fontFamily: 'Nunito-Bold', fontSize: 22, color: '#fff' },
   appName:      { fontFamily: 'Nunito-Bold', fontSize: 24, color: '#fff', letterSpacing: -0.3, marginBottom: 6 },
@@ -160,7 +160,5 @@ const s = StyleSheet.create({
   registerLink: { alignItems: 'center', marginTop: spacing.lg },
   registerTxt:  { fontFamily: 'Nunito-Regular', fontSize: 13, color: colors.mid },
   registerBold: { fontFamily: 'Nunito-Bold', color: colors.sage },
-  waveLeft:  { flex: 1, height: 28, backgroundColor: colors.cream, borderTopRightRadius: 40 },
-  waveRight: { flex: 1, height: 28, backgroundColor: colors.cream, borderTopLeftRadius: 40 },
   footer:       { fontFamily: 'Nunito-SemiBold', fontSize: 10, color: colors.light, textAlign: 'center', marginTop: spacing.sm, marginBottom: spacing.xl },
 })
