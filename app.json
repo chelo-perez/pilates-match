@@ -56,8 +56,7 @@
           "photosPermission": "Para seleccionar tu foto de perfil.",
           "cameraPermission": "Para tomar una foto de perfil."
         }
-      ],
-      "lottie-react-native"
+      ]
     ],
     "extra": {
       "eas": {
