@@ -1,10 +1,12 @@
 // src/screens/camara/RateRangesScreen.tsx
 import React, { useState, useEffect } from 'react'
-import { View, TouchableOpacity, Text, StyleSheet, ScrollView, Alert } from 'react-native'
+import { View, TouchableOpacity, Text, StyleSheet, ScrollView } from 'react-native'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { db } from '../../lib/supabase'
 import { camaraAPI } from '../../lib/api'
 import { Card, Button, Badge, LoadingScreen, colors, spacing, typography, radius } from '../../components/ui'
+import Toast from '../../components/Toast'
+import { useToast } from '../../hooks/useToast'
 
 
 function RangeInput({ value, onChange, min = 1, max = 20 }: { label: string; value: number; onChange: (v: number) => void; min?: number; max?: number }) {
@@ -33,6 +35,7 @@ function RangeInput({ value, onChange, min = 1, max = 20 }: { label: string; val
 
 export default function RateRangesScreen() {
   const qc = useQueryClient()
+  const { toast, showToast, hideToast } = useToast()
   const { data: ranges, isLoading } = useQuery({
     queryKey: ['rate-ranges'],
     queryFn: async () => {
@@ -66,7 +69,7 @@ export default function RateRangesScreen() {
       qc.invalidateQueries({ queryKey: ['rate-ranges'] })
       showToast('Rangos actualizados correctamente')
     },
-    onError: (e: any) => Alert.alert('Error', e.message),
+    onError: (e: any) => showToast(e.message ?? 'Error al guardar', 'error'),
   })
 
   if (isLoading) return <LoadingScreen />
@@ -74,6 +77,7 @@ export default function RateRangesScreen() {
   const formatARS = (n: number) => `$${n.toLocaleString('es-AR')}`
 
   return (
+    <>
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
 
       <View style={styles.info}>
@@ -143,6 +147,8 @@ export default function RateRangesScreen() {
         }
       </Text>
     </ScrollView>
+      <Toast visible={toast.visible} message={toast.message} type={toast.type} onHide={hideToast} />
+    </>
   )
 }
 

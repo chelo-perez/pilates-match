@@ -42,7 +42,7 @@ export default function EvaluateInstructorScreen({ navigation, route }: Props) {
     presentation: 8,
   })
   const [comment, setComment] = useState('')
-  const average = Object.values(scores).reduce((a, b) => a + b, 0) / 4
+  const average = (Object.values(scores) as number[]).reduce((a, b) => a + b, 0) / 4
 
   const setScore = useCallback((key: keyof typeof scores) => (value: number) => {
     setScores(prev => ({ ...prev, [key]: value }))
