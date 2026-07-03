@@ -57,7 +57,6 @@
           "cameraPermission": "Para tomar una foto de perfil."
         }
       ],
-      "react-native-svg",
       "lottie-react-native"
     ],
     "extra": {
