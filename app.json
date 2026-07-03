@@ -1,67 +1,68 @@
 {
-  "expo": {
-    "name": "Trabajo Más Fácil",
-    "slug": "pilates-match",
-    "owner": "chelo.perez3",
-    "version": "1.0.0",
-    "orientation": "portrait",
-    "icon": "./assets/icon.png",
-    "userInterfaceStyle": "light",
-    "splash": {
-      "image": "./assets/splash.png",
-      "resizeMode": "contain",
-      "backgroundColor": "#4A5D4E"
-    },
-    "assetBundlePatterns": [
-      "**/*"
-    ],
-    "ios": {
-      "supportsTablet": true,
-      "bundleIdentifier": "com.pilates.match",
-      "infoPlist": {
-        "NSCameraUsageDescription": "Para subir tu foto de perfil.",
-        "NSPhotoLibraryUsageDescription": "Para seleccionar una foto de perfil.",
-        "NSUserNotificationsUsageDescription": "Para enviarte solicitudes de cobertura de clases."
-      }
-    },
-    "android": {
-      "adaptiveIcon": {
-        "foregroundImage": "./assets/icon.png",
-        "backgroundColor": "#4A5D4E"
-      },
-      "package": "com.pilates.match",
-      "permissions": [
-        "android.permission.CAMERA",
-        "android.permission.READ_EXTERNAL_STORAGE",
-        "android.permission.RECEIVE_BOOT_COMPLETED",
-        "android.permission.VIBRATE",
-        "android.permission.POST_NOTIFICATIONS",
-        "android.permission.RECORD_AUDIO"
-      ],
-      "googleServicesFile": "./google-services.json"
-    },
-    "plugins": [
-      [
-        "expo-notifications",
-        {
-          "icon": "./assets/icon.png",
-          "color": "#4A5D4E",
-          "sounds": []
+    "expo": {
+        "name": "Trabajo M\u00e1s F\u00e1cil",
+        "slug": "pilates-match",
+        "owner": "chelo.perez3",
+        "version": "1.0.0",
+        "orientation": "portrait",
+        "icon": "./assets/icon.png",
+        "userInterfaceStyle": "light",
+        "splash": {
+            "image": "./assets/splash.png",
+            "resizeMode": "contain",
+            "backgroundColor": "#4A5D4E"
+        },
+        "assetBundlePatterns": [
+            "**/*"
+        ],
+        "ios": {
+            "supportsTablet": true,
+            "bundleIdentifier": "com.pilates.match",
+            "infoPlist": {
+                "NSCameraUsageDescription": "Para subir tu foto de perfil.",
+                "NSPhotoLibraryUsageDescription": "Para seleccionar una foto de perfil.",
+                "NSUserNotificationsUsageDescription": "Para enviarte solicitudes de cobertura de clases."
+            }
+        },
+        "android": {
+            "adaptiveIcon": {
+                "foregroundImage": "./assets/icon.png",
+                "backgroundColor": "#4A5D4E"
+            },
+            "package": "com.pilates.match",
+            "permissions": [
+                "android.permission.CAMERA",
+                "android.permission.READ_EXTERNAL_STORAGE",
+                "android.permission.RECEIVE_BOOT_COMPLETED",
+                "android.permission.VIBRATE",
+                "android.permission.POST_NOTIFICATIONS",
+                "android.permission.RECORD_AUDIO"
+            ],
+            "googleServicesFile": "./google-services.json"
+        },
+        "plugins": [
+            [
+                "expo-notifications",
+                {
+                    "icon": "./assets/icon.png",
+                    "color": "#4A5D4E",
+                    "sounds": []
+                }
+            ],
+            "expo-font",
+            [
+                "expo-image-picker",
+                {
+                    "photosPermission": "Para seleccionar tu foto de perfil.",
+                    "cameraPermission": "Para tomar una foto de perfil."
+                }
+            ],
+            "react-native-svg"
+        ],
+        "extra": {
+            "eas": {
+                "projectId": "55e2dd48-7479-44f9-812a-3ab2bd8a9861"
+            }
         }
-      ],
-      "expo-font",
-      [
-        "expo-image-picker",
-        {
-          "photosPermission": "Para seleccionar tu foto de perfil.",
-          "cameraPermission": "Para tomar una foto de perfil."
-        }
-      ]
-    ],
-    "extra": {
-      "eas": {
-        "projectId": "55e2dd48-7479-44f9-812a-3ab2bd8a9861"
-      }
     }
-  }
 }
