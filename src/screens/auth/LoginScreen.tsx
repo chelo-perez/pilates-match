@@ -4,7 +4,6 @@ import {
   View, Text, StyleSheet, TouchableOpacity,
   KeyboardAvoidingView, Platform, ScrollView, ActivityIndicator,
 } from 'react-native'
-import { LinearGradient } from 'expo-linear-gradient'
 import { supabase } from '../../lib/supabase'
 import { useAuthStore } from '../../store'
 import { colors, spacing, radius, Input } from '../../components/ui'
@@ -70,11 +69,7 @@ export default function LoginScreen({ navigation }: any) {
       <ScrollView contentContainerStyle={s.scroll} keyboardShouldPersistTaps="handled">
 
         {/* Hero con gradiente */}
-        <LinearGradient
-          colors={['#2D3F31', '#4A5D4E', '#5C7060']}
-          start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}
-          style={[s.hero, { paddingTop: insets.top + 24 }]}
-        >
+        <View style={[s.hero, { paddingTop: insets.top + 24 }]}>
           <View style={s.hblob1} />
           <View style={s.hblob2} />
           <View style={s.heroInner}>
@@ -87,9 +82,7 @@ export default function LoginScreen({ navigation }: any) {
           <Svg width="100%" height={28} viewBox="0 0 375 28" preserveAspectRatio="none" style={s.wave}>
             <Path d="M0,14 C93,28 187,0 280,14 C327,21 351,24 375,14 L375,28 L0,28 Z" fill={colors.cream} />
           </Svg>
-        </LinearGradient>
-
-        {/* Formulario */}
+        </View>
         <View style={s.form}>
           <Input
             label="Email"
@@ -144,7 +137,7 @@ export default function LoginScreen({ navigation }: any) {
 
 const s = StyleSheet.create({
   scroll:       { flexGrow: 1, backgroundColor: colors.cream },
-  hero:         { paddingHorizontal: spacing.md, paddingBottom: 44, position: 'relative', overflow: 'hidden' },
+  hero:         { backgroundColor: '#3D5440', paddingHorizontal: spacing.md, paddingBottom: 44, position: 'relative', overflow: 'hidden' },
   hblob1:       { position: 'absolute', width: 200, height: 200, borderRadius: 100, backgroundColor: 'rgba(255,255,255,0.06)', top: -50, right: -50 },
   hblob2:       { position: 'absolute', width: 120, height: 120, borderRadius: 60,  backgroundColor: 'rgba(255,255,255,0.04)', bottom: -30, left: -20 },
   heroInner:    { alignItems: 'center', position: 'relative', zIndex: 1, paddingBottom: 8 },

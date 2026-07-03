@@ -3,7 +3,6 @@ import React from 'react'
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, RefreshControl } from 'react-native'
 import { useQuery } from '@tanstack/react-query'
 import Svg, { Path } from 'react-native-svg'
-import { LinearGradient } from 'expo-linear-gradient'
 import { supabase } from '../../lib/supabase'
 import { useAuthStore } from '../../store'
 import { BlobCard, LoadingScreen, colors, spacing, radius } from '../../components/ui'
@@ -68,11 +67,7 @@ export default function InstructorDashboardScreen({ navigation }: any) {
         refreshControl={<RefreshControl refreshing={false} onRefresh={refetch} tintColor={colors.white} />}
       >
         {/* ── Hero ── */}
-        <LinearGradient
-          colors={['#2D3F31', '#4A5D4E', '#5C7060']}
-          start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}
-          style={[s.hero, { paddingTop: insets.top + 14 }]}
-        >
+        <View style={[s.hero, { backgroundColor: '#3D5440', paddingTop: insets.top + 14 }]}>
           <View style={s.hblob1} />
           <View style={s.hblob2} />
 
@@ -106,7 +101,7 @@ export default function InstructorDashboardScreen({ navigation }: any) {
           <Svg width="100%" height={28} viewBox="0 0 375 28" preserveAspectRatio="none" style={s.wave}>
             <Path d="M0,14 C93,28 187,0 280,14 C327,21 351,24 375,14 L375,28 L0,28 Z" fill={colors.cream} />
           </Svg>
-        </LinearGradient>
+        </View>
 
         {/* ── KPI row flotante ── */}
         <View style={s.kpiRow}>
@@ -194,15 +189,11 @@ export default function InstructorDashboardScreen({ navigation }: any) {
           onPress={() => navigation.navigate('InstructorMatches')}
           activeOpacity={0.85}
         >
-          <LinearGradient
-            colors={['#2D3F31', '#4A5D4E']}
-            start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }}
-            style={s.ctaBtnInner}
-          >
+          <View style={s.ctaBtnInner}>
             <View style={s.ctaBlob} />
             <Text style={s.ctaTxt}>Ver solicitudes</Text>
             <Feather name="arrow-right" size={16} color="#fff" style={{ position: 'relative', zIndex: 1 }} />
-          </LinearGradient>
+          </View>
         </TouchableOpacity>
 
       </ScrollView>
