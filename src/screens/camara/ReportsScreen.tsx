@@ -4,7 +4,9 @@ import React, { useState } from 'react'
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from 'react-native'
 import { useQuery } from '@tanstack/react-query'
 import { supabase, db } from '../../lib/supabase'
-import { Card, LoadingScreen, colors, spacing, radius, typography } from '../../components/ui'
+import { LoadingScreen, colors, spacing, radius, typography } from '../../components/ui'
+import BlobCard from '../../components/BlobCard'
+import HeroHeader from '../../components/HeroHeader'
 import { Feather } from '@expo/vector-icons'
 
 type Period = 'month' | 'quarter' | 'year'
@@ -95,22 +97,27 @@ export default function ReportsScreen({ navigation }: any) {
   if (isLoading) return <LoadingScreen message="Cargando reportes..." />
 
   return (
-    <ScrollView style={styles.container} contentContainerStyle={styles.content}>
-
-      {/* Selector de período */}
-      <View style={styles.periodRow}>
-        {PERIODS.map(p => (
-          <TouchableOpacity
-            key={p.key}
-            style={[styles.periodBtn, period === p.key && styles.periodActive]}
-            onPress={() => setPeriod(p.key)}
-          >
-            <Text style={[styles.periodText, period === p.key && styles.periodTextActive]}>
-              {p.label}
-            </Text>
-          </TouchableOpacity>
-        ))}
-      </View>
+    <View style={{ flex: 1, backgroundColor: colors.cream }}>
+      <HeroHeader
+        title="Reportes"
+        subtitle="Actividad de la red"
+        bottomElement={
+          <View style={styles.periodRow}>
+            {PERIODS.map(p => (
+              <TouchableOpacity
+                key={p.key}
+                style={[styles.periodChip, period === p.key && styles.periodActive]}
+                onPress={() => setPeriod(p.key)}
+              >
+                <Text style={[styles.periodText, period === p.key && styles.periodTextActive]}>
+                  {p.label}
+                </Text>
+              </TouchableOpacity>
+            ))}
+          </View>
+        }
+      />
+      <ScrollView contentContainerStyle={styles.content}>
 
       {/* KPIs actividad */}
       <Text style={styles.sectionTitle}>Actividad de la red</Text>
@@ -137,7 +144,7 @@ export default function ReportsScreen({ navigation }: any) {
       {(stats?.studioReports?.length ?? 0) > 0 && (
         <>
           <Text style={styles.sectionTitle}>Estudios con reportes de instructores</Text>
-          <Card style={[styles.listCard, { marginBottom: spacing.md }]}>
+          <BlobCard style={[styles.listCard, { marginBottom: spacing.md }]}>
             {stats!.studioReports.map((r, idx) => (
               <View key={idx} style={[styles.reportRow, idx === stats!.studioReports.length - 1 && { borderBottomWidth: 0 }]}>
                 <View style={[styles.rAvatar, { borderRadius: 6 }]}>
@@ -158,13 +165,13 @@ export default function ReportsScreen({ navigation }: any) {
                 </View>
               </View>
             ))}
-          </Card>
+          </BlobCard>
         </>
       )}
 
       {/* Top instructores */}
       <Text style={styles.sectionTitle}>Instructores activos</Text>
-      <Card style={[styles.listCard, { marginBottom: spacing.md }]}>
+      <BlobCard style={[styles.listCard, { marginBottom: spacing.md }]}>
         {(stats?.topInstructors ?? []).map((inst: any, idx: number) => (
           <View key={inst.id} style={[styles.reportRow, idx === (stats?.topInstructors?.length ?? 1) - 1 && { borderBottomWidth: 0 }]}>
             <View style={styles.rAvatar}>
@@ -183,11 +190,11 @@ export default function ReportsScreen({ navigation }: any) {
             <Text style={{ ...typography.small, color: colors.light }}>Sin datos aún</Text>
           </View>
         )}
-      </Card>
+      </BlobCard>
 
       {/* Top estudios */}
       <Text style={styles.sectionTitle}>Estudios más activos</Text>
-      <Card style={[styles.listCard, { marginBottom: spacing.xl }]}>
+      <BlobCard style={[styles.listCard, { marginBottom: spacing.xl }]}>
         {(stats?.topStudios ?? []).map((studio: any, idx: number) => (
           <View key={studio.id} style={[styles.reportRow, idx === (stats?.topStudios?.length ?? 1) - 1 && { borderBottomWidth: 0 }]}>
             <View style={[styles.rAvatar, { borderRadius: 6 }]}>
@@ -202,14 +209,14 @@ export default function ReportsScreen({ navigation }: any) {
             </View>
           </View>
         ))}
-      </Card>
+      </BlobCard>
 
-    </ScrollView>
+      </ScrollView>
+    </View>
   )
 }
 
 const styles = StyleSheet.create({
-  container:         { flex: 1, backgroundColor: colors.cream },
   content:           { padding: spacing.md, paddingTop: 52, paddingBottom: spacing.xxl },
   periodRow:         { flexDirection: 'row', gap: spacing.xs, marginBottom: spacing.md },
   periodBtn:         { flex: 1, paddingVertical: spacing.sm, borderRadius: 9999, backgroundColor: colors.white, borderWidth: 0.5, borderColor: colors.border, alignItems: 'center' },

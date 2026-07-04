@@ -8,7 +8,9 @@ import {
 } from 'react-native'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { db } from '../../lib/supabase'
-import { Card, Badge, EmptyState, LoadingScreen, colors, spacing, radius, typography } from '../../components/ui'
+import { Badge, EmptyState, LoadingScreen, colors, spacing, radius, typography } from '../../components/ui'
+import BlobCard from '../../components/BlobCard'
+import HeroHeader from '../../components/HeroHeader'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import Toast from '../../components/Toast'
 import { useToast } from '../../hooks/useToast'
@@ -179,7 +181,7 @@ export default function CamaraStudiosScreen() {
           const matchLimit = membership?.matches_limit ?? null
 
           return (
-            <Card style={styles.card}>
+            <BlobCard style={styles.card}>
               {/* Fila principal */}
               <View style={styles.row}>
                 <View style={styles.avatar}>
@@ -234,7 +236,7 @@ export default function CamaraStudiosScreen() {
                   {isMember ? 'Quitar membresía' : 'Activar membresía'}
                 </Text>
               </TouchableOpacity>
-            </Card>
+            </BlobCard>
           )
         }}
       />

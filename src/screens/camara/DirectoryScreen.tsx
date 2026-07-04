@@ -6,7 +6,9 @@ import {
 import { usePendingInstructors, useVerifyInstructor } from '../../hooks'
 import { useQuery } from '@tanstack/react-query'
 import { db } from '../../lib/supabase'
-import { Card, Avatar, Badge, Button, EmptyState, LoadingScreen, colors, spacing, radius, typography } from '../../components/ui'
+import { Avatar, Badge, Button, EmptyState, LoadingScreen, colors, spacing, radius, typography } from '../../components/ui'
+import BlobCard from '../../components/BlobCard'
+import HeroHeader from '../../components/HeroHeader'
 import type { NativeStackScreenProps } from '@react-navigation/native-stack'
 
 type Filter = 'todos' | 'verificado' | 'pendiente' | 'inactivo'
@@ -89,14 +91,14 @@ export default function DirectoryScreen({ navigation }: any) {
           ItemSeparatorComponent={() => <View style={{ height: spacing.sm }} />}
           ListEmptyComponent={<EmptyState title="Sin instructores" subtitle="No hay resultados para este filtro." />}
           renderItem={({ item }: any) => (
-            <Card style={styles.card} onPress={() => setSelectedInstructor(item)}>
+            <BlobCard style={styles.card} onPress={() => setSelectedInstructor(item)}>
               <Avatar name={item.full_name} size={36} color={colors.sageMid} />
               <View style={{ flex: 1, marginLeft: spacing.sm }}>
                 <Text style={styles.name}>{item.full_name}</Text>
                 <Text style={styles.meta}>{item.neighborhood} · DNI {item.dni}</Text>
               </View>
               <Badge label={BADGE_LABEL[item.verification_status]} color={BADGE_COLOR[item.verification_status]} />
-            </Card>
+            </BlobCard>
           )}
         />
       )}
@@ -129,7 +131,7 @@ export default function DirectoryScreen({ navigation }: any) {
               {(selectedInstructor.certifications ?? []).length === 0 ? (
                 <Text style={{ ...typography.body, color: colors.light }}>Sin certificaciones cargadas</Text>
               ) : (selectedInstructor.certifications ?? []).map((cert: any) => (
-                <Card key={cert.id} style={styles.certCard}>
+                <BlobCard style={styles.certCard}>
                   <View style={{ flex: 1 }}>
                     <Text style={styles.certName}>{cert.name}</Text>
                     <Text style={styles.certMeta}>{cert.institution} · {cert.year}</Text>
@@ -138,7 +140,7 @@ export default function DirectoryScreen({ navigation }: any) {
                     ? <Badge label="✓ Verificada" color="success" />
                     : <Badge label="Pendiente" color="warning" />
                   }
-                </Card>
+                </BlobCard>
               ))}
 
               {selectedInstructor.verification_status === 'pendiente' && (

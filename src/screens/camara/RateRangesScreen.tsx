@@ -4,9 +4,11 @@ import { View, TouchableOpacity, Text, StyleSheet, ScrollView, Alert } from 'rea
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { db } from '../../lib/supabase'
 import { camaraAPI } from '../../lib/api'
-import { Card, Button, Badge, LoadingScreen, colors, spacing, typography, radius } from '../../components/ui'
+import { Button, Badge, LoadingScreen, colors, spacing, typography, radius } from '../../components/ui'
 import Toast from '../../components/Toast'
 import { useToast } from '../../hooks/useToast'
+import BlobCard from '../../components/BlobCard'
+import HeroHeader from '../../components/HeroHeader'
 
 
 function RangeInput({ value, onChange, min = 1, max = 20 }: { label: string; value: number; onChange: (v: number) => void; min?: number; max?: number }) {
@@ -78,7 +80,13 @@ export default function RateRangesScreen() {
 
   return (
     <>
-    <ScrollView style={styles.container} contentContainerStyle={styles.content}>
+    <HeroHeader
+      title="Rangos de tarifas"
+      subtitle="Referencia del mercado para toda la red"
+      onBack={() => navigation.navigate('CamaraHome')}
+      backLabel="Inicio"
+    />
+    <ScrollView contentContainerStyle={styles.content}>
 
       <View style={styles.info}>
         <Text style={styles.infoText}>
@@ -87,7 +95,7 @@ export default function RateRangesScreen() {
       </View>
 
       {/* Clases Regulares */}
-      <Card style={styles.card}>
+      <BlobCard style={styles.card}>
         <View style={styles.cardHeader}>
           <Text style={styles.cardTitle}>Clases regulares</Text>
           <Badge label="Clases Regulares" color="sage" />
@@ -102,10 +110,10 @@ export default function RateRangesScreen() {
         <View style={styles.rangeSummary}>
           <Text style={styles.rangeText}>Rango actual: {formatARS(regMin)} – {formatARS(regMax)}</Text>
         </View>
-      </Card>
+      </BlobCard>
 
       {/* Reemplazos */}
-      <Card style={styles.card}>
+      <BlobCard style={styles.card}>
         <View style={styles.cardHeader}>
           <Text style={styles.cardTitle}>Reemplazo</Text>
           <Badge label="Reemplazos" color="gold" />
@@ -128,7 +136,7 @@ export default function RateRangesScreen() {
             </Text>
           </View>
         )}
-      </Card>
+      </BlobCard>
 
       <Button
         label="Guardar rangos"
