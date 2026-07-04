@@ -1,14 +1,11 @@
-// src/screens/studio/InstructorProfileScreen.tsx
 import React, { useState } from 'react'
-import {
-  View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert
-} from 'react-native'
-import { useInstructor, useMyStudio, useCreateMatch } from '../../hooks'
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from 'react-native'
+import { useInstructor, useMyStudio } from '../../hooks'
 import { studioAPI } from '../../lib/api'
-import {
-  Card, Avatar, Badge, ScoreDisplay, TariffMatchPill, Button, LoadingScreen,
-  colors, spacing, radius, typography
-} from '../../components/ui'
+import { Badge, ScoreDisplay, TariffMatchPill, LoadingScreen, colors, spacing } from '../../components/ui'
+import { Feather } from '@expo/vector-icons'
+import BlobCard from '../../components/BlobCard'
+import HeroHeader from '../../components/HeroHeader'
 import type { NativeStackScreenProps } from '@react-navigation/native-stack'
 
 type Props = NativeStackScreenProps<any, 'InstructorProfile'>
@@ -29,7 +26,6 @@ export default function InstructorProfileScreen({ navigation, route }: Props) {
   const [tab, setTab] = useState<Tab>('perfil')
   const { data: instructor, isLoading } = useInstructor(instructorId)
   const { data: studio } = useMyStudio()
-  const createMatch = useCreateMatch()
   const [budget, setBudget] = React.useState<any>(null)
 
   React.useEffect(() => {
@@ -40,199 +36,209 @@ export default function InstructorProfileScreen({ navigation, route }: Props) {
 
   const rates = instructor.rates
   const stats = instructor.stats
-  const budget_regular = budget?.max_regular ?? 0
+  const budget_regular     = budget?.max_regular ?? 0
   const budget_replacement = budget?.max_replacement ?? 0
-
-  const tariffRegular: 'ok' | 'parcial' | 'sin_match' =
-    rates && budget_regular > 0 && rates.rate_regular <= budget_regular ? 'ok' : 'sin_match'
-  const tariffReplacement: 'ok' | 'parcial' | 'sin_match' =
-    rates && budget_replacement > 0 && rates.rate_replacement <= budget_replacement ? 'ok' : 'sin_match'
+  const tariffRegular: 'ok' | 'parcial' | 'sin_match'     = rates && budget_regular > 0 && rates.rate_regular <= budget_regular ? 'ok' : 'sin_match'
+  const tariffReplacement: 'ok' | 'parcial' | 'sin_match' = rates && budget_replacement > 0 && rates.rate_replacement <= budget_replacement ? 'ok' : 'sin_match'
   const isFullMatch = tariffRegular === 'ok' && tariffReplacement === 'ok'
-
-  const handleRequestMatch = () => {
-    navigation.navigate('RequestMatch', { instructorId, instructorName: instructor.full_name })
-  }
 
   return (
     <View style={{ flex: 1, backgroundColor: colors.cream }}>
-      <ScrollView>
-        {/* Hero header */}
-        <View style={[styles.hero, isFullMatch && styles.heroMatch]}>
-          <Avatar name={instructor.full_name} size={56} color={isFullMatch ? colors.sageMid : colors.sage} />
-          <View style={{ flex: 1, marginLeft: spacing.md }}>
-            <Text style={styles.name}>{instructor.full_name}</Text>
-            {instructor.neighborhood && (
-              <Text style={styles.zone}>{instructor.neighborhood}</Text>
-            )}
-            <View style={{ flexDirection: 'row', gap: spacing.xs, marginTop: spacing.xs, flexWrap: 'wrap' }}>
-              {instructor.verification_status === 'verificado' && (
-                <Badge label="✓ Verificada" color="sage" />
-              )}
-            </View>
+      <HeroHeader
+        title={instructor.full_name}
+        subtitle={[instructor.neighborhood, instructor.years_experience > 0 && `${instructor.years_experience} años exp.`].filter(Boolean).join(' · ')}
+        onBack={() => navigation.goBack()}
+        backLabel="Resultados"
+        rightElement={
+          <View style={s.scoreWrap}>
+            <Text style={s.scoreNum}>{stats?.avg_score > 0 ? stats.avg_score.toFixed(1) : '—'}</Text>
+            <Text style={s.scoreLbl}>Puntaje</Text>
           </View>
-          <ScoreDisplay score={stats?.avg_score} size="lg" showLabel />
-        </View>
-
-        {/* Stats row */}
-        {stats && (
-          <View style={styles.statsRow}>
-            {[
-              { value: stats.total_evaluations, label: 'Evaluaciones' },
-              { value: stats.avg_technique?.toFixed(1), label: 'Técnica' },
-              { value: stats.avg_punctuality?.toFixed(1), label: 'Puntualidad' },
-            ].map((s, i) => (
-              <View key={i} style={styles.statItem}>
-                <Text style={styles.statValue}>{s.value}</Text>
-                <Text style={styles.statLabel}>{s.label}</Text>
+        }
+        bottomElement={
+          <View style={s.heroBottom}>
+            {instructor.verification_status === 'verificado' && (
+              <View style={s.veriBadge}>
+                <Text style={s.veriTxt}>✓ Verificado · CAPIAF</Text>
               </View>
-            ))}
+            )}
+            {isFullMatch && (
+              <View style={s.matchBadge}>
+                <Feather name="check-circle" size={11} color={colors.okTx} />
+                <Text style={s.matchBadgeTxt}>Match de tarifas</Text>
+              </View>
+            )}
+          </View>
+        }
+      />
+
+      <ScrollView showsVerticalScrollIndicator={false}>
+        {/* KPI stats */}
+        {stats && (
+          <View style={s.kpiRow}>
+            <BlobCard style={s.kpiCard} delay={0}>
+              <Text style={s.kpiNum}>{stats.total_evaluations ?? 0}</Text>
+              <Text style={s.kpiLbl}>Evaluaciones</Text>
+            </BlobCard>
+            <BlobCard style={s.kpiCard} delay={1500}>
+              <Text style={s.kpiNum}>{stats.avg_technique?.toFixed(1) ?? '—'}</Text>
+              <Text style={s.kpiLbl}>Técnica</Text>
+            </BlobCard>
+            <BlobCard style={s.kpiCard} delay={3000}>
+              <Text style={s.kpiNum}>{stats.avg_punctuality?.toFixed(1) ?? '—'}</Text>
+              <Text style={s.kpiLbl}>Puntualidad</Text>
+            </BlobCard>
           </View>
         )}
 
-        {/* Match de tarifas */}
+        {/* Comparativa de tarifas */}
         {rates && budget_regular > 0 && (
-          <Card style={[styles.tariffCard, isFullMatch && styles.tariffCardMatch]}>
-            <Text style={styles.sectionTitle}>Comparativa de tarifas</Text>
-            <View style={styles.tariffTable}>
-              <View style={styles.tariffHeader}>
-                <Text style={[styles.tariffCol, { flex: 1.5 }]}>Tipo</Text>
-                <Text style={[styles.tariffCol, { color: colors.sage }]}>Instructora</Text>
-                <Text style={[styles.tariffCol, { color: colors.sage }]}>Tu oferta</Text>
-                <Text style={styles.tariffCol}>Estado</Text>
+          <BlobCard
+            style={s.tariffCard}
+            delay={500}
+            blobColor={isFullMatch ? 'rgba(46,107,26,0.14)' : 'rgba(74,93,78,0.12)'}
+            blobColor2={isFullMatch ? 'rgba(46,107,26,0.08)' : 'rgba(74,93,78,0.07)'}
+          >
+            <Text style={s.sectionTitle}>Comparativa de tarifas</Text>
+            {[
+              { type: 'Regular', ins: rates.rate_regular, studio: budget_regular, status: tariffRegular },
+              { type: 'Reemplazo', ins: rates.rate_replacement, studio: budget_replacement, status: tariffReplacement },
+            ].map(row => (
+              <View key={row.type} style={s.tariffRow}>
+                <Text style={s.tariffType}>{row.type}</Text>
+                <Text style={s.tariffVal}>${row.ins.toLocaleString('es-AR')}</Text>
+                <TariffMatchPill status={row.status} />
               </View>
-              {[
-                { type: 'Regular', ins: rates.rate_regular, studio: budget_regular, status: tariffRegular },
-                { type: 'Reemplazo', ins: rates.rate_replacement, studio: budget_replacement, status: tariffReplacement },
-              ].map(row => (
-                <View key={row.type} style={styles.tariffRow}>
-                  <Text style={[styles.tariffCell, { flex: 1.5 }]}>{row.type}</Text>
-                  <Text style={[styles.tariffCell, { color: colors.sage, fontFamily: 'Nunito-SemiBold' }]}>
-                    ${row.ins.toLocaleString('es-AR')}
-                  </Text>
-                  <Text style={[styles.tariffCell, { color: colors.sage, fontFamily: 'Nunito-SemiBold' }]}>
-                    ${row.studio.toLocaleString('es-AR')}
-                  </Text>
-                  <View style={styles.tariffCell}>
-                    <TariffMatchPill status={row.status}  />
-                  </View>
-                </View>
-              ))}
-            </View>
-          </Card>
+            ))}
+          </BlobCard>
         )}
 
         {/* Tabs */}
-        <View style={styles.tabs}>
+        <View style={s.tabs}>
           {(['perfil', 'certificaciones', 'disponibilidad'] as Tab[]).map(t => (
-            <TouchableOpacity key={t} style={[styles.tab, tab === t && styles.tabActive]} onPress={() => setTab(t)}>
-              <Text style={[styles.tabText, tab === t && styles.tabTextActive]}>
+            <TouchableOpacity key={t} style={[s.tab, tab === t && s.tabActive]} onPress={() => setTab(t)}>
+              <Text style={[s.tabTxt, tab === t && s.tabTxtActive]}>
                 {t.charAt(0).toUpperCase() + t.slice(1)}
               </Text>
             </TouchableOpacity>
           ))}
         </View>
 
-        <View style={{ padding: spacing.lg }}>
+        <View style={s.tabContent}>
+          {/* ── PERFIL ── */}
           {tab === 'perfil' && (
             <>
               {instructor.bio && (
-                <Card style={styles.section}>
-                  <Text style={styles.sectionTitle}>Sobre mí</Text>
-                  <Text style={styles.bioText}>{instructor.bio}</Text>
-                </Card>
+                <BlobCard style={s.section} delay={200}>
+                  <Text style={s.sectionTitle}>Sobre mí</Text>
+                  <Text style={s.bioText}>{instructor.bio}</Text>
+                </BlobCard>
               )}
               {instructor.specialties.length > 0 && (
-                <Card style={styles.section}>
-                  <Text style={styles.sectionTitle}>Especialidades</Text>
-                  <View style={styles.chipRow}>
+                <BlobCard style={s.section} delay={800}>
+                  <Text style={s.sectionTitle}>Especialidades</Text>
+                  <View style={s.chipRow}>
                     {instructor.specialties.map((sp: any) => (
-                      <Badge key={sp.id} label={SPECIALTY_LABELS[sp.specialty] ?? sp.specialty} color="sage" />
+                      <View key={sp.id} style={s.chip}>
+                        <Text style={s.chipTxt}>{SPECIALTY_LABELS[sp.specialty] ?? sp.specialty}</Text>
+                      </View>
                     ))}
                   </View>
-                </Card>
+                </BlobCard>
               )}
               {stats && (
-                <Card style={styles.section}>
-                  <Text style={styles.sectionTitle}>Puntaje por criterio</Text>
+                <BlobCard style={s.section} delay={1400}>
+                  <Text style={s.sectionTitle}>Puntaje por criterio</Text>
                   {[
-                    { label: 'Técnica', val: stats.avg_technique },
-                    { label: 'Puntualidad', val: stats.avg_punctuality },
-                    { label: 'Trato', val: stats.avg_student_care },
+                    { label: 'Técnica',      val: stats.avg_technique },
+                    { label: 'Puntualidad',  val: stats.avg_punctuality },
+                    { label: 'Trato',        val: stats.avg_student_care },
                     { label: 'Presentación', val: stats.avg_presentation },
                   ].map(c => (
-                    <View key={c.label} style={styles.scoreRow}>
-                      <Text style={styles.scoreName}>{c.label}</Text>
-                      <View style={styles.scoreBar}>
-                        <View style={[styles.scoreBarFill, { width: `${(c.val / 10) * 100}%` }]} />
+                    <View key={c.label} style={s.scoreRow}>
+                      <Text style={s.scoreName}>{c.label}</Text>
+                      <View style={s.scoreBar}>
+                        <View style={[s.scoreBarFill, { width: `${((c.val ?? 0) / 10) * 100}%` }]} />
                       </View>
-                      <Text style={styles.scoreVal}>{c.val?.toFixed(1)}</Text>
+                      <Text style={s.scoreVal}>{c.val?.toFixed(1) ?? '—'}</Text>
                     </View>
                   ))}
-                </Card>
+                </BlobCard>
               )}
             </>
           )}
 
+          {/* ── CERTIFICACIONES ── */}
           {tab === 'certificaciones' && (
-            <Card style={styles.section}>
-              <Text style={styles.sectionTitle}>Certificaciones</Text>
+            <BlobCard style={s.section} delay={200}>
+              <Text style={s.sectionTitle}>Certificaciones</Text>
               {instructor.certifications.length === 0 ? (
-                <Text style={styles.emptyText}>Sin certificaciones cargadas</Text>
+                <Text style={s.emptyText}>Sin certificaciones cargadas</Text>
               ) : instructor.certifications.map((cert: any) => (
-                <View key={cert.id} style={styles.certRow}>
-                  <View style={{ flex: 1 }}>
-                    <Text style={styles.certName}>{cert.name}</Text>
-                    <Text style={styles.certMeta}>{cert.institution} · {cert.year}</Text>
-                    {cert.hours && <Text style={styles.certMeta}>{cert.hours} horas</Text>}
+                <View key={cert.id} style={s.certRow}>
+                  <View style={[s.certIcon, { backgroundColor: cert.verified ? colors.sageLight : colors.warnBg }]}>
+                    <Feather name="award" size={16} color={cert.verified ? colors.sage : colors.warnTx} />
                   </View>
-                  {cert.verified && <Badge label="✓ Verificada" color="sage" />}
+                  <View style={{ flex: 1 }}>
+                    <Text style={s.certName}>{cert.name}</Text>
+                    {cert.institution && <Text style={s.certMeta}>{cert.institution}{cert.year ? ` · ${cert.year}` : ''}</Text>}
+                    <View style={[s.miniTag, { backgroundColor: cert.verified ? colors.okBg : colors.warnBg, marginTop: 4 }]}>
+                      <Text style={[s.miniTagTxt, { color: cert.verified ? colors.okTx : colors.warnTx }]}>
+                        {cert.verified ? '✓ Verificado' : 'En revisión'}
+                      </Text>
+                    </View>
+                  </View>
                 </View>
               ))}
-            </Card>
+            </BlobCard>
           )}
 
+          {/* ── DISPONIBILIDAD ── */}
           {tab === 'disponibilidad' && (
             <>
-              <View style={styles.daysStrip}>
+              <View style={s.daysStrip}>
                 {Object.entries(DAYS_ES).map(([day, label]) => {
                   const hasSlot = instructor.availability.some((a: any) => a.day_of_week === day && a.is_active)
                   return (
-                    <View key={day} style={[styles.dayPill, hasSlot && styles.dayPillActive]}>
-                      <Text style={[styles.dayLabel, hasSlot && styles.dayLabelActive]}>{label}</Text>
-                      {hasSlot && <View style={styles.dayDot} />}
+                    <View key={day} style={[s.dayPill, hasSlot && s.dayPillActive]}>
+                      <Text style={[s.dayLbl, hasSlot && s.dayLblActive]}>{label}</Text>
+                      {hasSlot && <View style={s.dayDot} />}
                     </View>
                   )
                 })}
               </View>
-
-              <Card style={styles.section}>
+              <BlobCard style={s.section} delay={400}>
                 {Object.entries(DAYS_ES).map(([day, label]) => {
                   const slots = instructor.availability.filter((a: any) => a.day_of_week === day && a.is_active)
                   if (!slots.length) return null
                   return (
-                    <View key={day} style={{ marginBottom: spacing.md }}>
-                      <Text style={styles.dayTitle}>{label}</Text>
+                    <View key={day} style={s.daySection}>
+                      <Text style={s.dayTitle}>{label}</Text>
                       {slots.map((slot: any) => (
-                        <View key={slot.id} style={styles.slot}>
-                          <Text style={styles.slotTime}>{slot.start_time.slice(0, 5)} – {slot.end_time.slice(0, 5)}</Text>
-                          <Badge label={slot.class_type === 'regular' ? 'Regular' : 'Reemplazo'}
-                            color={slot.class_type === 'regular' ? 'sage' : 'blush'} />
+                        <View key={slot.id} style={s.slot}>
+                          <Text style={s.slotTime}>{slot.start_time.slice(0, 5)} – {slot.end_time.slice(0, 5)}</Text>
+                          <View style={[s.chip, { backgroundColor: slot.class_type === 'regular' ? colors.sageLight : colors.goldLight }]}>
+                            <Text style={[s.chipTxt, { color: slot.class_type === 'regular' ? colors.sage : colors.gold }]}>
+                              {slot.class_type === 'regular' ? 'Regular' : 'Reemplazo'}
+                            </Text>
+                          </View>
                         </View>
                       ))}
                     </View>
                   )
                 })}
-              </Card>
-
+              </BlobCard>
               {instructor.zones.length > 0 && (
-                <Card style={styles.section}>
-                  <Text style={styles.sectionTitle}>Zonas donde trabaja</Text>
-                  <View style={styles.chipRow}>
+                <BlobCard style={s.section} delay={1000}>
+                  <Text style={s.sectionTitle}>Zonas donde trabaja</Text>
+                  <View style={s.chipRow}>
                     {instructor.zones.map((z: any) => (
-                      <Badge key={z.id} label={z.neighborhood} color="sage" />
+                      <View key={z.id} style={s.chip}>
+                        <Text style={s.chipTxt}>{z.neighborhood}</Text>
+                      </View>
                     ))}
                   </View>
-                </Card>
+                </BlobCard>
               )}
             </>
           )}
@@ -240,60 +246,91 @@ export default function InstructorProfileScreen({ navigation, route }: Props) {
       </ScrollView>
 
       {/* CTA fijo */}
-      <View style={styles.cta}>
-        <Button
-          label={isFullMatch ? 'Solicitar reemplazo →' : 'Ver disponibilidad →'}
-          onPress={handleRequestMatch}
-          fullWidth size="lg"
-          variant={isFullMatch ? 'primary' : 'secondary'}
-        />
+      <View style={s.cta}>
+        <TouchableOpacity
+          style={[s.ctaBtn, isFullMatch && s.ctaBtnMatch]}
+          onPress={() => navigation.navigate('RequestMatch', { instructorId, instructorName: instructor.full_name })}
+          activeOpacity={0.85}
+        >
+          <Text style={s.ctaTxt}>{isFullMatch ? 'Enviar solicitud →' : 'Ver disponibilidad →'}</Text>
+        </TouchableOpacity>
       </View>
     </View>
   )
 }
 
-const styles = StyleSheet.create({
-  hero: { backgroundColor: colors.sageLight, padding: spacing.lg, flexDirection: 'row', alignItems: 'flex-start' },
-  heroMatch: { backgroundColor: '#F0F7F0' },
-  name: { fontFamily: 'Nunito-Bold', fontSize: 20, color: colors.dark },
-  zone: { ...typography.small, color: colors.mid, marginTop: 2 },
-  statsRow: { flexDirection: 'row', backgroundColor: colors.white, borderBottomWidth: 0.5, borderColor: colors.border },
-  statItem: { flex: 1, alignItems: 'center', padding: spacing.md },
-  statValue: { fontFamily: 'Nunito-SemiBold', fontSize: 18, color: colors.dark },
-  statLabel: { ...typography.small, color: colors.mid, marginTop: 2 },
-  tariffCard: { margin: spacing.lg, padding: spacing.md, backgroundColor: colors.white },
-  tariffCardMatch: { borderColor: '#B5D4B7', backgroundColor: '#F4FAF4' },
-  tariffTable: {},
-  tariffHeader: { flexDirection: 'row', paddingBottom: spacing.xs, borderBottomWidth: 0.5, borderColor: colors.border, marginBottom: spacing.xs },
-  tariffRow: { flexDirection: 'row', paddingVertical: spacing.xs },
-  tariffCol: { flex: 1, ...typography.label, color: colors.light, fontSize: 10 },
-  tariffCell: { flex: 1, ...typography.small, color: colors.dark },
-  tabs: { flexDirection: 'row', backgroundColor: colors.white, borderBottomWidth: 0.5, borderColor: colors.border },
-  tab: { flex: 1, paddingVertical: spacing.md, alignItems: 'center' },
-  tabActive: { borderBottomWidth: 2, borderColor: colors.sage },
-  tabText: { ...typography.small, color: colors.mid },
-  tabTextActive: { color: colors.sage, fontFamily: 'Nunito-SemiBold' },
-  section: { padding: spacing.md, marginBottom: spacing.md, backgroundColor: colors.white },
-  sectionTitle: { ...typography.label, color: colors.dark, marginBottom: spacing.md },
-  bioText: { ...typography.body, color: colors.mid, lineHeight: 22 },
-  chipRow: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.xs },
-  scoreRow: { flexDirection: 'row', alignItems: 'center', marginBottom: spacing.sm },
-  scoreName: { ...typography.small, color: colors.mid, width: 80 },
-  scoreBar: { flex: 1, height: 5, backgroundColor: colors.sageLighter, borderRadius: 3, marginHorizontal: spacing.sm },
-  scoreBarFill: { height: '100%', backgroundColor: colors.sage, borderRadius: 3 },
-  scoreVal: { fontFamily: 'Nunito-SemiBold', fontSize: 12, color: colors.dark, width: 28, textAlign: 'right' },
-  certRow: { flexDirection: 'row', alignItems: 'flex-start', paddingVertical: spacing.sm, borderBottomWidth: 0.5, borderColor: colors.borderLight },
-  certName: { fontFamily: 'Nunito-Medium', fontSize: 13, color: colors.dark },
-  certMeta: { ...typography.small, color: colors.mid, marginTop: 2 },
-  emptyText: { ...typography.body, color: colors.light, textAlign: 'center', padding: spacing.lg },
-  daysStrip: { flexDirection: 'row', gap: spacing.xs, padding: spacing.lg, paddingBottom: 0 },
-  dayPill: { flex: 1, alignItems: 'center', paddingVertical: spacing.sm, borderTopLeftRadius: 14, borderTopRightRadius: 0, borderBottomLeftRadius: 0, borderBottomRightRadius: 14, backgroundColor: colors.cream, borderWidth: 0.5, borderColor: colors.border },
-  dayPillActive: { backgroundColor: colors.sageLight, borderColor: colors.sageMid },
-  dayLabel: { fontSize: 10, color: colors.light },
-  dayLabelActive: { color: colors.sage, fontFamily: 'Nunito-Medium' },
-  dayDot: { width: 5, height: 5, borderRadius: 3, backgroundColor: colors.sage, marginTop: 3 },
-  dayTitle: { fontFamily: 'Nunito-SemiBold', fontSize: 13, color: colors.dark, marginBottom: spacing.xs },
-  slot: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingVertical: spacing.xs },
-  slotTime: { ...typography.body, color: colors.dark },
-  cta: { padding: spacing.lg, backgroundColor: colors.white, borderTopWidth: 0.5, borderColor: colors.border },
+const s = StyleSheet.create({
+  // Hero extras
+  scoreWrap:      { alignItems: 'center', gap: 2 },
+  scoreNum:       { fontFamily: 'Nunito-Bold', fontSize: 22, color: '#fff' },
+  scoreLbl:       { fontFamily: 'Nunito-SemiBold', fontSize: 9, color: 'rgba(255,255,255,0.6)', textTransform: 'uppercase' as const, letterSpacing: 0.5 },
+  heroBottom:     { flexDirection: 'row', gap: 8, marginTop: 12 },
+  veriBadge:      { alignSelf: 'flex-start', backgroundColor: 'rgba(184,150,12,0.22)', borderWidth: 1, borderColor: 'rgba(184,150,12,0.38)', borderRadius: 999, paddingHorizontal: 10, paddingVertical: 3 },
+  veriTxt:        { fontFamily: 'Nunito-Bold', fontSize: 9, color: '#FFD060', letterSpacing: 0.5 },
+  matchBadge:     { flexDirection: 'row', alignItems: 'center', gap: 4, backgroundColor: 'rgba(46,107,26,0.25)', borderRadius: 999, paddingHorizontal: 10, paddingVertical: 3 },
+  matchBadgeTxt:  { fontFamily: 'Nunito-Bold', fontSize: 9, color: '#A8FFAA' },
+
+  // KPI
+  kpiRow:         { flexDirection: 'row', gap: spacing.sm, marginHorizontal: spacing.md, marginTop: -12, marginBottom: spacing.md, zIndex: 2 },
+  kpiCard:        { flex: 1, padding: spacing.md, alignItems: 'center' },
+  kpiNum:         { fontFamily: 'Nunito-Bold', fontSize: 22, color: colors.dark },
+  kpiLbl:         { fontFamily: 'Nunito-Bold', fontSize: 8, color: colors.light, textTransform: 'uppercase' as const, letterSpacing: 0.5, marginTop: 2 },
+
+  // Tariffs
+  tariffCard:     { marginHorizontal: spacing.md, marginBottom: spacing.md, padding: spacing.md },
+  tariffRow:      { flexDirection: 'row', alignItems: 'center', paddingVertical: 8, borderBottomWidth: 0.5, borderColor: colors.borderLight },
+  tariffType:     { fontFamily: 'Nunito-SemiBold', fontSize: 13, color: colors.dark, flex: 1 },
+  tariffVal:      { fontFamily: 'Nunito-Bold', fontSize: 13, color: colors.sage, marginRight: spacing.sm },
+
+  // Tabs
+  tabs:           { flexDirection: 'row', backgroundColor: colors.white, borderBottomWidth: 0.5, borderColor: colors.border, marginBottom: spacing.md },
+  tab:            { flex: 1, paddingVertical: spacing.md, alignItems: 'center' },
+  tabActive:      { borderBottomWidth: 2, borderColor: colors.sage },
+  tabTxt:         { fontFamily: 'Nunito-SemiBold', fontSize: 12, color: colors.light },
+  tabTxtActive:   { color: colors.sage, fontFamily: 'Nunito-Bold' },
+  tabContent:     { paddingHorizontal: spacing.md, paddingBottom: 16 },
+
+  // Sections
+  section:        { padding: spacing.md, marginBottom: spacing.md },
+  sectionTitle:   { fontFamily: 'Nunito-Bold', fontSize: 11, color: colors.light, textTransform: 'uppercase' as const, letterSpacing: 0.7, marginBottom: spacing.md },
+  bioText:        { fontFamily: 'Nunito-Regular', fontSize: 14, color: colors.mid, lineHeight: 22 },
+
+  // Chips
+  chipRow:        { flexDirection: 'row', flexWrap: 'wrap', gap: 6 },
+  chip:           { backgroundColor: colors.sageLight, borderTopLeftRadius: 10, borderTopRightRadius: 0, borderBottomLeftRadius: 0, borderBottomRightRadius: 10, paddingHorizontal: 10, paddingVertical: 4 },
+  chipTxt:        { fontFamily: 'Nunito-SemiBold', fontSize: 11, color: colors.sage },
+
+  // Score bars
+  scoreRow:       { flexDirection: 'row', alignItems: 'center', marginBottom: spacing.sm },
+  scoreName:      { fontFamily: 'Nunito-SemiBold', fontSize: 12, color: colors.mid, width: 90 },
+  scoreBar:       { flex: 1, height: 5, backgroundColor: colors.sageLighter, borderRadius: 3, marginHorizontal: spacing.sm, overflow: 'hidden' },
+  scoreBarFill:   { height: '100%' as any, backgroundColor: colors.sage, borderRadius: 3 },
+  scoreVal:       { fontFamily: 'Nunito-Bold', fontSize: 12, color: colors.dark, width: 28, textAlign: 'right' },
+
+  // Certs
+  certRow:        { flexDirection: 'row', alignItems: 'flex-start', gap: spacing.sm, paddingVertical: spacing.sm, borderBottomWidth: 0.5, borderColor: colors.borderLight },
+  certIcon:       { width: 36, height: 36, borderRadius: 18, alignItems: 'center', justifyContent: 'center', flexShrink: 0 },
+  certName:       { fontFamily: 'Nunito-Bold', fontSize: 13, color: colors.dark },
+  certMeta:       { fontFamily: 'Nunito-Regular', fontSize: 11, color: colors.light, marginTop: 2 },
+  miniTag:        { alignSelf: 'flex-start', borderTopLeftRadius: 6, borderTopRightRadius: 0, borderBottomLeftRadius: 0, borderBottomRightRadius: 6, paddingHorizontal: 7, paddingVertical: 2 },
+  miniTagTxt:     { fontFamily: 'Nunito-Bold', fontSize: 9 },
+  emptyText:      { fontFamily: 'Nunito-Regular', fontSize: 13, color: colors.light, textAlign: 'center', paddingVertical: spacing.xl },
+
+  // Availability
+  daysStrip:      { flexDirection: 'row', gap: 4, marginHorizontal: spacing.md, marginBottom: spacing.md },
+  dayPill:        { flex: 1, alignItems: 'center', paddingVertical: 8, borderTopLeftRadius: 10, borderTopRightRadius: 0, borderBottomLeftRadius: 0, borderBottomRightRadius: 10, backgroundColor: colors.cream, borderWidth: 0.5, borderColor: colors.border },
+  dayPillActive:  { backgroundColor: colors.sageLight, borderColor: colors.sage },
+  dayLbl:         { fontSize: 9, fontFamily: 'Nunito-Bold', color: colors.light },
+  dayLblActive:   { color: colors.sage },
+  dayDot:         { width: 4, height: 4, borderRadius: 2, backgroundColor: colors.sage, marginTop: 3 },
+  daySection:     { marginBottom: spacing.md },
+  dayTitle:       { fontFamily: 'Nunito-Bold', fontSize: 13, color: colors.dark, marginBottom: spacing.xs },
+  slot:           { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingVertical: 4 },
+  slotTime:       { fontFamily: 'Nunito-SemiBold', fontSize: 13, color: colors.dark },
+
+  // CTA
+  cta:            { padding: spacing.md, backgroundColor: colors.white, borderTopWidth: 0.5, borderColor: colors.border },
+  ctaBtn:         { backgroundColor: colors.sage, borderTopLeftRadius: 14, borderTopRightRadius: 0, borderBottomLeftRadius: 0, borderBottomRightRadius: 14, padding: 15, alignItems: 'center' },
+  ctaBtnMatch:    { backgroundColor: '#2E6B1A' },
+  ctaTxt:         { fontFamily: 'Nunito-Bold', fontSize: 15, color: '#fff' },
 })

@@ -77,9 +77,9 @@ export default function SearchScreen({ navigation }: Props) {
             <EmptyState message="No encontramos instructores que coincidan con los filtros aplicados en Buenos Aires." />
           )}
           renderItem={({ item }: { item: InstructorSearchResult }) => (
-            <BlobCard style={styles.resultCard} onPress={() => navigation.navigate('InstructorProfile', { instructorId: item.id })}>
+            <BlobCard style={styles.resultCard} onPress={() => navigation.navigate('InstructorProfile', { instructorId: item.id })} blobColor='rgba(74,93,78,0.08)' blobColor2='rgba(74,93,78,0.05)'>
               <View style={styles.cardTop}>
-                <Avatar src={item.avatar_url} fallback={item.full_name[0]} size="lg" />
+                <Avatar name={item.full_name} size={44} />
                 <View style={styles.metaArea}>
                   <Text style={styles.nameText}>{item.full_name}</Text>
                   <Text style={styles.subText}>{item.neighborhood || 'Buenos Aires'} • {(item.stats?.total_evaluations || 0) || 0} años exp.</Text>
