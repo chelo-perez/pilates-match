@@ -86,20 +86,14 @@ export default function ProfileEditScreen({ navigation }: any) {
     const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync()
     if (status !== 'granted') return
     const result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ImagePicker.MediaTypeOptions.Images, allowsEditing: true, aspect: [1, 1], quality: 0.7,
+      mediaTypes: ImagePicker.MediaTypeOptions.Images, allowsEditing: true, aspect: [1, 1], quality: 0.7, base64: true,
     })
     if (result.canceled || !result.assets[0]) return
     try {
       setUploading(true)
-      const asset = result.assets[0]
-      // Re-launch with base64 to get reliable data for native upload
-      const b64Result = await ImagePicker.launchImageLibraryAsync({
-        mediaTypes: ImagePicker.MediaTypeOptions.Images,
-        allowsEditing: true, aspect: [1, 1], quality: 0.7, base64: true,
-      })
-      if (b64Result.canceled || !b64Result.assets[0]?.base64) throw new Error('No se pudo leer la imagen')
-      const { base64, uri } = b64Result.assets[0]
-      const ext = uri.split('.').pop()?.toLowerCase() ?? 'jpg'
+      const { base64, uri } = result.assets[0]
+      if (!base64) throw new Error('No se pudo leer la imagen')
+      const ext = uri.split('.').pop()?.toLowerCase().replace('jpeg','jpg') ?? 'jpg'
       const mimeType = ext === 'png' ? 'image/png' : 'image/jpeg'
       const path = `${user!.id}/avatar.${ext}`
       const { error: uploadError } = await supabase.storage
