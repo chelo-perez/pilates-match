@@ -107,7 +107,7 @@ export default function InstructorRatesScreen({ navigation }: any) {
 
   return (
     <View style={{ flex: 1, backgroundColor: colors.cream }}>
-      <HeroHeader title="Mis tarifas" subtitle="Solo visibles cuando hay match con un estudio" onBack={() => navigation.goBack()} backLabel="Mi perfil" />
+      <HeroHeader title="Mis tarifas" subtitle="Solo visibles cuando hay match con un estudio" />
       <ScrollView contentContainerStyle={s.content} showsVerticalScrollIndicator={false}>
         <Text style={s.intro}>Definí el valor mínimo que aceptás por hora. Tus tarifas son privadas.</Text>
 
