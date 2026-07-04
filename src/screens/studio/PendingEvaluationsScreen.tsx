@@ -62,15 +62,25 @@ export default function PendingEvaluationsScreen({ navigation }: any) {
 
   return (
     <View style={styles.container}>
-      {/* Banner de estado */}
-      <View style={styles.banner}>
-        <Feather name="lock" size={18} color="#B8960C" />
-        <Text style={styles.bannerText}>
-          {pending.length > 0
-            ? `Evaluá para desbloquear el envío de propuestas`
-            : 'Todas las evaluaciones completadas'}
-        </Text>
-      </View>
+      <HeroHeader
+        title="Evaluaciones pendientes"
+        subtitle={pending.length > 0
+          ? 'Evaluá para desbloquear el envío de propuestas'
+          : 'Todo al día'}
+        onBack={() => navigation.goBack()}
+        backLabel="Inicio"
+        bottomElement={pending.length > 0 ? (
+          <View style={styles.pendingBadge}>
+            <View style={styles.pendingDot} />
+            <Text style={styles.pendingBadgeTxt}>{pending.length} pendiente{pending.length > 1 ? 's' : ''}</Text>
+          </View>
+        ) : (
+          <View style={styles.allDoneBadge}>
+            <Feather name="check-circle" size={12} color="#FFD060" />
+            <Text style={styles.allDoneTxt}>Todo al día</Text>
+          </View>
+        )}
+      />
 
       <FlatList
         data={pending}
@@ -160,8 +170,6 @@ const styles = StyleSheet.create({
   pendingBadge:         { flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 10, alignSelf: 'flex-start', backgroundColor: 'rgba(255,255,255,0.15)', borderRadius: 999, paddingHorizontal: 10, paddingVertical: 4 },
   pendingDot:           { width: 6, height: 6, borderRadius: 3, backgroundColor: '#FF6B6B' },
   pendingBadgeTxt:      { fontFamily: 'Nunito-Bold', fontSize: 10, color: '#fff' },
-  banner:               { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, backgroundColor: '#FFF6E0', padding: spacing.md, borderBottomWidth: 0.5, borderColor: '#EF9F27' },
-  bannerText:           { fontFamily: 'Nunito-SemiBold', fontSize: 13, color: '#633806', flex: 1 },
   list:                 { padding: spacing.md, paddingBottom: spacing.xxl },
   card:                 { marginBottom: spacing.sm, padding: spacing.md },
   row:                  { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, marginBottom: spacing.sm },
