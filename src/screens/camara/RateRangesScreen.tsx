@@ -1,6 +1,6 @@
 // src/screens/camara/RateRangesScreen.tsx
 import React, { useState, useEffect } from 'react'
-import { View, TouchableOpacity, Text, StyleSheet, ScrollView } from 'react-native'
+import { View, TouchableOpacity, Text, StyleSheet, ScrollView, Alert } from 'react-native'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { db } from '../../lib/supabase'
 import { camaraAPI } from '../../lib/api'
@@ -69,7 +69,7 @@ export default function RateRangesScreen() {
       qc.invalidateQueries({ queryKey: ['rate-ranges'] })
       showToast('Rangos actualizados correctamente')
     },
-    onError: (e: any) => showToast(e.message ?? 'Error al guardar', 'error'),
+    onError: (e: any) => Alert.alert('Error', e.message),
   })
 
   if (isLoading) return <LoadingScreen />
@@ -147,7 +147,7 @@ export default function RateRangesScreen() {
         }
       </Text>
     </ScrollView>
-      <Toast visible={toast.visible} message={toast.message} type={toast.type} onHide={hideToast} />
+    <Toast visible={toast.visible} message={toast.message} type={toast.type} onHide={hideToast} />
     </>
   )
 }
@@ -157,7 +157,7 @@ const styles = StyleSheet.create({
   content: { padding: spacing.lg, paddingTop: 52, paddingBottom: spacing.xxl },
   info: {
     flexDirection: 'row', alignItems: 'flex-start',
-    backgroundColor: colors.sageLight, borderTopLeftRadius: 14, borderTopRightRadius: 0, borderBottomLeftRadius: 0, borderBottomRightRadius: 14,
+    backgroundColor: colors.sageLight, borderRadius: radius.md,
     padding: spacing.md, marginBottom: spacing.lg,
   },
   infoText: { ...typography.small, color: colors.mid, flex: 1, lineHeight: 18 },
@@ -167,9 +167,9 @@ const styles = StyleSheet.create({
   fieldLabel: { ...typography.label, color: colors.mid, marginBottom: spacing.xs },
   sliderRow: { flexDirection: 'row', justifyContent: 'flex-end', marginBottom: spacing.xs },
   sliderVal: { fontFamily: 'Nunito-SemiBold', fontSize: 18, color: colors.dark },
-  rangeSummary: { backgroundColor: colors.sageLight, borderTopLeftRadius: 8, borderTopRightRadius: 0, borderBottomLeftRadius: 0, borderBottomRightRadius: 8, padding: spacing.sm, marginTop: spacing.sm },
+  rangeSummary: { backgroundColor: colors.sageLight, borderRadius: radius.sm, padding: spacing.sm, marginTop: spacing.sm },
   rangeText: { ...typography.small, color: colors.sage, textAlign: 'center', fontFamily: 'Nunito-Medium' },
-  warning: { backgroundColor: colors.warnBg, borderTopLeftRadius: 8, borderTopRightRadius: 0, borderBottomLeftRadius: 0, borderBottomRightRadius: 8, padding: spacing.sm, marginTop: spacing.sm },
+  warning: { backgroundColor: colors.warnBg, borderRadius: radius.sm, padding: spacing.sm, marginTop: spacing.sm },
   warningText: { ...typography.small, color: colors.warnTx, lineHeight: 18 },
   lastUpdate: { ...typography.small, color: colors.light, textAlign: 'center', marginTop: spacing.lg },
 })

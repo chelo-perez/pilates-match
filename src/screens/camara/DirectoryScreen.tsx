@@ -159,7 +159,7 @@ export default function DirectoryScreen({ navigation }: any) {
 
 const styles = StyleSheet.create({
   searchBox: { backgroundColor: colors.white, padding: spacing.md, paddingTop: 52, paddingBottom: spacing.sm, borderBottomWidth: 0.5, borderColor: colors.borderLight },
-  searchInput: { backgroundColor: colors.white, borderTopLeftRadius: 14, borderTopRightRadius: 0, borderBottomLeftRadius: 0, borderBottomRightRadius: 14, padding: spacing.md, ...typography.body, color: colors.dark, borderWidth: 0.5, borderColor: colors.border },
+  searchInput: { backgroundColor: colors.white, borderRadius: radius.md, padding: spacing.md, ...typography.body, color: colors.dark, borderWidth: 0.5, borderColor: colors.border },
   filtersRow: { paddingVertical: spacing.sm, marginBottom: 0, maxHeight: 44 },
   chip: { paddingVertical: 5, paddingHorizontal: 12, borderRadius: 999, backgroundColor: colors.white, borderWidth: 0.5, borderColor: colors.border, marginRight: spacing.xs, height: 30, justifyContent: 'center' },
   chipActive: { backgroundColor: colors.sage, borderColor: colors.sage },

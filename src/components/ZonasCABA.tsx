@@ -59,12 +59,12 @@ export default function ZonasCABA({ selected, onToggle }: Props) {
 }
 
 const s = StyleSheet.create({
-  allBtn:         { borderWidth: 1.5, borderColor: colors.sage, borderTopLeftRadius: 14, borderTopRightRadius: 0, borderBottomLeftRadius: 0, borderBottomRightRadius: 14, padding: spacing.md, alignItems: 'center', marginBottom: spacing.sm },
+  allBtn:         { borderWidth: 1.5, borderColor: colors.sage, borderRadius: radius.md, padding: spacing.md, alignItems: 'center', marginBottom: spacing.sm },
   allBtnActive:   { backgroundColor: colors.sage },
   allBtnText:     { fontFamily: 'Nunito-SemiBold', fontSize: 14, color: colors.sage },
   allBtnTextActive:{ color: colors.white },
   count:          { fontFamily: 'Nunito-Regular', fontSize: 12, color: colors.mid, marginBottom: spacing.md, textAlign: 'center' },
-  zonaSection:    { marginBottom: spacing.sm, backgroundColor: colors.white, borderTopLeftRadius: 14, borderTopRightRadius: 0, borderBottomLeftRadius: 0, borderBottomRightRadius: 14, overflow: 'hidden', borderWidth: 0.5, borderColor: colors.borderLight },
+  zonaSection:    { marginBottom: spacing.sm, backgroundColor: colors.white, borderRadius: radius.md, overflow: 'hidden', borderWidth: 0.5, borderColor: colors.borderLight },
   zonaHeader:     { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', padding: spacing.md, backgroundColor: colors.cream, borderBottomWidth: 0.5, borderColor: colors.borderLight },
   zonaName:       { fontFamily: 'Nunito-Bold', fontSize: 13, color: colors.dark },
   check:          { width: 24, height: 24, borderRadius: 12, borderWidth: 1.5, borderColor: colors.border, alignItems: 'center', justifyContent: 'center' },

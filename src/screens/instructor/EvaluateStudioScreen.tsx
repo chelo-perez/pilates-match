@@ -248,7 +248,7 @@ const styles = StyleSheet.create({
   studioLetter: { fontFamily: 'Nunito-SemiBold', fontSize: 18, color: colors.sage },
   studioName:   { fontFamily: 'Nunito-SemiBold', fontSize: 15, color: colors.dark },
   studioMeta:   { ...typography.small, color: colors.mid, marginTop: 2 },
-  anonBadge:    { flexDirection: 'row', alignItems: 'center', gap: spacing.xs, backgroundColor: colors.sageLight, borderTopLeftRadius: 8, borderTopRightRadius: 0, borderBottomLeftRadius: 0, borderBottomRightRadius: 8, padding: spacing.sm },
+  anonBadge:    { flexDirection: 'row', alignItems: 'center', gap: spacing.xs, backgroundColor: colors.sageLight, borderRadius: radius.sm, padding: spacing.sm },
   anonText:     { ...typography.small, color: colors.sage, fontFamily: 'Nunito-SemiBold' },
   sectionTitle: { fontFamily: 'Nunito-SemiBold', fontSize: 11, color: colors.mid, textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: spacing.sm },
   scoreRow:     { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingVertical: spacing.sm, borderBottomWidth: 0.5, borderColor: colors.borderLight },

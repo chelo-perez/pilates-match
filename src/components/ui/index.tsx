@@ -1,14 +1,13 @@
-// src/components/ui/index.tsx — Design system PilatesMatch · Variante B
-// Diagonal: top-left + bottom-right curvos · top-right + bottom-left rectos
+// src/components/ui/index.tsx — Design system PilatesMatch con Nunito
 
-import React, { useEffect, useRef } from 'react'
+import React from 'react'
 import {
   View, Text, StyleSheet, TouchableOpacity,
-  ActivityIndicator, TextInput, Animated, Easing,
+  ActivityIndicator, TextInput,
 } from 'react-native'
 import { Feather } from '@expo/vector-icons'
 
-// ── Tokens de color ────────────────────────────────────────────
+// ── Tokens de marca ───────────────────────────────────────────
 export const colors = {
   sage:        '#4A5D4E',
   sageMid:     '#6B7E6F',
@@ -19,8 +18,8 @@ export const colors = {
   dark:        '#1A1A1A',
   mid:         '#5C5C5C',
   light:       '#9A9A9A',
-  border:      '#D8E2D8',
-  borderLight: '#EAEFEA',
+  border:      '#E2E2DE',
+  borderLight: '#EFEFEB',
   gold:        '#B8960C',
   goldLight:   '#FBF6E3',
   // Semánticos
@@ -28,43 +27,33 @@ export const colors = {
   warnBg:      '#FEF3DC',  warnTx: '#7A5000',
   redBg:       '#FDECEC',  redTx:  '#8B1F1F',
   blueBg:      '#E8F1FD',  blueTx: '#1A4FA0',
-  // Aliases legacy
+  // Aliases legacy (compatibilidad con pantallas existentes)
   sageMid2:    '#6B7E6F',
   lavender:    '#B0A8D0',
   lavLight:    '#F0EEF8',
   lavDark:     '#5C5490',
   goldLight2:  '#F9F6E5',
-  border2:     '#D8E2D8',
-  borderLight2:'#EAEFEA',
+  border2:     '#DDDDDD',
+  borderLight2:'#EEEEEE',
 }
 
 export const spacing = {
   xs: 4, sm: 8, md: 16, lg: 24, xl: 32, xxl: 40, xxxl: 48,
 }
 
-// ── Radius variante B: top-left + bottom-right curvos ─────────
 export const radius = {
-  sm:   { borderTopLeftRadius: 8,  borderTopRightRadius: 0, borderBottomLeftRadius: 0,  borderBottomRightRadius: 8  },
-  md:   { borderTopLeftRadius: 14, borderTopRightRadius: 0, borderBottomLeftRadius: 0,  borderBottomRightRadius: 14 },
-  lg:   { borderTopLeftRadius: 20, borderTopRightRadius: 0, borderBottomLeftRadius: 0,  borderBottomRightRadius: 20 },
-  xl:   { borderTopLeftRadius: 26, borderTopRightRadius: 0, borderBottomLeftRadius: 0,  borderBottomRightRadius: 26 },
-  full: { borderRadius: 9999 },
-  // Valores planos para casos que siguen necesitando un número
-  smN:  8,
-  mdN:  14,
-  lgN:  20,
-  xlN:  26,
+  sm: 6, md: 10, lg: 14, xl: 18, full: 9999,
 }
 
-// ── Tipografía — Nunito ────────────────────────────────────────
+// ── Tipografía — Nunito ───────────────────────────────────────
 export const typography = {
-  h1:      { fontFamily: 'Nunito-Bold',     fontSize: 26, color: colors.dark,  letterSpacing: -0.4, lineHeight: 32 },
-  h2:      { fontFamily: 'Nunito-Bold',     fontSize: 20, color: colors.dark,  letterSpacing: -0.2 },
-  h3:      { fontFamily: 'Nunito-Bold',     fontSize: 16, color: colors.dark },
+  h1:      { fontFamily: 'Nunito-Bold',     fontSize: 28, color: colors.dark,  letterSpacing: -0.3, lineHeight: 34 },
+  h2:      { fontFamily: 'Nunito-Bold',     fontSize: 22, color: colors.dark,  letterSpacing: -0.2 },
+  h3:      { fontFamily: 'Nunito-SemiBold', fontSize: 18, color: colors.dark },
   body:    { fontFamily: 'Nunito-Regular',  fontSize: 14, color: colors.mid,   lineHeight: 22 },
-  label:   { fontFamily: 'Nunito-Bold',     fontSize: 10, color: colors.light, textTransform: 'uppercase' as const, letterSpacing: 0.7 },
-  small:   { fontFamily: 'Nunito-SemiBold', fontSize: 11, color: colors.light },
-  caption: { fontFamily: 'Nunito-Bold',     fontSize: 9,  color: colors.light, textTransform: 'uppercase' as const, letterSpacing: 0.8 },
+  label:   { fontFamily: 'Nunito-SemiBold', fontSize: 13, color: colors.dark },
+  small:   { fontFamily: 'Nunito-Medium',   fontSize: 11, color: colors.light },
+  caption: { fontFamily: 'Nunito-Bold',     fontSize: 10, color: colors.light, textTransform: 'uppercase' as const, letterSpacing: 0.8 },
   // Aliases legacy
   heading: { fontFamily: 'Nunito-Bold',     fontSize: 24, color: colors.dark },
   text:    { fontFamily: 'Nunito-Regular',  fontSize: 14, color: colors.dark },
@@ -72,96 +61,23 @@ export const typography = {
 
 export const shadows = {
   card: {
-    shadowColor: '#2D3F31',
-    shadowOffset: { width: 0, height: 3 },
-    shadowOpacity: 0.07,
-    shadowRadius: 8,
-    elevation: 3,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.04,
+    shadowRadius: 4,
+    elevation: 2,
   },
 }
 
-// ── BlobCard — card con luz cenital animada ────────────────────
-interface BlobCardProps {
-  children: React.ReactNode
-  style?: any
-  onPress?: () => void
-  blobColor?: string   // color base del blob principal (rgba)
-  blobColor2?: string  // color base del blob secundario
-  size?: 'sm' | 'md' | 'lg'
-}
-
-export function BlobCard({
-  children, style, onPress,
-  blobColor  = 'rgba(74,93,78,',
-  blobColor2 = 'rgba(74,93,78,',
-  size = 'md',
-}: BlobCardProps) {
-  const anim1 = useRef(new Animated.Value(0)).current
-  const anim2 = useRef(new Animated.Value(0)).current
-
-  useEffect(() => {
-    Animated.loop(
-      Animated.sequence([
-        Animated.timing(anim1, { toValue: 1, duration: 7000, easing: Easing.bezier(0.45, 0, 0.55, 1), useNativeDriver: true }),
-        Animated.timing(anim1, { toValue: 0, duration: 7000, easing: Easing.bezier(0.45, 0, 0.55, 1), useNativeDriver: true }),
-      ])
-    ).start()
-    Animated.loop(
-      Animated.sequence([
-        Animated.timing(anim2, { toValue: 1, duration: 10000, easing: Easing.bezier(0.45, 0, 0.55, 1), useNativeDriver: true }),
-        Animated.timing(anim2, { toValue: 0, duration: 10000, easing: Easing.bezier(0.45, 0, 0.55, 1), useNativeDriver: true }),
-      ])
-    ).start()
-  }, [])
-
-  const r = size === 'sm' ? radius.sm : size === 'lg' ? radius.lg : radius.md
-  const Comp = onPress ? TouchableOpacity : View
-
-  // Blob 1: orbita de esquina top-left a bottom-right
-  const b1x = anim1.interpolate({ inputRange: [0, 1], outputRange: [-20, 110] })
-  const b1y = anim1.interpolate({ inputRange: [0, 1], outputRange: [-20, 80] })
-  // Blob 2: dirección opuesta, desde bottom-right
-  const b2x = anim2.interpolate({ inputRange: [0, 1], outputRange: [80, -30] })
-  const b2y = anim2.interpolate({ inputRange: [0, 1], outputRange: [60, -20] })
-
-  return (
-    <Comp
-      style={[s.blobCard, r, style]}
-      onPress={onPress}
-      activeOpacity={0.88}
-    >
-      {/* Blob principal */}
-      <Animated.View
-        style={[
-          s.blob,
-          s.blobMain,
-          {
-            backgroundColor: blobColor + '0.18)',
-            transform: [{ translateX: b1x }, { translateY: b1y }],
-          },
-        ]}
-      />
-      {/* Blob secundario */}
-      <Animated.View
-        style={[
-          s.blob,
-          s.blobSec,
-          {
-            backgroundColor: blobColor2 + '0.12)',
-            transform: [{ translateX: b2x }, { translateY: b2y }],
-          },
-        ]}
-      />
-      <View style={s.blobContent}>{children}</View>
-    </Comp>
-  )
-}
-
-// ── Card (sin blob, legacy) ────────────────────────────────────
+// ── Card ──────────────────────────────────────────────────────
 export function Card({ children, style, onPress }: any) {
   const Comp = onPress ? TouchableOpacity : View
   return (
-    <Comp style={[s.card, style]} onPress={onPress} activeOpacity={0.88}>
+    <Comp
+      style={[s.card, style]}
+      onPress={onPress}
+      activeOpacity={0.85}
+    >
       {children}
     </Comp>
   )
@@ -171,7 +87,6 @@ export function Card({ children, style, onPress }: any) {
 export function Button({ label, onPress, isLoading, fullWidth, size, style, icon, variant }: any) {
   const isSecondary = variant === 'secondary'
   const isDanger    = variant === 'danger'
-  const isGhost     = variant === 'ghost'
   return (
     <TouchableOpacity
       style={[
@@ -181,7 +96,6 @@ export function Button({ label, onPress, isLoading, fullWidth, size, style, icon
         size === 'lg' && s.btnLg,
         isSecondary && s.btnSecondary,
         isDanger    && s.btnDanger,
-        isGhost     && s.btnGhost,
         style,
       ]}
       onPress={onPress}
@@ -189,7 +103,7 @@ export function Button({ label, onPress, isLoading, fullWidth, size, style, icon
       activeOpacity={0.85}
     >
       {isLoading ? (
-        <ActivityIndicator color={isSecondary || isGhost ? colors.sage : '#fff'} size="small" />
+        <ActivityIndicator color={isSecondary ? colors.sage : '#fff'} size="small" />
       ) : (
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 7 }}>
           {icon}
@@ -197,7 +111,6 @@ export function Button({ label, onPress, isLoading, fullWidth, size, style, icon
             s.btnText,
             isSecondary && { color: colors.sage },
             isDanger    && { color: colors.redTx },
-            isGhost     && { color: colors.mid },
           ]}>
             {label}
           </Text>
@@ -209,12 +122,12 @@ export function Button({ label, onPress, isLoading, fullWidth, size, style, icon
 
 // ── Badge ─────────────────────────────────────────────────────
 const BADGE: Record<string, { bg: string; tx: string }> = {
-  success: { bg: colors.okBg,    tx: colors.okTx },
-  warning: { bg: colors.warnBg,  tx: colors.warnTx },
-  danger:  { bg: colors.redBg,   tx: colors.redTx },
-  info:    { bg: colors.blueBg,  tx: colors.blueTx },
+  success: { bg: colors.okBg,   tx: colors.okTx },
+  warning: { bg: colors.warnBg, tx: colors.warnTx },
+  danger:  { bg: colors.redBg,  tx: colors.redTx },
+  info:    { bg: colors.blueBg, tx: colors.blueTx },
   sage:    { bg: colors.sageLight, tx: colors.sage },
-  gold:    { bg: colors.goldLight, tx: colors.gold },
+  gold:    { bg: colors.goldLight,  tx: colors.gold },
   default: { bg: colors.borderLight, tx: colors.mid },
 }
 
@@ -233,10 +146,7 @@ export function Avatar({ source, name, size = 44 }: any) {
   const letter = (name ?? '?')[0]?.toUpperCase() ?? '?'
   return (
     <View style={[s.avatar, { width: dim, height: dim, borderRadius: dim / 2 }]}>
-      {source
-        ? null /* Image component iría acá con fallback */
-        : <Text style={[s.avatarLetter, { fontSize: dim * 0.38 }]}>{letter}</Text>
-      }
+      <Text style={[s.avatarLetter, { fontSize: dim * 0.38 }]}>{letter}</Text>
     </View>
   )
 }
@@ -316,78 +226,63 @@ export function LoadingScreen({ message }: any) {
   )
 }
 
-// ── Stubs ─────────────────────────────────────────────────────
+// ── ScoreSlider / TariffMatchPill (stubs) ─────────────────────
 export function ScoreSlider() { return null }
 
 export function TariffMatchPill({ status }: { status: string }) {
   const cfg: Record<string, { label: string; bg: string; tx: string }> = {
-    ok:        { label: 'Match',         bg: colors.okBg,   tx: colors.okTx },
-    parcial:   { label: 'Match parcial', bg: colors.warnBg, tx: colors.warnTx },
-    sin_match: { label: 'Sin match',     bg: colors.redBg,  tx: colors.redTx },
+    ok:        { label: 'Tarifas OK',      bg: colors.okBg,   tx: colors.okTx },
+    parcial:   { label: 'Tarifas parcial', bg: colors.warnBg, tx: colors.warnTx },
+    sin_match: { label: 'Sin match',       bg: colors.redBg,  tx: colors.redTx },
   }
   const c = cfg[status] ?? cfg.sin_match
   return (
-    <View style={[s.tariffPill, { backgroundColor: c.bg }]}>
-      <Text style={[s.tariffPillText, { color: c.tx }]}>{c.label}</Text>
+    <View style={{ paddingHorizontal: 8, paddingVertical: 3, borderRadius: radius.sm, backgroundColor: c.bg }}>
+      <Text style={{ fontFamily: 'Nunito-Bold', fontSize: 10, color: c.tx }}>{c.label}</Text>
     </View>
   )
 }
 
 // ── Styles ────────────────────────────────────────────────────
 const s = StyleSheet.create({
-  // BlobCard
-  blobCard: {
-    backgroundColor: colors.white,
-    borderWidth: 0.5,
-    borderColor: colors.border,
-    padding: spacing.md,
-    overflow: 'hidden',
-    ...shadows.card,
-  },
-  blob: {
-    position: 'absolute',
-    borderRadius: 9999,
-  },
-  blobMain: { width: 130, height: 130, top: -35, left: -30 },
-  blobSec:  { width: 90,  height: 90,  bottom: -25, right: -20 },
-  blobContent: { position: 'relative', zIndex: 1 },
-
-  // Card legacy
   card: {
     backgroundColor: colors.white,
-    ...radius.md,
+    borderRadius: radius.lg,
     borderWidth: 0.5,
     borderColor: colors.border,
     padding: spacing.md,
     ...shadows.card,
   },
-
-  // Button
   btn: {
     height: 48,
     backgroundColor: colors.sage,
-    ...radius.md,
+    borderRadius: radius.md,
     justifyContent: 'center',
     alignItems: 'center',
     paddingHorizontal: spacing.xl,
   },
-  btnSm:        { height: 36, ...radius.sm, paddingHorizontal: spacing.md },
-  btnLg:        { height: 54, ...radius.lg },
-  btnSecondary: { backgroundColor: colors.sageLight, borderWidth: 0.5, borderColor: colors.sage },
-  btnDanger:    { backgroundColor: colors.redBg, borderWidth: 0.5, borderColor: '#F5C5C5' },
-  btnGhost:     { backgroundColor: colors.sageLighter, borderWidth: 0.5, borderColor: colors.border },
+  btnSm: { height: 36, borderRadius: radius.sm, paddingHorizontal: spacing.md },
+  btnLg: { height: 54, borderRadius: radius.lg },
+  btnSecondary: {
+    backgroundColor: colors.sageLight,
+    borderWidth: 0.5,
+    borderColor: colors.sage,
+  },
+  btnDanger: {
+    backgroundColor: colors.redBg,
+    borderWidth: 0.5,
+    borderColor: '#F5C5C5',
+  },
   btnText: {
     fontFamily: 'Nunito-Bold',
     fontSize: 14,
     color: colors.white,
     letterSpacing: 0.1,
   },
-
-  // Badge
   badge: {
     paddingHorizontal: 9,
     paddingVertical: 3,
-    ...radius.sm,
+    borderRadius: radius.sm,
     alignSelf: 'flex-start',
   },
   badgeText: {
@@ -395,8 +290,6 @@ const s = StyleSheet.create({
     fontSize: 10,
     letterSpacing: 0.3,
   },
-
-  // Avatar
   avatar: {
     backgroundColor: colors.sageLight,
     justifyContent: 'center',
@@ -408,8 +301,6 @@ const s = StyleSheet.create({
     fontFamily: 'Nunito-Bold',
     color: colors.sage,
   },
-
-  // Score
   score: {
     backgroundColor: colors.sageLight,
     justifyContent: 'center',
@@ -419,11 +310,9 @@ const s = StyleSheet.create({
     fontFamily: 'Nunito-Bold',
     color: colors.sage,
   },
-
-  // Input
   inputLabel: {
     fontFamily: 'Nunito-Bold',
-    fontSize: 9,
+    fontSize: 10,
     color: colors.light,
     textTransform: 'uppercase',
     letterSpacing: 0.7,
@@ -433,9 +322,9 @@ const s = StyleSheet.create({
     height: 48,
     borderWidth: 0.5,
     borderColor: colors.border,
-    ...radius.md,
+    borderRadius: radius.md,
     paddingHorizontal: spacing.md,
-    backgroundColor: colors.white,
+    backgroundColor: colors.cream,
     fontFamily: 'Nunito-Regular',
     fontSize: 14,
     color: colors.dark,
@@ -446,8 +335,6 @@ const s = StyleSheet.create({
     color: colors.redTx,
     marginTop: 3,
   },
-
-  // EmptyState
   empty: {
     flex: 1,
     alignItems: 'center',
@@ -456,7 +343,7 @@ const s = StyleSheet.create({
     paddingHorizontal: spacing.xl,
   },
   emptyTitle: {
-    fontFamily: 'Nunito-Bold',
+    fontFamily: 'Nunito-SemiBold',
     fontSize: 15,
     color: colors.mid,
     textAlign: 'center',
@@ -474,30 +361,17 @@ const s = StyleSheet.create({
     paddingHorizontal: spacing.lg,
     paddingVertical: spacing.sm,
     backgroundColor: colors.sageLight,
-    ...radius.full,
+    borderRadius: 9999,
   },
   emptyActionText: {
     fontFamily: 'Nunito-SemiBold',
     fontSize: 13,
     color: colors.sage,
   },
-
-  // Loading
   loadingWrap: {
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: colors.cream,
-  },
-
-  // TariffMatchPill
-  tariffPill: {
-    ...radius.sm,
-    paddingHorizontal: 8,
-    paddingVertical: 3,
-  },
-  tariffPillText: {
-    fontFamily: 'Nunito-Bold',
-    fontSize: 10,
   },
 })
