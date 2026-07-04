@@ -182,14 +182,20 @@ export default function ProfileEditScreen({ navigation }: any) {
         <View style={s.section}>
           <Text style={s.sectionLabel}>INFORMACIÓN PERSONAL</Text>
           <Input label="SOBRE MÍ" placeholder="Contá tu experiencia..." value={bio} onChangeText={setBio} multiline />
-          <Text style={s.fieldLabel}>BARRIO BASE</Text>
-          <TouchableOpacity style={s.selector} onPress={() => setShowNeighborhoodModal(true)}>
-            <Text style={[s.selectorText, !neighborhood && { color: colors.light }]}>
-              {neighborhood || 'Seleccioná tu barrio'}
-            </Text>
-            <Feather name="chevron-down" size={16} color={colors.light} />
-          </TouchableOpacity>
-          <Input label="TELÉFONO" placeholder="11 5555-6666" value={phone} onChangeText={setPhone} keyboardType="phone-pad" />
+          <View style={s.rowFields}>
+            <View style={{ flex: 1 }}>
+              <Text style={s.fieldLabel}>BARRIO BASE</Text>
+              <TouchableOpacity style={s.selector} onPress={() => setShowNeighborhoodModal(true)}>
+                <Text style={[s.selectorText, !neighborhood && { color: colors.light }]} numberOfLines={1}>
+                  {neighborhood || 'Seleccioná'}
+                </Text>
+                <Feather name="chevron-down" size={14} color={colors.light} />
+              </TouchableOpacity>
+            </View>
+            <View style={{ flex: 1 }}>
+              <Input label="TELÉFONO" placeholder="11 5555-6666" value={phone} onChangeText={setPhone} keyboardType="phone-pad" />
+            </View>
+          </View>
         </View>
 
         <View style={s.section}>
@@ -247,7 +253,6 @@ export default function ProfileEditScreen({ navigation }: any) {
 
         <View style={{ paddingHorizontal: spacing.md }}>
           <Button label="Guardar perfil" onPress={() => saveMutation.mutate()} isLoading={saveMutation.isPending} fullWidth size="lg" />
-          <Button label="Cerrar sesión" variant="danger" onPress={handleSignOut} fullWidth style={{ marginTop: spacing.sm }} />
         </View>
       </ScrollView>
 
@@ -297,6 +302,7 @@ export default function ProfileEditScreen({ navigation }: any) {
 }
 
 const s = StyleSheet.create({
+  rowFields:          { flexDirection: 'row', gap: spacing.sm, marginBottom: spacing.sm },
   logoutPill:         { flexDirection: 'row', alignItems: 'center', gap: 4, backgroundColor: 'rgba(255,255,255,0.1)', borderRadius: 999, paddingHorizontal: 10, paddingVertical: 6 },
   logoutPillTxt:      { fontFamily: 'Nunito-SemiBold', fontSize: 11, color: 'rgba(255,255,255,0.65)' },
   hero:               { backgroundColor: '#3D5440', paddingTop: 52, paddingBottom: 44, paddingHorizontal: spacing.md, flexDirection: 'row', alignItems: 'center', position: 'relative', overflow: 'hidden' },
