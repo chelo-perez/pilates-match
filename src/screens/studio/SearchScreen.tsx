@@ -13,6 +13,8 @@ import {
 import type { InstructorSearchResult } from '../../types/database'
 import type { NativeStackScreenProps } from '@react-navigation/native-stack'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
+import BlobCard from '../../components/BlobCard'
+import HeroHeader from '../../components/HeroHeader'
 import { Feather } from '@expo/vector-icons'
 
 type Props = NativeStackScreenProps<any, 'Search'>
@@ -39,23 +41,24 @@ export default function SearchScreen({ navigation }: Props) {
 
   return (
     <View style={styles.container}>
-      {/* Cabecera / Barra de búsqueda */}
-      <View style={styles.searchHeader}>
-        <TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()}>
-          <Feather name="arrow-left" size={24} color={colors.dark || '#333'} />
-        </TouchableOpacity>
-        <View style={styles.inputContainer}>
-          <Feather name="search" size={18} color={colors.light || '#999'} style={styles.searchIcon} />
-          <TextInput
-            style={styles.input}
-            placeholder="Buscar instructor por nombre..."
-            placeholderTextColor={colors.light || '#999'}
-            value={searchText}
-            onChangeText={setSearchText}
-          />
-        </View>
-        <TouchableOpacity style={styles.filterButton} onPress={() => setShowFilters(true)}>
-          <Feather name="sliders" size={22} color="#4A5D4E" />
+      <HeroHeader
+        title="Buscar instructor"
+        subtitle={studio?.neighborhood ?? 'Buenos Aires'}
+        onBack={() => navigation.goBack()}
+        backLabel="Inicio"
+      />
+      {/* Search bar */}
+      <View style={styles.searchBar}>
+        <Feather name="search" size={16} color={colors.light} />
+        <TextInput
+          style={styles.input}
+          placeholder="Buscar por nombre..."
+          placeholderTextColor={colors.light}
+          value={searchText}
+          onChangeText={setSearchText}
+        />
+        <TouchableOpacity style={styles.filterBtn} onPress={() => setShowFilters(true)}>
+          <Feather name="sliders" size={18} color={colors.sage} />
         </TouchableOpacity>
       </View>
 
@@ -74,7 +77,7 @@ export default function SearchScreen({ navigation }: Props) {
             <EmptyState message="No encontramos instructores que coincidan con los filtros aplicados en Buenos Aires." />
           )}
           renderItem={({ item }: { item: InstructorSearchResult }) => (
-            <Card style={styles.resultCard} onPress={() => navigation.navigate('InstructorProfile', { instructorId: item.id })}>
+            <BlobCard style={styles.resultCard} onPress={() => navigation.navigate('InstructorProfile', { instructorId: item.id })}>
               <View style={styles.cardTop}>
                 <Avatar src={item.avatar_url} fallback={item.full_name[0]} size="lg" />
                 <View style={styles.metaArea}>
@@ -96,7 +99,7 @@ export default function SearchScreen({ navigation }: Props) {
                 </View>
                 <TariffMatchPill status={item.tariff_status_regular} />
               </View>
-            </Card>
+            </BlobCard>
           )}
         />
       )}
@@ -133,12 +136,9 @@ export default function SearchScreen({ navigation }: Props) {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.cream || '#F9F9F6' },
-  searchHeader: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: spacing.lg, paddingTop: 52, paddingBottom: spacing.md, backgroundColor: colors.white || '#FFF', borderBottomWidth: 0.5, borderColor: colors.borderLight || '#EEE' },
-  backButton: { marginRight: spacing.sm },
-  inputContainer: { flex: 1, flexDirection: 'row', alignItems: 'center', backgroundColor: colors.cream || '#F9F9F6', borderTopLeftRadius: 14, borderTopRightRadius: 0, borderBottomLeftRadius: 0, borderBottomRightRadius: 14, paddingHorizontal: spacing.sm, height: 44 },
-  searchIcon: { marginRight: spacing.xs },
-  input: { flex: 1, fontFamily: 'Nunito-Regular', fontSize: 14, color: colors.dark || '#333' },
-  filterButton: { marginLeft: spacing.sm, width: 44, height: 44, backgroundColor: colors.cream || '#F9F9F6', borderTopLeftRadius: 14, borderTopRightRadius: 0, borderBottomLeftRadius: 0, borderBottomRightRadius: 14, justifyContent: 'center', alignItems: 'center' },
+  searchBar: { flexDirection: 'row', alignItems: 'center', gap: 8, marginHorizontal: spacing.md, marginVertical: spacing.md, backgroundColor: '#fff', borderTopLeftRadius: 14, borderTopRightRadius: 0, borderBottomLeftRadius: 0, borderBottomRightRadius: 14, borderWidth: 0.5, borderColor: colors.border, paddingHorizontal: 12, height: 46 },
+  input: { flex: 1, fontFamily: 'Nunito-Regular', fontSize: 14, color: colors.dark },
+  filterBtn: { width: 34, height: 34, borderTopLeftRadius: 10, borderTopRightRadius: 0, borderBottomLeftRadius: 0, borderBottomRightRadius: 10, backgroundColor: colors.sageLight, alignItems: 'center', justifyContent: 'center' },
   loadingArea: { flex: 1, justifyContent: 'center', alignItems: 'center' },
   loadingText: { fontFamily: 'Nunito-Medium', fontSize: 14, color: colors.mid || '#666', marginTop: spacing.md },
   listContent: { padding: spacing.lg },

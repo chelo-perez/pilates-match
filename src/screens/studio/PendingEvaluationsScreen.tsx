@@ -8,6 +8,8 @@ import { useFocusEffect } from '@react-navigation/native'
 import { supabase } from '../../lib/supabase'
 import { useMyStudio } from '../../hooks'
 import { Card, LoadingScreen, EmptyState, colors, spacing, radius, typography } from '../../components/ui'
+import BlobCard from '../../components/BlobCard'
+import HeroHeader from '../../components/HeroHeader'
 import { Feather } from '@expo/vector-icons'
 
 function getHoursLeft(classDate: string): number {
@@ -83,13 +85,13 @@ export default function PendingEvaluationsScreen({ navigation }: any) {
             onAction={() => navigation.navigate('Search')}
           />
         }
-        renderItem={({ item: match }: any) => {
+        renderItem={({ item: match, index }: any) => {
           const hoursLeft = getHoursLeft(match.class_date)
           const isUrgent  = hoursLeft < 6
           const instructor = match.instructor
 
           return (
-            <Card style={styles.card}>
+            <BlobCard style={styles.card} delay={index * 600}>
               {/* Info match */}
               <View style={styles.row}>
                 <View style={styles.avatar}>
@@ -143,7 +145,7 @@ export default function PendingEvaluationsScreen({ navigation }: any) {
                 <Text style={styles.evalBtnText}>Evaluar a {instructor?.full_name?.split(' ')[0]}</Text>
                 <Feather name="arrow-right" size={14} color={colors.white} />
               </TouchableOpacity>
-            </Card>
+            </BlobCard>
           )
         }}
       />
@@ -153,6 +155,11 @@ export default function PendingEvaluationsScreen({ navigation }: any) {
 
 const styles = StyleSheet.create({
   container:            { flex: 1, backgroundColor: colors.cream },
+  allDoneBadge:         { flexDirection: 'row', alignItems: 'center', gap: 5, marginTop: 10, alignSelf: 'flex-start', backgroundColor: 'rgba(184,150,12,0.22)', borderWidth: 1, borderColor: 'rgba(184,150,12,0.38)', borderRadius: 999, paddingHorizontal: 10, paddingVertical: 3 },
+  allDoneTxt:           { fontFamily: 'Nunito-Bold', fontSize: 9, color: '#FFD060' },
+  pendingBadge:         { flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 10, alignSelf: 'flex-start', backgroundColor: 'rgba(255,255,255,0.15)', borderRadius: 999, paddingHorizontal: 10, paddingVertical: 4 },
+  pendingDot:           { width: 6, height: 6, borderRadius: 3, backgroundColor: '#FF6B6B' },
+  pendingBadgeTxt:      { fontFamily: 'Nunito-Bold', fontSize: 10, color: '#fff' },
   banner:               { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, backgroundColor: '#FFF6E0', padding: spacing.md, borderBottomWidth: 0.5, borderColor: '#EF9F27' },
   bannerText:           { fontFamily: 'Nunito-SemiBold', fontSize: 13, color: '#633806', flex: 1 },
   list:                 { padding: spacing.md, paddingBottom: spacing.xxl },
@@ -169,6 +176,6 @@ const styles = StyleSheet.create({
   divider:              { height: 0.5, backgroundColor: colors.borderLight, marginBottom: spacing.sm },
   timeRow:              { flexDirection: 'row', alignItems: 'center', gap: spacing.xs, marginBottom: spacing.md },
   timeText:             { ...typography.small, color: colors.dark, fontSize: 13 },
-  evalBtn:              { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: spacing.xs, backgroundColor: colors.sage, borderRadius: radius.md, paddingVertical: spacing.sm + 2 },
+  evalBtn:              { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: spacing.xs, backgroundColor: colors.sage, borderTopLeftRadius: 14, borderTopRightRadius: 0, borderBottomLeftRadius: 0, borderBottomRightRadius: 14, paddingVertical: spacing.sm + 2 },
   evalBtnText:          { fontFamily: 'Nunito-SemiBold', fontSize: 14, color: colors.white },
 })

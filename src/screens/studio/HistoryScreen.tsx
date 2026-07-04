@@ -1,8 +1,9 @@
-// src/screens/studio/HistoryScreen.tsx
 import React, { useState } from 'react'
 import { View, Text, StyleSheet, FlatList, TouchableOpacity } from 'react-native'
 import { useEvaluationHistory, useMyStudio } from '../../hooks'
-import { Card, Avatar, Badge, ScoreDisplay, EmptyState, LoadingScreen, colors, spacing, typography } from '../../components/ui'
+import { Avatar, ScoreDisplay, EmptyState, LoadingScreen, colors, spacing } from '../../components/ui'
+import HeroHeader from '../../components/HeroHeader'
+import BlobCard from '../../components/BlobCard'
 import type { NativeStackScreenProps } from '@react-navigation/native-stack'
 
 type Props = NativeStackScreenProps<any, 'HistoryList'>
@@ -18,81 +19,96 @@ export default function HistoryScreen({ navigation }: Props) {
 
   return (
     <View style={{ flex: 1, backgroundColor: colors.cream }}>
-      {/* Filter tabs */}
-      <View style={styles.filterRow}>
-        {(['todos', 'regular', 'reemplazo'] as const).map(f => (
-          <TouchableOpacity key={f} style={[styles.filterChip, filter === f && styles.filterChipActive]}
-            onPress={() => setFilter(f)}>
-            <Text style={[styles.filterText, filter === f && styles.filterTextActive]}>
-              {f.charAt(0).toUpperCase() + f.slice(1)}
-            </Text>
-          </TouchableOpacity>
-        ))}
-      </View>
+      <HeroHeader
+        title="Historial"
+        subtitle="Evaluaciones de instructores"
+        onBack={() => navigation.goBack()}
+        backLabel="Inicio"
+        bottomElement={
+          <View style={s.tabs}>
+            {(['todos', 'regular', 'reemplazo'] as const).map(f => (
+              <TouchableOpacity
+                key={f}
+                style={[s.tab, filter === f && s.tabActive]}
+                onPress={() => setFilter(f)}
+              >
+                <Text style={[s.tabTxt, filter === f && s.tabTxtActive]}>
+                  {f.charAt(0).toUpperCase() + f.slice(1)}
+                </Text>
+              </TouchableOpacity>
+            ))}
+          </View>
+        }
+      />
 
       <FlatList
         data={filtered}
         keyExtractor={(item: any) => item.id}
-        contentContainerStyle={{ padding: spacing.lg }}
+        contentContainerStyle={{ padding: spacing.md, paddingBottom: 40 }}
         ItemSeparatorComponent={() => <View style={{ height: spacing.sm }} />}
         ListEmptyComponent={
-          <EmptyState
-            title="Sin evaluaciones"
-            subtitle="Aún no hay evaluaciones registradas para este filtro."
-          />
+          <EmptyState title="Sin evaluaciones" subtitle="Aún no hay evaluaciones registradas para este filtro." />
         }
-        renderItem={({ item }: any) => (
-          <Card style={styles.card}
-            onPress={() => navigation.navigate('InstructorProfile', { instructorId: item.instructor_id })}>
-            <View style={styles.cardTop}>
-              <Avatar name={item.instructor?.full_name ?? '?'} size={36} color={colors.sageMid} />
+        renderItem={({ item, index }: any) => (
+          <BlobCard
+            style={s.card}
+            delay={index * 800}
+            onPress={() => navigation.navigate('InstructorProfile', { instructorId: item.instructor_id })}
+          >
+            <View style={s.cardTop}>
+              <Avatar name={item.instructor?.full_name ?? '?'} size={38} />
               <View style={{ flex: 1, marginLeft: spacing.sm }}>
-                <Text style={styles.name}>{item.instructor?.full_name}</Text>
+                <Text style={s.name}>{item.instructor?.full_name}</Text>
                 <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.xs, marginTop: 3 }}>
-                  <Badge label={item.class_type === 'regular' ? 'Regular' : 'Reemplazo'}
-                    color={item.class_type === 'regular' ? 'sage' : 'gold'} />
-                  <Text style={styles.date}>{item.class_date}</Text>
+                  <View style={[s.typePill, { backgroundColor: item.class_type === 'regular' ? colors.sageLight : colors.goldLight }]}>
+                    <Text style={[s.typeTxt, { color: item.class_type === 'regular' ? colors.sage : colors.gold }]}>
+                      {item.class_type === 'regular' ? 'Regular' : 'Reemplazo'}
+                    </Text>
+                  </View>
+                  <Text style={s.date}>{item.class_date}</Text>
                 </View>
               </View>
               <ScoreDisplay score={item.average_score} size="sm" />
             </View>
             {item.comment && (
-              <Text style={styles.comment} numberOfLines={2}>{item.comment}</Text>
+              <Text style={s.comment} numberOfLines={2}>"{item.comment}"</Text>
             )}
-            {/* Mini breakdown */}
-            <View style={styles.breakdown}>
+            <View style={s.breakdown}>
               {[
-                { label: 'Téc', val: item.score_technique },
-                { label: 'Pun', val: item.score_punctuality },
-                { label: 'Tra', val: item.score_student_care },
-                { label: 'Pre', val: item.score_presentation },
+                { label: 'Técnica', val: item.score_technique },
+                { label: 'Puntualidad', val: item.score_punctuality },
+                { label: 'Trato', val: item.score_student_care },
+                { label: 'Presentación', val: item.score_presentation },
               ].map(c => (
-                <View key={c.label} style={styles.breakdownItem}>
-                  <Text style={styles.breakdownLabel}>{c.label}</Text>
-                  <Text style={styles.breakdownVal}>{c.val}</Text>
+                <View key={c.label} style={s.breakdownItem}>
+                  <Text style={s.breakdownLbl}>{c.label}</Text>
+                  <Text style={s.breakdownVal}>{c.val}</Text>
                 </View>
               ))}
             </View>
-          </Card>
+          </BlobCard>
         )}
       />
     </View>
   )
 }
 
-const styles = StyleSheet.create({
-  filterRow: { flexDirection: 'row', gap: spacing.sm, padding: spacing.lg, paddingTop: 52, paddingBottom: spacing.sm },
-  filterChip: { paddingVertical: 6, paddingHorizontal: 14, borderRadius: 999, backgroundColor: colors.white, borderWidth: 0.5, borderColor: colors.border },
-  filterChipActive: { backgroundColor: colors.sage, borderColor: colors.sage },
-  filterText: { ...typography.small, color: colors.mid },
-  filterTextActive: { color: colors.white, fontFamily: 'Nunito-SemiBold' },
-  card: { padding: spacing.md, backgroundColor: colors.white },
-  cardTop: { flexDirection: 'row', alignItems: 'center', marginBottom: spacing.sm },
-  name: { fontFamily: 'Nunito-SemiBold', fontSize: 14, color: colors.dark },
-  date: { ...typography.small, color: colors.light },
-  comment: { ...typography.small, color: colors.mid, lineHeight: 18, marginBottom: spacing.sm, fontStyle: 'italic' },
-  breakdown: { flexDirection: 'row', gap: spacing.sm, paddingTop: spacing.sm, borderTopWidth: 0.5, borderColor: colors.borderLight },
+const s = StyleSheet.create({
+  tabs:          { flexDirection: 'row', gap: 6, marginTop: 12 },
+  tab:           { paddingVertical: 5, paddingHorizontal: 14, borderRadius: 999, backgroundColor: 'rgba(255,255,255,0.15)', borderWidth: 0.5, borderColor: 'rgba(255,255,255,0.3)' },
+  tabActive:     { backgroundColor: '#fff' },
+  tabTxt:        { fontFamily: 'Nunito-SemiBold', fontSize: 12, color: 'rgba(255,255,255,0.7)' },
+  tabTxtActive:  { color: colors.sage, fontFamily: 'Nunito-Bold' },
+
+  card:          { padding: spacing.md },
+  cardTop:       { flexDirection: 'row', alignItems: 'center', marginBottom: spacing.sm },
+  name:          { fontFamily: 'Nunito-Bold', fontSize: 14, color: colors.dark },
+  typePill:      { borderTopLeftRadius: 8, borderTopRightRadius: 0, borderBottomLeftRadius: 0, borderBottomRightRadius: 8, paddingHorizontal: 8, paddingVertical: 2 },
+  typeTxt:       { fontFamily: 'Nunito-Bold', fontSize: 9 },
+  date:          { fontFamily: 'Nunito-Regular', fontSize: 11, color: colors.light },
+  comment:       { fontFamily: 'Nunito-Regular', fontSize: 11, color: colors.mid, lineHeight: 17, marginBottom: spacing.sm, fontStyle: 'italic' },
+  breakdown:     { flexDirection: 'row', gap: spacing.sm, paddingTop: spacing.sm, borderTopWidth: 0.5, borderColor: colors.borderLight },
   breakdownItem: { flex: 1, alignItems: 'center' },
-  breakdownLabel: { ...typography.small, color: colors.light, fontSize: 10 },
-  breakdownVal: { fontFamily: 'Nunito-SemiBold', fontSize: 14, color: colors.dark },
+  breakdownLbl:  { fontFamily: 'Nunito-Regular', fontSize: 9, color: colors.light },
+  breakdownVal:  { fontFamily: 'Nunito-Bold', fontSize: 14, color: colors.dark },
 })
