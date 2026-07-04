@@ -1,5 +1,3 @@
-// src/components/BlobCard.tsx
-// Card con luz cenital animada — variante B (top-left + bottom-right curvos)
 import React, { useEffect, useRef } from 'react'
 import { View, StyleSheet, Animated, TouchableOpacity, Easing } from 'react-native'
 
@@ -9,30 +7,42 @@ interface BlobCardProps {
   onPress?: () => void
   blobColor?: string
   blobColor2?: string
+  delay?: number   // ms — desfasa el arranque del ciclo
 }
 
 export default function BlobCard({
   children, style, onPress,
-  blobColor = 'rgba(74,93,78,0.16)',
+  blobColor  = 'rgba(74,93,78,0.16)',
   blobColor2 = 'rgba(74,93,78,0.10)',
+  delay = 0,
 }: BlobCardProps) {
   const anim1 = useRef(new Animated.Value(0)).current
   const anim2 = useRef(new Animated.Value(0)).current
 
   useEffect(() => {
-    Animated.loop(
+    const loop1 = Animated.loop(
       Animated.sequence([
         Animated.timing(anim1, { toValue: 1, duration: 7000, easing: Easing.bezier(0.45, 0, 0.55, 1), useNativeDriver: true }),
         Animated.timing(anim1, { toValue: 0, duration: 7000, easing: Easing.bezier(0.45, 0, 0.55, 1), useNativeDriver: true }),
       ])
-    ).start()
-    Animated.loop(
+    )
+    const loop2 = Animated.loop(
       Animated.sequence([
         Animated.timing(anim2, { toValue: 1, duration: 10000, easing: Easing.bezier(0.45, 0, 0.55, 1), useNativeDriver: true }),
         Animated.timing(anim2, { toValue: 0, duration: 10000, easing: Easing.bezier(0.45, 0, 0.55, 1), useNativeDriver: true }),
       ])
-    ).start()
-  }, [])
+    )
+    // Desfase: arranca después del delay
+    const t = setTimeout(() => {
+      loop1.start()
+      loop2.start()
+    }, delay)
+    return () => {
+      clearTimeout(t)
+      loop1.stop()
+      loop2.stop()
+    }
+  }, [delay])
 
   const b1x = anim1.interpolate({ inputRange: [0, 1], outputRange: [-20, 110] })
   const b1y = anim1.interpolate({ inputRange: [0, 1], outputRange: [-20, 80] })

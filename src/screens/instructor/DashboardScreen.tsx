@@ -87,11 +87,11 @@ export default function InstructorDashboardScreen({ navigation }: any) {
 
         {/* KPI row — flota sobre el hero */}
         <View style={s.kpiRow}>
-          <BlobCard style={s.kpiCard}>
+          <BlobCard style={s.kpiCard} delay={0}>
             <Text style={s.kpiNum}>{totalClasses}</Text>
             <Text style={s.kpiLbl}>Clases</Text>
           </BlobCard>
-          <BlobCard style={s.kpiCard} blobColor="rgba(184,150,12,0.16)" blobColor2="rgba(184,150,12,0.10)">
+          <BlobCard style={s.kpiCard} blobColor="rgba(184,150,12,0.16)" blobColor2="rgba(184,150,12,0.10)" delay={3500}>
             <Text style={s.kpiNum}>{uniqueStudios}</Text>
             <Text style={s.kpiLbl}>Estudios</Text>
           </BlobCard>
@@ -106,7 +106,7 @@ export default function InstructorDashboardScreen({ navigation }: any) {
         )}
 
         {/* Tarifas */}
-        <BlobCard style={s.section}>
+        <BlobCard style={s.section} delay={1500}>
           <View style={s.sectionHeader}>
             <Text style={s.sectionTitle}>Mis tarifas por hora</Text>
             <TouchableOpacity onPress={() => navigation.navigate('InstructorTarifas')}>
@@ -130,7 +130,7 @@ export default function InstructorDashboardScreen({ navigation }: any) {
         </BlobCard>
 
         {/* Feedback */}
-        <BlobCard style={s.section}>
+        <BlobCard style={s.section} delay={5000}>
           <View style={s.sectionHeader}>
             <Text style={s.sectionTitle}>Último feedback</Text>
           </View>
@@ -176,7 +176,7 @@ const s = StyleSheet.create({
   verifiedTag:     { alignSelf: 'flex-start', marginTop: 12, backgroundColor: 'rgba(184,150,12,0.22)', borderWidth: 1, borderColor: 'rgba(184,150,12,0.38)', borderRadius: 999, paddingHorizontal: 10, paddingVertical: 3 },
   verifiedTxt:     { fontFamily: 'Nunito-Bold', fontSize: 9, color: '#FFD060', letterSpacing: 0.7 },
 
-  kpiRow:          { flexDirection: 'row', gap: spacing.sm, marginHorizontal: spacing.md, marginTop: -20, marginBottom: spacing.md, zIndex: 2 },
+  kpiRow:          { flexDirection: 'row', gap: spacing.sm, marginHorizontal: spacing.md, marginTop: -12, marginBottom: spacing.md, zIndex: 2 },
   kpiCard:         { flex: 1, padding: spacing.md },
   kpiNum:          { fontFamily: 'Nunito-Bold', fontSize: 26, color: colors.dark, lineHeight: 28 },
   kpiLbl:          { fontFamily: 'Nunito-Bold', fontSize: 9, color: colors.light, textTransform: 'uppercase', letterSpacing: 0.6, marginTop: 3 },

@@ -49,7 +49,7 @@ export default function HeroHeader({
 }
 
 const s = StyleSheet.create({
-  hero:      { backgroundColor: '#3D5440', paddingHorizontal: 16, paddingBottom: 32, position: 'relative', overflow: 'hidden' },
+  hero:      { backgroundColor: '#3D5440', paddingHorizontal: 16, paddingBottom: 52, position: 'relative', overflow: 'hidden' },
   blob1:     { position: 'absolute', width: 200, height: 200, borderRadius: 100, backgroundColor: 'rgba(255,255,255,0.06)', top: -60, right: -50 },
   blob2:     { position: 'absolute', width: 130, height: 130, borderRadius: 65,  backgroundColor: 'rgba(255,255,255,0.04)', bottom: -40, left: -20 },
   inner:     { position: 'relative', zIndex: 1 },
