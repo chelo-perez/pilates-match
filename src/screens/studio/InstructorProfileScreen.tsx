@@ -287,7 +287,7 @@ const styles = StyleSheet.create({
   certMeta: { ...typography.small, color: colors.mid, marginTop: 2 },
   emptyText: { ...typography.body, color: colors.light, textAlign: 'center', padding: spacing.lg },
   daysStrip: { flexDirection: 'row', gap: spacing.xs, padding: spacing.lg, paddingBottom: 0 },
-  dayPill: { flex: 1, alignItems: 'center', paddingVertical: spacing.sm, borderRadius: radius.md, backgroundColor: colors.cream, borderWidth: 0.5, borderColor: colors.border },
+  dayPill: { flex: 1, alignItems: 'center', paddingVertical: spacing.sm, borderTopLeftRadius: 14, borderTopRightRadius: 0, borderBottomLeftRadius: 0, borderBottomRightRadius: 14, backgroundColor: colors.cream, borderWidth: 0.5, borderColor: colors.border },
   dayPillActive: { backgroundColor: colors.sageLight, borderColor: colors.sageMid },
   dayLabel: { fontSize: 10, color: colors.light },
   dayLabelActive: { color: colors.sage, fontFamily: 'Nunito-Medium' },

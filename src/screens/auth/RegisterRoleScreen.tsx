@@ -73,7 +73,7 @@ const styles = StyleSheet.create({
   roles: { gap: spacing.md },
   roleCard: {
     flexDirection: 'row', alignItems: 'center', gap: spacing.md,
-    padding: spacing.lg, borderRadius: radius.lg, borderWidth: 1,
+    padding: spacing.lg, borderTopLeftRadius: 14, borderTopRightRadius: 0, borderBottomLeftRadius: 0, borderBottomRightRadius: 14, borderWidth: 1,
   },
   roleIcon: { fontSize: 28 },
   roleTitle: { fontFamily: 'Nunito-SemiBold', fontSize: 15, color: colors.dark },

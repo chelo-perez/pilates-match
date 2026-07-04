@@ -224,12 +224,12 @@ const styles = StyleSheet.create({
   chipGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.xs, marginBottom: spacing.md },
   codeBox: {
     flexDirection: 'row', alignItems: 'center',
-    backgroundColor: colors.cream, borderRadius: radius.md,
+    backgroundColor: colors.cream, borderTopLeftRadius: 14, borderTopRightRadius: 0, borderBottomLeftRadius: 0, borderBottomRightRadius: 14,
     padding: spacing.sm, marginBottom: spacing.sm,
     borderWidth: 0.5, borderColor: colors.cream,
   },
   codeBoxVerified: { borderColor: colors.sage, backgroundColor: colors.sageLighter },
-  infoBox: { backgroundColor: colors.sageLight, borderRadius: radius.md, padding: spacing.md },
+  infoBox: { backgroundColor: colors.sageLight, borderTopLeftRadius: 14, borderTopRightRadius: 0, borderBottomLeftRadius: 0, borderBottomRightRadius: 14, padding: spacing.md },
   infoText: { ...typography.small, color: colors.mid, lineHeight: 18 },
   actions: { marginTop: spacing.xl },
 })
