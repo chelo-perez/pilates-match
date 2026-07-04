@@ -11,7 +11,9 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useFocusEffect } from '@react-navigation/native'
 import { supabase, db } from '../../lib/supabase'
 import { useAuthStore } from '../../store'
-import { Card, Badge, EmptyState, LoadingScreen, Button, colors, spacing, radius, typography } from '../../components/ui'
+import { Badge, EmptyState, LoadingScreen, Button, colors, spacing, radius, typography } from '../../components/ui'
+import BlobCard from '../../components/BlobCard'
+import HeroHeader from '../../components/HeroHeader'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { Feather } from '@expo/vector-icons'
 
@@ -162,30 +164,26 @@ export default function InstructorMatchesScreen() {
 
   return (
     <View style={styles.container}>
-      {/* Header */}
-      <View style={styles.header}>
-        <Text style={styles.title}>Solicitudes</Text>
-        {pending.length > 0 && (
-          <View style={styles.badge}>
-            <Text style={styles.badgeText}>{pending.length}</Text>
+      <HeroHeader
+        title="Solicitudes"
+        subtitle="Respondé antes de que expiren"
+        rightElement={pending.length > 0 ? (
+          <View style={styles.countBadge}>
+            <Text style={styles.countBadgeTxt}>{pending.length}</Text>
           </View>
-        )}
-      </View>
-
-      {/* Tabs */}
-      <View style={styles.tabs}>
-        {(['pendientes', 'historial'] as Tab[]).map(t => (
-          <TouchableOpacity
-            key={t}
-            style={[styles.tab, tab === t && styles.tabActive]}
-            onPress={() => setTab(t)}
-          >
-            <Text style={[styles.tabText, tab === t && styles.tabTextActive]}>
-              {t === 'pendientes' ? `Pendientes${pending.length > 0 ? ` (${pending.length})` : ''}` : 'Historial'}
-            </Text>
-          </TouchableOpacity>
-        ))}
-      </View>
+        ) : undefined}
+        bottomElement={
+          <View style={styles.tabs}>
+            {(['pendientes', 'historial'] as Tab[]).map(t => (
+              <TouchableOpacity key={t} style={[styles.tab, tab === t && styles.tabActive]} onPress={() => setTab(t)}>
+                <Text style={[styles.tabText, tab === t && styles.tabTextActive]}>
+                  {t === 'pendientes' ? `Pendientes${pending.length > 0 ? ` (${pending.length})` : ''}` : 'Historial'}
+                </Text>
+              </TouchableOpacity>
+            ))}
+          </View>
+        }
+      />
 
       {isLoading ? (
         <LoadingScreen message="Cargando solicitudes..." />
@@ -214,7 +212,7 @@ export default function InstructorMatchesScreen() {
             const hoursLeft = Math.max(0, Math.round((expiresAt.getTime() - now.getTime()) / 3_600_000))
 
             return (
-              <Card style={styles.card}>
+              <BlobCard style={styles.card}>
                 {/* Studio + tipo */}
                 <View style={styles.cardHeader}>
                   <View style={styles.studioAvatar}>
@@ -289,7 +287,7 @@ export default function InstructorMatchesScreen() {
                     </TouchableOpacity>
                   </View>
                 )}
-              </Card>
+              </BlobCard>
             )
           }}
         />
@@ -349,15 +347,13 @@ export default function InstructorMatchesScreen() {
 
 const styles = StyleSheet.create({
   container:         { flex: 1, backgroundColor: colors.cream },
-  header:            { flexDirection: 'row', alignItems: 'center', paddingHorizontal: spacing.md, paddingTop: 52, paddingBottom: spacing.sm, gap: spacing.sm },
-  title:             { fontFamily: 'Nunito-Bold', fontSize: 22, color: colors.dark },
-  badge:             { backgroundColor: colors.sage, borderTopLeftRadius: 10, borderTopRightRadius: 0, borderBottomLeftRadius: 0, borderBottomRightRadius: 10, paddingHorizontal: 8, paddingVertical: 2 },
-  badgeText:         { color: colors.white, fontFamily: 'Nunito-SemiBold', fontSize: 12 },
-  tabs:              { flexDirection: 'row', marginHorizontal: spacing.md, marginBottom: spacing.sm, backgroundColor: colors.white, borderTopLeftRadius: 14, borderTopRightRadius: 0, borderBottomLeftRadius: 0, borderBottomRightRadius: 14, padding: 3, borderWidth: 0.5, borderColor: colors.border },
-  tab:               { flex: 1, paddingVertical: spacing.sm, alignItems: 'center', borderTopLeftRadius: 8, borderTopRightRadius: 0, borderBottomLeftRadius: 0, borderBottomRightRadius: 8 },
-  tabActive:         { backgroundColor: colors.sage },
-  tabText:           { ...typography.small, fontFamily: 'Nunito-SemiBold', color: colors.mid },
-  tabTextActive:     { color: colors.white },
+  countBadge:        { width: 28, height: 28, borderRadius: 14, backgroundColor: '#fff', alignItems: 'center', justifyContent: 'center' },
+  countBadgeTxt:     { fontFamily: 'Nunito-Bold', fontSize: 13, color: colors.sage },
+  tabs:              { flexDirection: 'row', marginTop: 12, gap: 6 },
+  tab:               { paddingVertical: 5, paddingHorizontal: 16, borderRadius: 999, backgroundColor: 'rgba(255,255,255,0.15)', borderWidth: 0.5, borderColor: 'rgba(255,255,255,0.3)' },
+  tabActive:         { backgroundColor: '#fff' },
+  tabText:           { fontFamily: 'Nunito-SemiBold', fontSize: 12, color: 'rgba(255,255,255,0.7)' },
+  tabTextActive:     { color: colors.sage, fontFamily: 'Nunito-Bold' },
   list:              { paddingHorizontal: spacing.md, paddingBottom: spacing.xl },
   card:              { marginBottom: spacing.sm, padding: spacing.md, backgroundColor: colors.white },
   cardHeader:        { flexDirection: 'row', alignItems: 'center', marginBottom: spacing.sm },

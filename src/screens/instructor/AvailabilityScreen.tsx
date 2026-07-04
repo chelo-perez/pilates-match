@@ -5,7 +5,9 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { supabase } from '../../lib/supabase'
 import { instructorAPI } from '../../lib/api'
 import { useAuthStore } from '../../store'
-import { Card, Button, Badge, colors, spacing, typography, radius } from '../../components/ui'
+import { Button, Badge, colors, spacing, typography, radius } from '../../components/ui'
+import BlobCard from '../../components/BlobCard'
+import HeroHeader from '../../components/HeroHeader'
 import Toast from '../../components/Toast'
 import { useToast } from '../../hooks/useToast'
 import { Feather } from '@expo/vector-icons'
@@ -121,10 +123,10 @@ export default function AvailabilityScreen() {
     <View style={{ flex: 1, backgroundColor: colors.cream }}>
 
       {/* Header */}
-      <View style={s.header}>
-        <Text style={s.headerTitle}>Mi disponibilidad</Text>
-        <Text style={s.headerSub}>Configurá tus horarios y zonas de trabajo</Text>
-      </View>
+      <HeroHeader
+        title="Mi disponibilidad"
+        subtitle="Configurá tus horarios y zonas de trabajo"
+      />
 
       {/* Tabs */}
       <View style={s.tabRow}>
@@ -270,9 +272,7 @@ export default function AvailabilityScreen() {
 }
 
 const s = StyleSheet.create({
-  header:          { paddingHorizontal: spacing.md, paddingTop: 52, paddingBottom: spacing.sm, backgroundColor: colors.white, borderBottomWidth: 0.5, borderColor: colors.borderLight },
-  headerTitle:     { fontFamily: 'Nunito-Bold', fontSize: 22, color: colors.dark },
-  headerSub:       { fontFamily: 'Nunito-Regular', fontSize: 12, color: colors.mid, marginTop: 2 },
+
   tabRow:          { flexDirection: 'row', backgroundColor: colors.white, borderBottomWidth: 0.5, borderColor: colors.borderLight },
   tab:             { flex: 1, paddingVertical: spacing.sm + 2, alignItems: 'center' },
   tabActive:       { borderBottomWidth: 2, borderColor: colors.sage },

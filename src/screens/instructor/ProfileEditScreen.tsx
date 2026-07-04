@@ -296,7 +296,7 @@ export default function ProfileEditScreen({ navigation }: any) {
 const s = StyleSheet.create({
   logoutPill:         { flexDirection: 'row', alignItems: 'center', gap: 4, backgroundColor: 'rgba(255,255,255,0.1)', borderRadius: 999, paddingHorizontal: 10, paddingVertical: 6 },
   logoutPillTxt:      { fontFamily: 'Nunito-SemiBold', fontSize: 11, color: 'rgba(255,255,255,0.65)' },
-  hero:               { backgroundColor: colors.sage, paddingTop: 52, paddingBottom: 24, paddingHorizontal: spacing.md, flexDirection: 'row', alignItems: 'center' },
+  hero:               { backgroundColor: '#3D5440', paddingTop: 52, paddingBottom: 44, paddingHorizontal: spacing.md, flexDirection: 'row', alignItems: 'center', position: 'relative', overflow: 'hidden' },
   heroName:           { fontFamily: 'Nunito-Bold', fontSize: 20, color: colors.white, marginBottom: 6 },
   avatarWrap:         { position: 'relative' },
   avatarEdit:         { position: 'absolute', bottom: 0, right: 0, width: 24, height: 24, borderTopLeftRadius: 12, borderTopRightRadius: 0, borderBottomLeftRadius: 0, borderBottomRightRadius: 12, backgroundColor: colors.sage, borderWidth: 2, borderColor: colors.white, alignItems: 'center', justifyContent: 'center' },
