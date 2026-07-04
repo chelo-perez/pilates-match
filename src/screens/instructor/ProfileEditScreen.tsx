@@ -1,6 +1,6 @@
 // src/screens/instructor/ProfileEditScreen.tsx
 import React, { useState, useEffect } from 'react'
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert, Modal, FlatList, ActivityIndicator } from 'react-native'
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Modal, FlatList, ActivityIndicator, Alert } from 'react-native'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import * as ImagePicker from 'expo-image-picker'
 import * as DocumentPicker from 'expo-document-picker'
@@ -145,11 +145,9 @@ export default function ProfileEditScreen({ navigation }: any) {
   const toggleSpecialty = (key: string) =>
     setSelectedSpecialties(prev => prev.includes(key) ? prev.filter(s => s !== key) : [...prev, key])
 
-  const handleSignOut = () => {
-    Alert.alert('Cerrar sesión', '¿Seguro?', [
-      { text: 'Cancelar', style: 'cancel' },
-      { text: 'Salir', style: 'destructive', onPress: async () => { await supabase.auth.signOut(); reset() }},
-    ])
+  const handleSignOut = async () => {
+    await supabase.auth.signOut()
+    reset()
   }
 
   const isVerified = instructor?.verification_status === 'verificado' || instructor?.verification_status === 'verified'
@@ -172,6 +170,10 @@ export default function ProfileEditScreen({ navigation }: any) {
               </Text>
             </View>
           </View>
+          <TouchableOpacity style={s.logoutPill} onPress={handleSignOut}>
+            <Feather name="log-out" size={13} color="rgba(255,255,255,0.65)" />
+            <Text style={s.logoutPillTxt}>Salir</Text>
+          </TouchableOpacity>
         </View>
 
         <View style={s.section}>
@@ -242,7 +244,7 @@ export default function ProfileEditScreen({ navigation }: any) {
 
         <View style={{ paddingHorizontal: spacing.md }}>
           <Button label="Guardar perfil" onPress={() => saveMutation.mutate()} isLoading={saveMutation.isPending} fullWidth size="lg" />
-          <Button label="Cerrar sesión" variant="secondary" onPress={handleSignOut} fullWidth style={{ marginTop: spacing.sm }} />
+          <Button label="Cerrar sesión" variant="danger" onPress={handleSignOut} fullWidth style={{ marginTop: spacing.sm }} />
         </View>
       </ScrollView>
 
@@ -292,6 +294,8 @@ export default function ProfileEditScreen({ navigation }: any) {
 }
 
 const s = StyleSheet.create({
+  logoutPill:         { flexDirection: 'row', alignItems: 'center', gap: 4, backgroundColor: 'rgba(255,255,255,0.1)', borderRadius: 999, paddingHorizontal: 10, paddingVertical: 6 },
+  logoutPillTxt:      { fontFamily: 'Nunito-SemiBold', fontSize: 11, color: 'rgba(255,255,255,0.65)' },
   hero:               { backgroundColor: colors.sage, paddingTop: 52, paddingBottom: 24, paddingHorizontal: spacing.md, flexDirection: 'row', alignItems: 'center' },
   heroName:           { fontFamily: 'Nunito-Bold', fontSize: 20, color: colors.white, marginBottom: 6 },
   avatarWrap:         { position: 'relative' },

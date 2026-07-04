@@ -1,6 +1,6 @@
 // src/screens/studio/HomeScreen.tsx
 import React from 'react'
-import { View, Text, ScrollView, TouchableOpacity, StyleSheet, Alert, RefreshControl } from 'react-native'
+import { View, Text, ScrollView, TouchableOpacity, StyleSheet, RefreshControl } from 'react-native'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { supabase } from '../../lib/supabase'
 import { useAuthStore } from '../../store'
@@ -35,13 +35,9 @@ export default function StudioHomeScreen({ navigation }: any) {
     enabled: !!studio?.id,
   })
 
-  const handleSignOut = () => {
-    Alert.alert('Cerrar sesión', '¿Seguro que querés salir?', [
-      { text: 'Cancelar', style: 'cancel' },
-      { text: 'Salir', style: 'destructive', onPress: async () => {
-        await supabase.auth.signOut(); reset()
-      }},
-    ])
+  const handleSignOut = async () => {
+    await supabase.auth.signOut()
+    reset()
   }
 
   if (isLoading) return <LoadingScreen message="Cargando..." />
@@ -57,7 +53,8 @@ export default function StudioHomeScreen({ navigation }: any) {
       >
         <View style={s.hero}>
           <TouchableOpacity style={s.logoutBtn} onPress={handleSignOut}>
-            <Feather name="log-out" size={18} color="rgba(255,255,255,0.7)" />
+            <Feather name="log-out" size={13} color="rgba(255,255,255,0.65)" />
+            <Text style={s.logoutText}>Salir</Text>
           </TouchableOpacity>
           <Text style={s.heroName}>{studio?.name ?? 'Mi estudio'}</Text>
           <Text style={s.heroMeta}>{studio?.neighborhood ?? 'Buenos Aires'}</Text>
@@ -146,7 +143,8 @@ export default function StudioHomeScreen({ navigation }: any) {
 
 const s = StyleSheet.create({
   hero:            { backgroundColor: colors.sage, paddingTop: 52, paddingBottom: 28, paddingHorizontal: spacing.md },
-  logoutBtn:       { position: 'absolute', top: 52, right: spacing.md, padding: 8, borderRadius: 999, backgroundColor: 'rgba(255,255,255,0.12)' },
+  logoutBtn:       { position: 'absolute', top: 52, right: spacing.md, flexDirection: 'row', alignItems: 'center', gap: 4, backgroundColor: 'rgba(255,255,255,0.1)', borderRadius: 999, paddingHorizontal: 10, paddingVertical: 6 },
+  logoutText:      { fontFamily: 'Nunito-SemiBold', fontSize: 11, color: 'rgba(255,255,255,0.65)' },
   heroName:        { fontFamily: 'Nunito-Bold', fontSize: 22, color: colors.white, marginBottom: 3 },
   heroMeta:        { fontFamily: 'Nunito-Regular', fontSize: 12, color: 'rgba(255,255,255,0.65)' },
   memberBadge:     { marginTop: 8, alignSelf: 'flex-start', backgroundColor: 'rgba(184,150,12,0.25)', borderWidth: 1, borderColor: 'rgba(184,150,12,0.4)', borderRadius: 999, paddingHorizontal: 10, paddingVertical: 3 },

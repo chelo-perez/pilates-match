@@ -1,6 +1,6 @@
 // src/screens/camara/DashboardScreen.tsx
 import React from 'react'
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert } from 'react-native'
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from 'react-native'
 import { useQuery } from '@tanstack/react-query'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { supabase } from '../../lib/supabase'
@@ -47,13 +47,9 @@ export default function CamaraDashboardScreen({ navigation }: any) {
     enabled: !!user?.camara_id,
   })
 
-  const handleSignOut = () => {
-    Alert.alert('Cerrar sesión', '¿Seguro que querés salir?', [
-      { text: 'Cancelar', style: 'cancel' },
-      { text: 'Salir', style: 'destructive', onPress: async () => {
-        await supabase.auth.signOut(); reset()
-      }},
-    ])
+  const handleSignOut = async () => {
+    await supabase.auth.signOut()
+    reset()
   }
 
   if (isLoading) return <LoadingScreen message="Cargando panel..." />
