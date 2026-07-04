@@ -148,7 +148,7 @@ export interface Match {
   studio_id: string
   instructor_id: string
   class_type: ClassType
-  class_date: string
+  class_date: string        // Para reemplazo: fecha puntual. Para regular: fecha de la clase de prueba
   start_time: string
   end_time: string
   status: MatchStatus
@@ -158,6 +158,12 @@ export interface Match {
   created_at: string
   responded_at: string | null
   expires_at: string
+  // Campos para clase regular
+  schedule_days: string[] | null       // ['lunes', 'miercoles']
+  schedule_from: string | null         // '08:00'
+  schedule_to: string | null           // '12:00'
+  trial_date: string | null            // Fecha de la clase de prueba acordada
+  trial_time: string | null            // Horario de la prueba
 }
 
 export interface RateRange {
@@ -231,6 +237,10 @@ export interface CreateMatchDTO {
   start_time: string
   end_time: string
   note_studio?: string
+  // Solo para clase regular
+  schedule_days?: string[]
+  schedule_from?: string
+  schedule_to?: string
 }
 
 export interface InstructorSearchFilters {
