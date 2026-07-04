@@ -3,6 +3,7 @@ import React, { useState, useEffect } from 'react'
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Modal, FlatList, ActivityIndicator, Alert } from 'react-native'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import * as ImagePicker from 'expo-image-picker'
+import { decode } from 'base64-arraybuffer'
 import * as DocumentPicker from 'expo-document-picker'
 import { supabase } from '../../lib/supabase'
 import { storage } from '../../lib/supabase'
@@ -90,19 +91,27 @@ export default function ProfileEditScreen({ navigation }: any) {
     if (result.canceled || !result.assets[0]) return
     try {
       setUploading(true)
-      const uri = result.assets[0].uri
-      const ext = uri.split('.').pop() ?? 'jpg'
+      const asset = result.assets[0]
+      // Re-launch with base64 to get reliable data for native upload
+      const b64Result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        allowsEditing: true, aspect: [1, 1], quality: 0.7, base64: true,
+      })
+      if (b64Result.canceled || !b64Result.assets[0]?.base64) throw new Error('No se pudo leer la imagen')
+      const { base64, uri } = b64Result.assets[0]
+      const ext = uri.split('.').pop()?.toLowerCase() ?? 'jpg'
+      const mimeType = ext === 'png' ? 'image/png' : 'image/jpeg'
       const path = `${user!.id}/avatar.${ext}`
-      const formData = new FormData()
-      formData.append('file', { uri, name: `avatar.${ext}`, type: `image/${ext}` } as any)
-      const { error: uploadError } = await supabase.storage.from('avatars').upload(path, formData, { upsert: true, contentType: `image/${ext}` })
+      const { error: uploadError } = await supabase.storage
+        .from('avatars')
+        .upload(path, decode(base64), { upsert: true, contentType: mimeType })
       if (uploadError) throw uploadError
       const url = supabase.storage.from('avatars').getPublicUrl(path).data.publicUrl
       await supabase.from('instructors').update({ avatar_url: url }).eq('id', instructor!.id)
       qc.invalidateQueries({ queryKey: ['my-instructor-profile'] })
       showToast('Foto de perfil actualizada')
     } catch (e: any) {
-      Alert.alert('Error al subir foto', e.message)
+      showToast('Error al subir foto: ' + e.message)
     } finally { setUploading(false) }
   }
 
