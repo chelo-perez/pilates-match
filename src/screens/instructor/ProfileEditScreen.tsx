@@ -3,6 +3,7 @@ import React, { useState, useEffect } from 'react'
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Modal, FlatList, ActivityIndicator, Alert } from 'react-native'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import * as ImagePicker from 'expo-image-picker'
+import * as FileSystem from 'expo-file-system'
 import { decode } from 'base64-arraybuffer'
 import * as DocumentPicker from 'expo-document-picker'
 import { supabase } from '../../lib/supabase'
@@ -86,15 +87,23 @@ export default function ProfileEditScreen({ navigation }: any) {
   const pickAvatar = async () => {
     const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync()
     if (status !== 'granted') return
+
     const result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ImagePicker.MediaTypeOptions.Images, allowsEditing: true, aspect: [1, 1], quality: 0.7, base64: true,
+      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      allowsEditing: true,
+      aspect: [1, 1],
+      quality: 0.7,
     })
+
     if (result.canceled || !result.assets[0]) return
+    const uri = result.assets[0].uri
+
     try {
       setUploading(true)
-      const { base64, uri } = result.assets[0]
-      if (!base64) throw new Error('No se pudo leer la imagen')
-      const ext = uri.split('.').pop()?.toLowerCase().replace('jpeg','jpg') ?? 'jpg'
+      const base64 = await FileSystem.readAsStringAsync(uri, {
+        encoding: FileSystem.EncodingType.Base64,
+      })
+      const ext = uri.split('.').pop()?.toLowerCase().replace('jpeg', 'jpg') ?? 'jpg'
       const mimeType = ext === 'png' ? 'image/png' : 'image/jpeg'
       const path = `${user!.id}/avatar.${ext}`
       const { error: uploadError } = await supabase.storage
@@ -104,10 +113,12 @@ export default function ProfileEditScreen({ navigation }: any) {
       const url = supabase.storage.from('avatars').getPublicUrl(path).data.publicUrl
       await supabase.from('instructors').update({ avatar_url: url }).eq('id', instructor!.id)
       qc.invalidateQueries({ queryKey: ['my-instructor-profile'] })
-      showToast('Foto de perfil actualizada')
+      showToast('Foto actualizada')
     } catch (e: any) {
-      showToast('Error al subir foto: ' + e.message)
-    } finally { setUploading(false) }
+      showToast('Error: ' + e.message)
+    } finally {
+      setUploading(false)
+    }
   }
 
   const addCertification = async () => {
