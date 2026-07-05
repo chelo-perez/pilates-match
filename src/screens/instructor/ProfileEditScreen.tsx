@@ -96,20 +96,26 @@ export default function ProfileEditScreen({ navigation }: any) {
     })
 
     if (result.canceled || !result.assets[0]) return
-    const uri = result.assets[0].uri
 
     try {
       setUploading(true)
-      const base64 = await FileSystem.readAsStringAsync(uri, {
+      const sourceUri = result.assets[0].uri
+
+      // Android devuelve content:// URIs que FileSystem no puede leer directamente.
+      // Copiamos al cache primero para obtener un file:// URI legible.
+      const cacheUri = FileSystem.cacheDirectory + 'avatar_upload.jpg'
+      await FileSystem.copyAsync({ from: sourceUri, to: cacheUri })
+
+      const base64 = await FileSystem.readAsStringAsync(cacheUri, {
         encoding: FileSystem.EncodingType.Base64,
       })
-      const ext = uri.split('.').pop()?.toLowerCase().replace('jpeg', 'jpg') ?? 'jpg'
-      const mimeType = ext === 'png' ? 'image/png' : 'image/jpeg'
-      const path = `${user!.id}/avatar.${ext}`
+
+      const path = `${user!.id}/avatar.jpg`
       const { error: uploadError } = await supabase.storage
         .from('avatars')
-        .upload(path, decode(base64), { upsert: true, contentType: mimeType })
+        .upload(path, decode(base64), { upsert: true, contentType: 'image/jpeg' })
       if (uploadError) throw uploadError
+
       const url = supabase.storage.from('avatars').getPublicUrl(path).data.publicUrl
       await supabase.from('instructors').update({ avatar_url: url }).eq('id', instructor!.id)
       qc.invalidateQueries({ queryKey: ['my-instructor-profile'] })
