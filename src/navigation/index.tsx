@@ -51,6 +51,7 @@ import PendingEvaluationsScreen from '../screens/studio/PendingEvaluationsScreen
 import CamaraDashboardScreen from '../screens/camara/DashboardScreen'
 import CamaraDirectoryScreen from '../screens/camara/DirectoryScreen'
 import CamaraStudiosScreen from '../screens/camara/StudiosScreen'
+import StudioDetailScreen from '../screens/camara/StudioDetailScreen'
 import CamaraRateRangesScreen from '../screens/camara/RateRangesScreen'
 import VerifyInstructorScreen from '../screens/camara/VerifyInstructorScreen'
 import CamaraReportsScreen from '../screens/camara/ReportsScreen'
@@ -208,6 +209,7 @@ export default function RootNavigator() {
           <>
             <Stack.Screen name="CamaraTabs" component={CamaraTabs} />
             <Stack.Screen name="VerifyInstructor" component={VerifyInstructorScreen} />
+        <Stack.Screen name="StudioDetail" component={StudioDetailScreen} />
           </>
         ) : user.role === 'super_admin' ? (
           <Stack.Screen name="AdminTabs" component={AdminHome} />

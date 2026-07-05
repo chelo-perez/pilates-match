@@ -23,7 +23,7 @@ function formatDate(dateStr: string | null) {
   return new Date(dateStr).toLocaleDateString('es-AR', { day: '2-digit', month: 'short', year: 'numeric' })
 }
 
-export default function CamaraStudiosScreen() {
+export default function CamaraStudiosScreen({ navigation }: any) {
   const { toast, showToast, hideToast } = useToast()
   const qc = useQueryClient()
   const [filter, setFilter]   = useState<Filter>('todos')
