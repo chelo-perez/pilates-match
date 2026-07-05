@@ -8,6 +8,7 @@ import { Button, Badge, LoadingScreen, colors, spacing, typography, radius } fro
 import Toast from '../../components/Toast'
 import { useToast } from '../../hooks/useToast'
 import BlobCard from '../../components/BlobCard'
+import SaveButton from '../../components/SaveButton'
 import HeroHeader from '../../components/HeroHeader'
 
 
@@ -138,14 +139,7 @@ export default function RateRangesScreen() {
         )}
       </BlobCard>
 
-      <Button
-        label="Guardar rangos"
-        onPress={() => updateMutation.mutate()}
-        isLoading={updateMutation.isPending}
-        disabled={repMin < regMin}
-        fullWidth size="lg"
-        style={{ marginTop: spacing.md }}
-      />
+      <SaveButton label="Guardar rangos" onPress={() => updateMutation.mutate()} isPending={updateMutation.isPending} isSuccess={updateMutation.isSuccess} />
 
       <Text style={styles.lastUpdate}>
         Última actualización:{' '}

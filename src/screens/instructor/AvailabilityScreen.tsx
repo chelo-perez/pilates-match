@@ -7,6 +7,7 @@ import { instructorAPI } from '../../lib/api'
 import { useAuthStore } from '../../store'
 import { Button, Badge, colors, spacing, typography, radius } from '../../components/ui'
 import BlobCard from '../../components/BlobCard'
+import SaveButton from '../../components/SaveButton'
 import HeroHeader from '../../components/HeroHeader'
 import Toast from '../../components/Toast'
 import { useToast } from '../../hooks/useToast'
@@ -193,13 +194,7 @@ export default function AvailabilityScreen() {
           </>
         )}
 
-        <Button
-          label="Guardar disponibilidad"
-          onPress={() => saveMutation.mutate()}
-          isLoading={saveMutation.isPending}
-          fullWidth size="lg"
-          style={{ marginTop: spacing.lg }}
-        />
+        <SaveButton label="Guardar disponibilidad" onPress={() => saveMutation.mutate()} isPending={saveMutation.isPending} isSuccess={saveMutation.isSuccess} />
       </ScrollView>
 
       {/* Modal agregar horario */}

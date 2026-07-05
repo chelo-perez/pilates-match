@@ -9,6 +9,7 @@ import { useAuthStore } from '../../store'
 import { colors, spacing } from '../../components/ui'
 import HeroHeader from '../../components/HeroHeader'
 import BlobCard from '../../components/BlobCard'
+import SaveButton from '../../components/SaveButton'
 import Slider from '@react-native-community/slider'
 
 export default function InstructorRatesScreen({ navigation }: any) {

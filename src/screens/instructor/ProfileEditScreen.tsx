@@ -12,6 +12,7 @@ import { Avatar, Button, Input, colors, spacing, radius } from '../../components
 import Toast from '../../components/Toast'
 import { useToast } from '../../hooks/useToast'
 import { Feather } from '@expo/vector-icons'
+import SaveButton from '../../components/SaveButton'
 
 const SPECIALTIES = [
   { key: 'mat', label: 'Mat' }, { key: 'reformer', label: 'Reformer' },
@@ -252,7 +253,7 @@ export default function ProfileEditScreen({ navigation }: any) {
         </View>
 
         <View style={{ paddingHorizontal: spacing.md }}>
-          <Button label="Guardar perfil" onPress={() => saveMutation.mutate()} isLoading={saveMutation.isPending} fullWidth size="lg" />
+          <SaveButton label="Guardar perfil" onPress={() => saveMutation.mutate()} isPending={saveMutation.isPending} isSuccess={saveMutation.isSuccess} />
         </View>
       </ScrollView>
 
