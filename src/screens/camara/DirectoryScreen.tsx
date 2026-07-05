@@ -90,7 +90,7 @@ export default function DirectoryScreen({ navigation }: any) {
           contentContainerStyle={{ padding: spacing.lg }}
           ItemSeparatorComponent={() => <View style={{ height: spacing.sm }} />}
           ListEmptyComponent={<EmptyState title="Sin instructores" subtitle="No hay resultados para este filtro." />}
-          renderItem={({ item }: any) => (
+          renderItem={({ item, index }: any) => (
             <BlobCard style={styles.card} onPress={() => setSelectedInstructor(item)}>
               <Avatar name={item.full_name} size={36} color={colors.sageMid} />
               <View style={{ flex: 1, marginLeft: spacing.sm }}>

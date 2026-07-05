@@ -96,7 +96,7 @@ export default function RateRangesScreen() {
       </View>
 
       {/* Clases Regulares */}
-      <BlobCard style={styles.card}>
+      <BlobCard style={styles.card} blobColor="rgba(74,93,78,0.10)" blobColor2="rgba(74,93,78,0.06)">
         <View style={styles.cardHeader}>
           <Text style={styles.cardTitle}>Clases regulares</Text>
           <Badge label="Clases Regulares" color="sage" />
@@ -114,7 +114,7 @@ export default function RateRangesScreen() {
       </BlobCard>
 
       {/* Reemplazos */}
-      <BlobCard style={styles.card}>
+      <BlobCard style={styles.card} blobColor="rgba(74,93,78,0.10)" blobColor2="rgba(74,93,78,0.06)">
         <View style={styles.cardHeader}>
           <Text style={styles.cardTitle}>Reemplazo</Text>
           <Badge label="Reemplazos" color="gold" />
