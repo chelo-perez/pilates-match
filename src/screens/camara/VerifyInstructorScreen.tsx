@@ -9,6 +9,8 @@ import { supabase, db } from '../../lib/supabase'
 import { instructorAPI } from '../../lib/api'
 import { Card, Badge, LoadingScreen, colors, spacing, radius, typography } from '../../components/ui'
 import { Feather } from '@expo/vector-icons'
+import HeroHeader from '../../components/HeroHeader'
+import BlobCard from '../../components/BlobCard'
 import { useAuthStore } from '../../store'
 
 const REJECT_REASONS = [
@@ -109,10 +111,23 @@ export default function VerifyInstructorScreen({ navigation, route }: any) {
 
   return (
     <View style={s.container}>
+      <HeroHeader
+        title={instructor.full_name}
+        subtitle={[instructor.neighborhood, instructor.dni ? `DNI ${instructor.dni}` : null].filter(Boolean).join(' · ')}
+        onBack={() => navigation.goBack()}
+        backLabel="Directorio"
+        rightElement={
+          <View style={[s.statusBadge, { backgroundColor: instructor.verification_status === 'verified' ? colors.okBg : colors.warnBg }]}>
+            <Text style={[s.statusBadgeTxt, { color: instructor.verification_status === 'verified' ? colors.okTx : colors.warnTx }]}>
+              {instructor.verification_status === 'verified' ? '✓ Verificado' : '⏳ Pendiente'}
+            </Text>
+          </View>
+        }
+      />
       <ScrollView contentContainerStyle={s.content}>
 
         {/* Perfil */}
-        <Card style={s.profileCard}>
+        <BlobCard style={s.profileCard}>
           <View style={s.profileRow}>
             <View style={s.avatar}>
               <Text style={s.avatarLetter}>{instructor.full_name?.[0]?.toUpperCase()}</Text>
@@ -127,11 +142,11 @@ export default function VerifyInstructorScreen({ navigation, route }: any) {
             <Badge label="Pendiente" variant="warning" />
           </View>
           {instructor.bio && <Text style={s.bio}>{instructor.bio}</Text>}
-        </Card>
+        </BlobCard>
 
         {/* Especialidades */}
         <Text style={s.sectionTitle}>Especialidades declaradas</Text>
-        <Card style={{ marginBottom: spacing.md }}>
+        <BlobCard style={{ marginBottom: spacing.md }}>
           <View style={s.tagRow}>
             {specialties.length > 0
               ? specialties.map((sp: any) => (
@@ -142,11 +157,11 @@ export default function VerifyInstructorScreen({ navigation, route }: any) {
               : <Text style={s.emptyText}>Sin especialidades declaradas</Text>
             }
           </View>
-        </Card>
+        </BlobCard>
 
         {/* Certificaciones */}
         <Text style={s.sectionTitle}>Certificaciones presentadas</Text>
-        <Card style={[{ paddingHorizontal: spacing.md, paddingVertical: 0 }, { marginBottom: spacing.md }]}>
+        <BlobCard style={[{ paddingHorizontal: spacing.md, paddingVertical: 0 }, { marginBottom: spacing.md }]}>
           {certs.length === 0 && (
             <View style={s.certRow}>
               <Text style={s.emptyText}>Sin certificaciones cargadas</Text>
@@ -172,11 +187,11 @@ export default function VerifyInstructorScreen({ navigation, route }: any) {
               )}
             </View>
           ))}
-        </Card>
+        </BlobCard>
 
         {/* Nota interna */}
         <Text style={s.sectionTitle}>Nota interna (solo visible para la Cámara)</Text>
-        <Card style={{ marginBottom: spacing.md }}>
+        <BlobCard style={{ marginBottom: spacing.md }}>
           <TextInput
             style={s.noteInput}
             placeholder="Ej: Certificados verificados telefónicamente con la institución..."
@@ -186,7 +201,7 @@ export default function VerifyInstructorScreen({ navigation, route }: any) {
             multiline
             numberOfLines={3}
           />
-        </Card>
+        </BlobCard>
 
         {/* Acciones */}
         <View style={s.actions}>
@@ -194,10 +209,17 @@ export default function VerifyInstructorScreen({ navigation, route }: any) {
             <Feather name="x" size={16} color="#A32D2D" />
             <Text style={s.rejectText}>Rechazar</Text>
           </TouchableOpacity>
-          <TouchableOpacity style={s.verifyBtn} onPress={handleVerify} disabled={verifyMutation.isPending}>
-            <Feather name="check" size={16} color={colors.white} />
-            <Text style={s.verifyText}>{verifyMutation.isPending ? 'Verificando...' : 'Verificar'}</Text>
-          </TouchableOpacity>
+          {instructor.verification_status !== 'verified' ? (
+            <TouchableOpacity style={s.verifyBtn} onPress={handleVerify} disabled={verifyMutation.isPending}>
+              <Feather name="check" size={16} color={colors.white} />
+              <Text style={s.verifyText}>{verifyMutation.isPending ? 'Verificando...' : 'Verificar'}</Text>
+            </TouchableOpacity>
+          ) : (
+            <TouchableOpacity style={s.revokeBtn} onPress={() => setShowRejectModal(true)}>
+              <Feather name="rotate-ccw" size={16} color="#A32D2D" />
+              <Text style={s.rejectText}>Revocar verificación</Text>
+            </TouchableOpacity>
+          )}
         </View>
 
       </ScrollView>
@@ -271,6 +293,8 @@ export default function VerifyInstructorScreen({ navigation, route }: any) {
 }
 
 const s = StyleSheet.create({
+  statusBadge:       { borderTopLeftRadius: 10, borderTopRightRadius: 0, borderBottomLeftRadius: 0, borderBottomRightRadius: 10, paddingHorizontal: 10, paddingVertical: 4 },
+  statusBadgeTxt:    { fontFamily: 'Nunito-Bold', fontSize: 10 },
   container:         { flex: 1, backgroundColor: colors.cream },
   content:           { padding: spacing.md, paddingBottom: spacing.xxl },
   profileCard:       { marginBottom: spacing.md, padding: spacing.md },
@@ -293,6 +317,7 @@ const s = StyleSheet.create({
   noteInput:         { fontFamily: 'Nunito-Regular', fontSize: 13, color: colors.dark, minHeight: 72, textAlignVertical: 'top' },
   inputLabel:        { fontFamily: 'Nunito-Bold', fontSize: 10, color: colors.mid, textTransform: 'uppercase', letterSpacing: 0.4, marginBottom: spacing.xs },
   actions:           { flexDirection: 'row', gap: spacing.sm, marginTop: spacing.xs },
+  revokeBtn:         { flex: 2, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: spacing.xs, backgroundColor: '#FCEBEB', borderTopLeftRadius: 14, borderTopRightRadius: 0, borderBottomLeftRadius: 0, borderBottomRightRadius: 14, paddingVertical: spacing.md, borderWidth: 0.5, borderColor: '#F09595' },
   rejectBtn:         { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: spacing.xs, backgroundColor: '#FCEBEB', borderTopLeftRadius: 14, borderTopRightRadius: 0, borderBottomLeftRadius: 0, borderBottomRightRadius: 14, paddingVertical: spacing.md, borderWidth: 0.5, borderColor: '#F09595' },
   rejectText:        { fontFamily: 'Nunito-SemiBold', fontSize: 14, color: '#A32D2D' },
   verifyBtn:         { flex: 2, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: spacing.xs, backgroundColor: colors.sage, borderTopLeftRadius: 14, borderTopRightRadius: 0, borderBottomLeftRadius: 0, borderBottomRightRadius: 14, paddingVertical: spacing.md },
