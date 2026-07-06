@@ -66,8 +66,12 @@ export default function InstructorDashboardScreen({ navigation }: any) {
       >
         {/* Hero */}
         <HeroHeader
-          title={`Hola, ${firstName}`}
+          title={firstName}
           subtitle={isVerified ? 'Instructor verificado · CAPIAF' : 'Perfil pendiente de verificación'}
+          centered
+          avatarUri={instructor?.avatar_url}
+          avatarFallback={firstName}
+          onAvatarPress={() => navigation.navigate('InstructorPerfil')}
           rightElement={
             <View style={s.scorePill}>
               <View style={s.scoreCircle}>

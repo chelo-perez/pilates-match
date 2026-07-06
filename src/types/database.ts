@@ -41,6 +41,7 @@ export interface Studio {
   member_since: string | null
   created_at: string
   updated_at: string
+  logo_url: string | null
   // Perfil para el match
   equipment: string[]           // ['reformer', 'cadillac', 'mat', 'chair', 'barrel']
   budget_regular: number | null    // máx que paga por clase regular

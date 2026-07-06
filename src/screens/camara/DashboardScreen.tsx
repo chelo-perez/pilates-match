@@ -56,8 +56,11 @@ export default function CamaraDashboardScreen({ navigation }: any) {
       <ScrollView contentContainerStyle={{ paddingBottom: 100 }} showsVerticalScrollIndicator={false}>
 
         <HeroHeader
-          title="Panel de gestión"
+          title={user?.camara_name ?? 'Cámara de Pilates'}
           subtitle={fecha}
+          centered
+          avatarUri={user?.camara_logo_url}
+          avatarFallback={user?.camara_name ?? 'C'}
           rightElement={
             <TouchableOpacity style={s.logoutBtn} onPress={handleSignOut}>
               <Feather name="log-out" size={13} color="rgba(255,255,255,0.65)" />
@@ -66,7 +69,7 @@ export default function CamaraDashboardScreen({ navigation }: any) {
           }
           bottomElement={
             <View style={s.camaraBadge}>
-              <Text style={s.camaraBadgeTxt}>Cámara de Pilates</Text>
+              <Text style={s.camaraBadgeTxt}>Panel de gestión · {fecha}</Text>
             </View>
           }
         />

@@ -52,6 +52,10 @@ export default function StudioHomeScreen({ navigation }: any) {
         <HeroHeader
           title={studio?.name ?? 'Mi estudio'}
           subtitle={studio?.neighborhood ?? 'Buenos Aires'}
+          centered
+          avatarUri={studio?.logo_url}
+          avatarFallback={studio?.name ?? 'E'}
+          onAvatarPress={() => navigation.navigate('StudioProfileEdit')}
           rightElement={
             <TouchableOpacity style={s.logoutPill} onPress={handleSignOut}>
               <Feather name="log-out" size={13} color="rgba(255,255,255,0.65)" />
