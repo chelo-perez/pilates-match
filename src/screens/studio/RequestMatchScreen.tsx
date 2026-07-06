@@ -36,18 +36,16 @@ export default function RequestMatchScreen({ navigation, route }: Props) {
 
   // ── Reemplazo ──
   const [classDate, setClassDate]   = useState(new Date())
-  const [startTime, setStartTime]   = useState(new Date())
-  const [endTime, setEndTime]       = useState(() => { const d = new Date(); d.setHours(d.getHours() + 3); return d })
+  const [startTime, setStartTime]   = useState(() => { const d = new Date(); d.setHours(8, 0, 0, 0); return d })
+  const [endTime, setEndTime]       = useState(() => { const d = new Date(); d.setHours(11, 0, 0, 0); return d })
   const [showDatePicker, setShowDatePicker] = useState(false)
   const [showTimePicker, setShowTimePicker] = useState(false)
   const [showEndTimePicker, setShowEndTimePicker] = useState(false)
 
   // ── Regular ──
   const [selectedDays, setSelectedDays] = useState<string[]>([])
-  const [scheduleFrom, setScheduleFrom] = useState(new Date())
-  const [scheduleTo,   setScheduleTo]   = useState(() => {
-    const d = new Date(); d.setHours(d.getHours() + 4); return d
-  })
+  const [scheduleFrom, setScheduleFrom] = useState(() => { const d = new Date(); d.setHours(8, 0, 0, 0); return d })
+  const [scheduleTo,   setScheduleTo]   = useState(() => { const d = new Date(); d.setHours(12, 0, 0, 0); return d })
   const [showFromPicker, setShowFromPicker] = useState(false)
   const [showToPicker,   setShowToPicker]   = useState(false)
 
@@ -178,7 +176,7 @@ export default function RequestMatchScreen({ navigation, route }: Props) {
                   {showTimePicker && (
                     <DateTimePicker
                       value={startTime} mode="time" display="spinner" minuteInterval={30}
-                      onChange={(_, t) => { setShowTimePicker(false); if (t) setStartTime(t) }}
+                      onChange={(_, t) => { setShowTimePicker(false); if (t) { const d = new Date(t); d.setSeconds(0,0); setStartTime(d) } }}
                     />
                   )}
                 </View>
@@ -193,7 +191,7 @@ export default function RequestMatchScreen({ navigation, route }: Props) {
                   {showEndTimePicker && (
                     <DateTimePicker
                       value={endTime} mode="time" display="spinner" minuteInterval={30}
-                      onChange={(_, t) => { setShowEndTimePicker(false); if (t) setEndTime(t) }}
+                      onChange={(_, t) => { setShowEndTimePicker(false); if (t) { const d = new Date(t); d.setSeconds(0,0); setEndTime(d) } }}
                     />
                   )}
                 </View>
@@ -241,7 +239,7 @@ export default function RequestMatchScreen({ navigation, route }: Props) {
                   {showFromPicker && (
                     <DateTimePicker
                       value={scheduleFrom} mode="time" display="spinner" minuteInterval={60}
-                      onChange={(_, t) => { setShowFromPicker(false); if (t) setScheduleFrom(t) }}
+                      onChange={(_, t) => { setShowFromPicker(false); if (t) { const d = new Date(t); d.setSeconds(0,0); setScheduleFrom(d) } }}
                     />
                   )}
                 </View>
@@ -256,7 +254,7 @@ export default function RequestMatchScreen({ navigation, route }: Props) {
                   {showToPicker && (
                     <DateTimePicker
                       value={scheduleTo} mode="time" display="spinner" minuteInterval={60}
-                      onChange={(_, t) => { setShowToPicker(false); if (t) setScheduleTo(t) }}
+                      onChange={(_, t) => { setShowToPicker(false); if (t) { const d = new Date(t); d.setSeconds(0,0); setScheduleTo(d) } }}
                     />
                   )}
                 </View>
