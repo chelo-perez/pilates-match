@@ -1,9 +1,9 @@
 // src/screens/camara/DirectoryScreen.tsx
 import React, { useState } from 'react'
 import {
-  View, Text, StyleSheet, FlatList, TextInput, TouchableOpacity, Modal, ScrollView, Alert
+  View, Text, StyleSheet, FlatList, TextInput, TouchableOpacity, ScrollView, Alert
 } from 'react-native'
-import { usePendingInstructors, useVerifyInstructor } from '../../hooks'
+import { usePendingInstructors } from '../../hooks'
 import { useQuery } from '@tanstack/react-query'
 import { db } from '../../lib/supabase'
 import { Avatar, Badge, Button, EmptyState, LoadingScreen, colors, spacing, radius, typography } from '../../components/ui'
@@ -16,8 +16,6 @@ type Filter = 'todos' | 'verificado' | 'pendiente' | 'inactivo'
 export default function DirectoryScreen({ navigation }: any) {
   const [filter, setFilter] = useState<Filter>('todos')
   const [search, setSearch] = useState('')
-  const [selectedInstructor, setSelectedInstructor] = useState<any>(null)
-  const verifyMutation = useVerifyInstructor()
 
   const { data: allInstructors = [], isLoading, refetch } = useQuery({
     queryKey: ['camara-instructors', filter],
@@ -35,27 +33,6 @@ export default function DirectoryScreen({ navigation }: any) {
   const filtered = search
     ? allInstructors.filter((i: any) => i.full_name.toLowerCase().includes(search.toLowerCase()))
     : allInstructors
-
-  const handleVerify = async (id: string, approved: boolean) => {
-    Alert.alert(
-      approved ? '¿Verificar instructor?' : '¿Rechazar instructor?',
-      approved
-        ? 'Se activará su perfil público y recibirá una notificación.'
-        : 'El instructor recibirá una notificación de rechazo.',
-      [
-        { text: 'Cancelar', style: 'cancel' },
-        {
-          text: approved ? 'Verificar' : 'Rechazar',
-          style: approved ? 'default' : 'destructive',
-          onPress: async () => {
-            await verifyMutation.mutateAsync({ id, approved })
-            setSelectedInstructor(null)
-            refetch()
-          },
-        },
-      ]
-    )
-  }
 
   const BADGE_COLOR: Record<string, any> = {
     verificado: 'success', pendiente: 'warning', rechazado: 'danger', inactivo: 'sand',
@@ -91,7 +68,7 @@ export default function DirectoryScreen({ navigation }: any) {
           ItemSeparatorComponent={() => <View style={{ height: spacing.sm }} />}
           ListEmptyComponent={<EmptyState title="Sin instructores" subtitle="No hay resultados para este filtro." />}
           renderItem={({ item, index }: any) => (
-            <BlobCard style={styles.card} onPress={() => setSelectedInstructor(item)}>
+            <BlobCard style={styles.card} onPress={() => navigation.navigate('VerifyInstructor', { instructorId: item.id })}>
               <Avatar name={item.full_name} size={36} color={colors.sageMid} />
               <View style={{ flex: 1, marginLeft: spacing.sm }}>
                 <Text style={styles.name}>{item.full_name}</Text>
@@ -102,59 +79,6 @@ export default function DirectoryScreen({ navigation }: any) {
           )}
         />
       )}
-
-      {/* FAB agregar */}
-      <TouchableOpacity style={styles.fab} onPress={() => navigation.navigate('AddInstructor')}>
-        <Text style={{ fontSize: 24, color: colors.white }}>+</Text>
-      </TouchableOpacity>
-
-      {/* Modal verificación */}
-      <Modal visible={!!selectedInstructor} animationType="slide" presentationStyle="pageSheet">
-        {selectedInstructor && (
-          <ScrollView style={{ flex: 1, backgroundColor: colors.cream }}>
-            <View style={styles.modalHeader}>
-              <View style={{ flex: 1 }}>
-                <Badge label={BADGE_LABEL[selectedInstructor.verification_status]}
-                  color={BADGE_COLOR[selectedInstructor.verification_status]} />
-                <Text style={styles.modalTitle}>{selectedInstructor.full_name}</Text>
-                <Text style={styles.modalSub}>
-                  {selectedInstructor.email} · {selectedInstructor.neighborhood}
-                </Text>
-              </View>
-              <TouchableOpacity onPress={() => setSelectedInstructor(null)}>
-                <Text style={{ fontSize: 22, color: colors.mid }}>✕</Text>
-              </TouchableOpacity>
-            </View>
-
-            <View style={{ padding: spacing.lg }}>
-              <Text style={styles.sectionTitle}>Certificaciones a validar</Text>
-              {(selectedInstructor.certifications ?? []).length === 0 ? (
-                <Text style={{ ...typography.body, color: colors.light }}>Sin certificaciones cargadas</Text>
-              ) : (selectedInstructor.certifications ?? []).map((cert: any) => (
-                <BlobCard style={styles.certCard}>
-                  <View style={{ flex: 1 }}>
-                    <Text style={styles.certName}>{cert.name}</Text>
-                    <Text style={styles.certMeta}>{cert.institution} · {cert.year}</Text>
-                  </View>
-                  {cert.verified
-                    ? <Badge label="✓ Verificada" color="success" />
-                    : <Badge label="Pendiente" color="warning" />
-                  }
-                </BlobCard>
-              ))}
-
-              {selectedInstructor.verification_status === 'pendiente' && (
-                <View style={styles.verifyActions}>
-                  <Button label="✓ Verificar instructor" onPress={() => handleVerify(selectedInstructor.id, true)}
-                    isLoading={verifyMutation.isPending} fullWidth size="lg" style={{ marginBottom: spacing.sm }} />
-                  <Button label="Rechazar" variant="danger" onPress={() => handleVerify(selectedInstructor.id, false)}
-                    fullWidth />
-                </View>
-              )}
-            </View>
-          </ScrollView>
-        )}
-      </Modal>
     </View>
   )
 }
@@ -170,18 +94,5 @@ const styles = StyleSheet.create({
   card: { flexDirection: 'row', alignItems: 'center', padding: spacing.md, backgroundColor: colors.white },
   name: { fontFamily: 'Nunito-SemiBold', fontSize: 14, color: colors.dark },
   meta: { ...typography.small, color: colors.mid, marginTop: 2 },
-  fab: {
-    position: 'absolute', bottom: spacing.xl, right: spacing.xl,
-    width: 52, height: 52, borderRadius: 26,
-    backgroundColor: colors.cream, alignItems: 'center', justifyContent: 'center',
-    shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.15, shadowRadius: 8, elevation: 8,
-  },
-  modalHeader: { flexDirection: 'row', alignItems: 'flex-start', padding: spacing.xl, backgroundColor: colors.goldLight },
-  modalTitle: { fontFamily: 'Nunito-Bold', fontSize: 20, color: colors.dark, marginTop: spacing.xs },
-  modalSub: { ...typography.small, color: colors.mid, marginTop: 2 },
   sectionTitle: { ...typography.label, color: colors.dark, marginBottom: spacing.md },
-  certCard: { flexDirection: 'row', alignItems: 'center', padding: spacing.md, marginBottom: spacing.sm, backgroundColor: colors.white },
-  certName: { fontFamily: 'Nunito-Medium', fontSize: 13, color: colors.dark },
-  certMeta: { ...typography.small, color: colors.mid, marginTop: 2 },
-  verifyActions: { marginTop: spacing.xl },
 })
