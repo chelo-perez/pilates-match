@@ -37,8 +37,10 @@ export default function RequestMatchScreen({ navigation, route }: Props) {
   // ── Reemplazo ──
   const [classDate, setClassDate]   = useState(new Date())
   const [startTime, setStartTime]   = useState(new Date())
+  const [endTime, setEndTime]       = useState(() => { const d = new Date(); d.setHours(d.getHours() + 3); return d })
   const [showDatePicker, setShowDatePicker] = useState(false)
   const [showTimePicker, setShowTimePicker] = useState(false)
+  const [showEndTimePicker, setShowEndTimePicker] = useState(false)
 
   // ── Regular ──
   const [selectedDays, setSelectedDays] = useState<string[]>([])
@@ -53,8 +55,6 @@ export default function RequestMatchScreen({ navigation, route }: Props) {
 
   const fmtDate = (d: Date) => d.toLocaleDateString('es-AR', { weekday: 'long', day: 'numeric', month: 'long' })
   const fmtTime = (d: Date) => d.toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' })
-  const endTime = new Date(startTime.getTime() + 60 * 60 * 1000)
-
   const toggleDay = (key: string) =>
     setSelectedDays(prev => prev.includes(key) ? prev.filter(d => d !== key) : [...prev, key])
 
@@ -70,7 +70,7 @@ export default function RequestMatchScreen({ navigation, route }: Props) {
         class_type: classType,
         class_date: classDate.toISOString().split('T')[0],
         start_time: fmtTime(startTime),
-        end_time: fmtTime(endTime),
+        end_time: classType === 'reemplazo' ? fmtTime(endTime) : fmtTime(endTime),
         note_studio: note.trim() || undefined,
         ...(classType === 'regular' && {
           schedule_days: selectedDays,
@@ -88,6 +88,11 @@ export default function RequestMatchScreen({ navigation, route }: Props) {
       if (e.message === 'MATCH_LIMIT_REACHED') navigation.navigate('MembershipPaywall')
       else showToast('Error: ' + e.message)
     }
+  }
+
+  const clasesReemplazo = () => {
+    const diff = (endTime.getTime() - startTime.getTime()) / (1000 * 60 * 60)
+    return diff > 0 ? Math.floor(diff) : 0
   }
 
   const clasesEnFranja = () => {
@@ -162,17 +167,44 @@ export default function RequestMatchScreen({ navigation, route }: Props) {
               )}
             </BlobCard>
 
-            <BlobCard style={s.card} delay={1800}>
-              <Text style={s.cardLabel}>HORARIO</Text>
-              <TouchableOpacity style={s.pickerBtn} onPress={() => setShowTimePicker(true)}>
-                <Feather name="clock" size={15} color={colors.sage} />
-                <Text style={s.pickerTxt}>{fmtTime(startTime)} – {fmtTime(endTime)}</Text>
-              </TouchableOpacity>
-              {showTimePicker && (
-                <DateTimePicker
-                  value={startTime} mode="time" display="spinner" minuteInterval={30}
-                  onChange={(_, t) => { setShowTimePicker(false); if (t) setStartTime(t) }}
-                />
+            <BlobCard style={s.card} delay={1800} blobColor="rgba(184,150,12,0.10)" blobColor2="rgba(184,150,12,0.06)">
+              <Text style={s.cardLabel}>BLOQUE HORARIO</Text>
+              <View style={s.franjaRow}>
+                <View style={{ flex: 1 }}>
+                  <Text style={s.franjaLbl}>Desde</Text>
+                  <TouchableOpacity style={s.pickerBtnSm} onPress={() => setShowTimePicker(true)}>
+                    <Text style={s.pickerTxtSm}>{fmtTime(startTime)}</Text>
+                  </TouchableOpacity>
+                  {showTimePicker && (
+                    <DateTimePicker
+                      value={startTime} mode="time" display="spinner" minuteInterval={30}
+                      onChange={(_, t) => { setShowTimePicker(false); if (t) setStartTime(t) }}
+                    />
+                  )}
+                </View>
+                <View style={s.franjaArrow}>
+                  <Feather name="arrow-right" size={18} color={colors.sage} />
+                </View>
+                <View style={{ flex: 1 }}>
+                  <Text style={s.franjaLbl}>Hasta</Text>
+                  <TouchableOpacity style={s.pickerBtnSm} onPress={() => setShowEndTimePicker(true)}>
+                    <Text style={s.pickerTxtSm}>{fmtTime(endTime)}</Text>
+                  </TouchableOpacity>
+                  {showEndTimePicker && (
+                    <DateTimePicker
+                      value={endTime} mode="time" display="spinner" minuteInterval={30}
+                      onChange={(_, t) => { setShowEndTimePicker(false); if (t) setEndTime(t) }}
+                    />
+                  )}
+                </View>
+              </View>
+              {clasesReemplazo() > 0 && (
+                <View style={s.clasesInfo}>
+                  <Feather name="info" size={13} color={colors.gold} />
+                  <Text style={s.clasesInfoTxt}>
+                    {clasesReemplazo()} clase{clasesReemplazo() > 1 ? 's' : ''} de 1h · {fmtTime(startTime)} a {fmtTime(endTime)}
+                  </Text>
+                </View>
               )}
             </BlobCard>
           </>
