@@ -39,6 +39,7 @@ import EvaluateStudioScreen from '../screens/instructor/EvaluateStudioScreen'
 
 // Studio
 import StudioHomeScreen from '../screens/studio/HomeScreen'
+import StudioProfileEditScreen from '../screens/studio/ProfileEditScreen'
 import SearchScreen from '../screens/studio/SearchScreen'
 import InstructorProfileScreen from '../screens/studio/InstructorProfileScreen'
 import RequestMatchScreen from '../screens/studio/RequestMatchScreen'

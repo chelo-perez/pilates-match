@@ -41,6 +41,11 @@ export interface Studio {
   member_since: string | null
   created_at: string
   updated_at: string
+  // Perfil para el match
+  equipment: string[]           // ['reformer', 'cadillac', 'mat', 'chair', 'barrel']
+  budget_regular: number | null    // máx que paga por clase regular
+  budget_replacement: number | null // máx que paga por reemplazo
+  bio: string | null
 }
 
 export interface Membership {

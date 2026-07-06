@@ -89,6 +89,19 @@ export default function StudioHomeScreen({ navigation }: any) {
           </BlobCard>
         </View>
 
+        {/* Perfil incompleto banner */}
+        {(!studio?.budget_regular || !studio?.equipment?.length) && (
+          <TouchableOpacity
+            style={s.profileBanner}
+            onPress={() => navigation.navigate('StudioProfileEdit')}
+            activeOpacity={0.85}
+          >
+            <Feather name="edit-3" size={14} color={colors.warnTx} />
+            <Text style={s.profileBannerTxt}>Completá tu perfil para activar el match automático</Text>
+            <Feather name="chevron-right" size={14} color={colors.warnTx} />
+          </TouchableOpacity>
+        )}
+
         {/* Buscar */}
         <TouchableOpacity style={s.searchBtn} onPress={() => navigation.navigate('Search')} activeOpacity={0.85}>
           <Feather name="search" size={18} color="#fff" />
@@ -162,6 +175,8 @@ const s = StyleSheet.create({
   kpiNum:         { fontFamily: 'Nunito-Bold', fontSize: 28, color: colors.dark, marginBottom: 2 },
   kpiLbl:         { fontFamily: 'Nunito-Bold', fontSize: 9, color: colors.light, textTransform: 'uppercase', letterSpacing: 0.6 },
 
+  profileBanner:   { flexDirection: 'row', alignItems: 'center', gap: 8, marginHorizontal: spacing.md, marginBottom: spacing.sm, backgroundColor: colors.warnBg, borderTopLeftRadius: 14, borderTopRightRadius: 0, borderBottomLeftRadius: 0, borderBottomRightRadius: 14, padding: spacing.md, borderWidth: 0.5, borderColor: 'rgba(122,80,0,0.2)' },
+  profileBannerTxt: { fontFamily: 'Nunito-Bold', fontSize: 12, color: colors.warnTx, flex: 1 },
   searchBtn:      { marginHorizontal: spacing.md, marginBottom: spacing.md, backgroundColor: colors.sage, borderTopLeftRadius: 14, borderTopRightRadius: 0, borderBottomLeftRadius: 0, borderBottomRightRadius: 14, padding: 14, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, elevation: 3 },
   searchBtnTxt:   { fontFamily: 'Nunito-Bold', fontSize: 15, color: '#fff', letterSpacing: 0.2 },
 
