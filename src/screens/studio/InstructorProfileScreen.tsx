@@ -128,12 +128,12 @@ export default function InstructorProfileScreen({ navigation, route }: Props) {
           {/* ── PERFIL ── */}
           {tab === 'perfil' && (
             <>
-              {instructor.bio && (
-                <BlobCard style={s.section} delay={200}>
-                  <Text style={s.sectionTitle}>Sobre mí</Text>
-                  <Text style={s.bioText}>{instructor.bio}</Text>
-                </BlobCard>
-              )}
+              <BlobCard style={s.section} delay={200}>
+                <Text style={s.sectionTitle}>Sobre mí</Text>
+                <Text style={s.bioText}>
+                  {instructor.bio || 'Este instructor aún no agregó una descripción.'}
+                </Text>
+              </BlobCard>
               {instructor.specialties.length > 0 && (
                 <BlobCard style={s.section} delay={800}>
                   <Text style={s.sectionTitle}>Especialidades</Text>
@@ -243,18 +243,21 @@ export default function InstructorProfileScreen({ navigation, route }: Props) {
             </>
           )}
         </View>
+
+        {/* CTA dentro del scroll */}
+        <View style={s.ctaInner}>
+          <TouchableOpacity
+            style={[s.ctaBtn, isFullMatch && s.ctaBtnMatch]}
+            onPress={() => navigation.navigate('RequestMatch', { instructorId, instructorName: instructor.full_name })}
+            activeOpacity={0.85}
+          >
+            <Text style={s.ctaTxt}>{isFullMatch ? 'Enviar solicitud →' : 'Ver disponibilidad →'}</Text>
+          </TouchableOpacity>
+        </View>
+
       </ScrollView>
 
-      {/* CTA fijo */}
-      <View style={s.cta}>
-        <TouchableOpacity
-          style={[s.ctaBtn, isFullMatch && s.ctaBtnMatch]}
-          onPress={() => navigation.navigate('RequestMatch', { instructorId, instructorName: instructor.full_name })}
-          activeOpacity={0.85}
-        >
-          <Text style={s.ctaTxt}>{isFullMatch ? 'Enviar solicitud →' : 'Ver disponibilidad →'}</Text>
-        </TouchableOpacity>
-      </View>
+
     </View>
   )
 }
@@ -329,7 +332,7 @@ const s = StyleSheet.create({
   slotTime:       { fontFamily: 'Nunito-SemiBold', fontSize: 13, color: colors.dark },
 
   // CTA
-  cta:            { padding: spacing.md, backgroundColor: colors.white, borderTopWidth: 0.5, borderColor: colors.border },
+  ctaInner:       { paddingHorizontal: spacing.md, paddingTop: spacing.sm, paddingBottom: 32 },
   ctaBtn:         { backgroundColor: colors.sage, borderTopLeftRadius: 14, borderTopRightRadius: 0, borderBottomLeftRadius: 0, borderBottomRightRadius: 14, padding: 15, alignItems: 'center' },
   ctaBtnMatch:    { backgroundColor: '#2E6B1A' },
   ctaTxt:         { fontFamily: 'Nunito-Bold', fontSize: 15, color: '#fff' },
