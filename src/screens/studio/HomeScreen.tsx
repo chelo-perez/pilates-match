@@ -120,9 +120,7 @@ export default function StudioHomeScreen({ navigation }: any) {
           {recentHistory.length === 0 ? (
             <EmptyState
               title="Sin historial aún"
-              subtitle="Tus propuestas enviadas aparecerán acá."
-              action="Buscar instructor"
-              onAction={() => navigation.navigate('Search')}
+              subtitle="Cuando envíes una propuesta a un instructor, aparecerá acá."
             />
           ) : (
             recentHistory.map((item: any) => (
@@ -165,7 +163,7 @@ const s = StyleSheet.create({
   kpiLbl:         { fontFamily: 'Nunito-Bold', fontSize: 9, color: colors.light, textTransform: 'uppercase', letterSpacing: 0.6 },
 
   searchBtn:      { marginHorizontal: spacing.md, marginBottom: spacing.md, backgroundColor: colors.sage, borderTopLeftRadius: 14, borderTopRightRadius: 0, borderBottomLeftRadius: 0, borderBottomRightRadius: 14, padding: 14, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, elevation: 3 },
-  searchBtnTxt:   { fontFamily: 'Nunito-Bold', fontSize: 15, color: '#fff' },
+  searchBtnTxt:   { fontFamily: 'Nunito-Bold', fontSize: 15, color: '#fff', letterSpacing: 0.2 },
 
   alertCard:      { marginHorizontal: spacing.md, marginBottom: spacing.md, backgroundColor: colors.warnBg, borderTopLeftRadius: 14, borderTopRightRadius: 0, borderBottomLeftRadius: 0, borderBottomRightRadius: 14, padding: spacing.md, flexDirection: 'row', alignItems: 'center', gap: spacing.sm, borderWidth: 0.5, borderColor: 'rgba(122,80,0,0.2)' },
   alertIcon:      { width: 36, height: 36, borderRadius: 18, backgroundColor: '#FEE8BC', alignItems: 'center', justifyContent: 'center' },

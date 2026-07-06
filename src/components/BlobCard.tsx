@@ -12,8 +12,8 @@ interface BlobCardProps {
 
 export default function BlobCard({
   children, style, onPress,
-  blobColor  = 'rgba(74,93,78,0.16)',
-  blobColor2 = 'rgba(74,93,78,0.10)',
+  blobColor  = 'rgba(74,93,78,0.10)',
+  blobColor2 = 'rgba(74,93,78,0.06)',
   delay = 0,
 }: BlobCardProps) {
   const anim1 = useRef(new Animated.Value(0)).current
@@ -22,14 +22,14 @@ export default function BlobCard({
   useEffect(() => {
     const loop1 = Animated.loop(
       Animated.sequence([
-        Animated.timing(anim1, { toValue: 1, duration: 7000, easing: Easing.bezier(0.45, 0, 0.55, 1), useNativeDriver: true }),
-        Animated.timing(anim1, { toValue: 0, duration: 7000, easing: Easing.bezier(0.45, 0, 0.55, 1), useNativeDriver: true }),
+        Animated.timing(anim1, { toValue: 1, duration: 14000, easing: Easing.bezier(0.45, 0, 0.55, 1), useNativeDriver: true }),
+        Animated.timing(anim1, { toValue: 0, duration: 14000, easing: Easing.bezier(0.45, 0, 0.55, 1), useNativeDriver: true }),
       ])
     )
     const loop2 = Animated.loop(
       Animated.sequence([
-        Animated.timing(anim2, { toValue: 1, duration: 10000, easing: Easing.bezier(0.45, 0, 0.55, 1), useNativeDriver: true }),
-        Animated.timing(anim2, { toValue: 0, duration: 10000, easing: Easing.bezier(0.45, 0, 0.55, 1), useNativeDriver: true }),
+        Animated.timing(anim2, { toValue: 1, duration: 20000, easing: Easing.bezier(0.45, 0, 0.55, 1), useNativeDriver: true }),
+        Animated.timing(anim2, { toValue: 0, duration: 20000, easing: Easing.bezier(0.45, 0, 0.55, 1), useNativeDriver: true }),
       ])
     )
     // Desfase: arranca después del delay
@@ -77,7 +77,7 @@ const s = StyleSheet.create({
     elevation: 3,
   },
   blob:     { position: 'absolute', borderRadius: 9999 },
-  blobMain: { width: 130, height: 130, top: -35, left: -30 },
-  blobSec:  { width: 90,  height: 90,  bottom: -25, right: -20 },
+  blobMain: { width: 100, height: 100, top: -25, left: -20 },
+  blobSec:  { width: 70,  height: 70,  bottom: -18, right: -15 },
   content:  { position: 'relative', zIndex: 1 },
 })
