@@ -86,7 +86,10 @@ export default function ProfileEditScreen({ navigation }: any) {
 
   const pickAvatar = async () => {
     const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync()
-    if (status !== 'granted') return
+    if (status !== 'granted') {
+      Alert.alert('Permiso requerido', 'Necesitamos acceso a tu galería')
+      return
+    }
 
     const result = await ImagePicker.launchImageLibraryAsync({
       mediaTypes: ImagePicker.MediaTypeOptions.Images,
@@ -101,27 +104,38 @@ export default function ProfileEditScreen({ navigation }: any) {
       setUploading(true)
       const sourceUri = result.assets[0].uri
 
-      // Android devuelve content:// URIs que FileSystem no puede leer directamente.
-      // Copiamos al cache primero para obtener un file:// URI legible.
-      const cacheUri = FileSystem.cacheDirectory + 'avatar_upload.jpg'
+      // Verificar que el bucket 'avatars' existe en Supabase Storage
+      // Copiar al cache primero (Android devuelve content:// URIs)
+      const cacheUri = FileSystem.cacheDirectory + 'avatar_' + Date.now() + '.jpg'
       await FileSystem.copyAsync({ from: sourceUri, to: cacheUri })
+
+      const fileInfo = await FileSystem.getInfoAsync(cacheUri)
+      if (!fileInfo.exists) throw new Error('No se pudo copiar la imagen al cache')
 
       const base64 = await FileSystem.readAsStringAsync(cacheUri, {
         encoding: FileSystem.EncodingType.Base64,
       })
 
+      if (!base64 || base64.length < 100) throw new Error('Base64 vacío o inválido')
+
       const path = `${user!.id}/avatar.jpg`
       const { error: uploadError } = await supabase.storage
         .from('avatars')
         .upload(path, decode(base64), { upsert: true, contentType: 'image/jpeg' })
-      if (uploadError) throw uploadError
 
-      const url = supabase.storage.from('avatars').getPublicUrl(path).data.publicUrl
-      await supabase.from('instructors').update({ avatar_url: url }).eq('id', instructor!.id)
+      if (uploadError) throw new Error('Storage error: ' + uploadError.message)
+
+      const { data: urlData } = supabase.storage.from('avatars').getPublicUrl(path)
+      const url = urlData.publicUrl + '?t=' + Date.now() // cache bust
+
+      const { error: updateError } = await supabase
+        .from('instructors').update({ avatar_url: url }).eq('id', instructor!.id)
+      if (updateError) throw new Error('Update error: ' + updateError.message)
+
       qc.invalidateQueries({ queryKey: ['my-instructor-profile'] })
-      showToast('Foto actualizada')
+      Alert.alert('✓ Foto actualizada', 'Tu foto de perfil fue guardada correctamente.')
     } catch (e: any) {
-      showToast('Error: ' + e.message)
+      Alert.alert('Error al subir foto', e.message ?? 'Error desconocido')
     } finally {
       setUploading(false)
     }
