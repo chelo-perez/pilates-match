@@ -58,8 +58,7 @@ export default function LoginScreen({ navigation }: any) {
           <View style={s.hblob1} /><View style={s.hblob2} />
           <View style={s.heroInner}>
             <Image source={require('../../../assets/logo-white.png')} style={s.logoImg} resizeMode="contain" />
-            <Text style={s.appName}>Trabajo Más Fácil</Text>
-            <Text style={s.appSub}>La comunidad de Pilates de Buenos Aires</Text>
+
           </View>
           <View style={s.waveRow}>
             <View style={s.waveL} /><View style={s.waveR} />
