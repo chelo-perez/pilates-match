@@ -57,11 +57,6 @@
           "cameraPermission": "Para tomar una foto de perfil."
         }
       ]
-    ],
-    "extra": {
-      "eas": {
-        "projectId": "55e2dd48-7479-44f9-812a-3ab2bd8a9861"
-      }
-    }
+    ]
   }
 }
