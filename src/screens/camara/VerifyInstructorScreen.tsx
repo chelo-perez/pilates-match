@@ -1,24 +1,29 @@
-// src/screens/camara/VerifyInstructorScreen.tsx
 import React, { useState } from 'react'
-import {
-  View, Text, StyleSheet, ScrollView, TouchableOpacity,
-  Alert, TextInput, Modal, Linking
-} from 'react-native'
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert, TextInput, Modal, Linking } from 'react-native'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { supabase, db } from '../../lib/supabase'
 import { instructorAPI } from '../../lib/api'
-import { Card, Badge, LoadingScreen, colors, spacing, radius, typography } from '../../components/ui'
+import { LoadingScreen, colors, spacing } from '../../components/ui'
 import { Feather } from '@expo/vector-icons'
 import HeroHeader from '../../components/HeroHeader'
 import BlobCard from '../../components/BlobCard'
 import { useAuthStore } from '../../store'
 
-const REJECT_REASONS = [
+const REJECT_CERT_REASONS = [
   'Certificado inválido o vencido',
   'Institución no reconocida por la Cámara',
-  'Documentación incompleta',
+  'Imagen ilegible o incompleta',
   'DNI no coincide con el certificado',
   'Las horas declaradas no coinciden',
+  'Otro',
+]
+
+const NO_VERIFY_REASONS = [
+  'No cumple los requisitos mínimos de la Cámara',
+  'Información inconsistente en el perfil',
+  'Instructor inhabilitado',
+  'En espera de documentación adicional',
+  'Decisión del directorio',
   'Otro',
 ]
 
@@ -27,87 +32,115 @@ export default function VerifyInstructorScreen({ navigation, route }: any) {
   const qc = useQueryClient()
   const user = useAuthStore(s => s.user)
 
-  const [internalNote, setInternalNote]       = useState('')
-  const [rejectReason, setRejectReason]       = useState(REJECT_REASONS[0])
-  const [rejectMessage, setRejectMessage]     = useState('')
-  const [showRejectModal, setShowRejectModal] = useState(false)
-  const [showPdfModal, setShowPdfModal]       = useState<any>(null)
+  const [internalNote,    setInternalNote]    = useState('')
+  const [showModal,       setShowModal]       = useState<'reject_cert' | 'no_verify' | null>(null)
+  const [selectedCert,    setSelectedCert]    = useState<any>(null)
+  const [selectedReason,  setSelectedReason]  = useState('')
+  const [extraMessage,    setExtraMessage]    = useState('')
 
   const { data: instructor, isLoading } = useQuery({
     queryKey: ['instructor-detail', instructorId],
     queryFn: async () => {
       const { data, error } = await db.instructors()
         .select('*, certifications(*), specialties:instructor_specialties(*), rates:instructor_rates(*)')
-        .eq('id', instructorId)
-        .single()
+        .eq('id', instructorId).single()
       if (error) throw error
       return data
     },
   })
 
-  const saveNote = async (type: 'verificacion' | 'rechazo' | 'interna', extra?: string) => {
-    const note = type === 'rechazo'
-      ? `Motivo: ${rejectReason}${extra ? `\n${extra}` : ''}`
-      : internalNote.trim()
-    if (!note) return
-    await supabase.from('camara_instructor_notes').insert({
-      instructor_id: instructorId,
-      camara_id: user?.camara_id,
-      note,
-      type,
-      reject_reason: type === 'rechazo' ? rejectReason : null,
-      created_by: user?.id,
-    })
-  }
+  // ── Aprobar certificado ──
+  const approveCertMutation = useMutation({
+    mutationFn: async (certId: string) => {
+      await supabase.from('certifications').update({
+        review_status: 'approved',
+        reviewed_by: user?.id,
+        reviewed_at: new Date().toISOString(),
+        review_note: null,
+      }).eq('id', certId)
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['instructor-detail', instructorId] }),
+    onError: (e: any) => Alert.alert('Error', e.message),
+  })
 
+  // ── Rechazar certificado ──
+  const rejectCertMutation = useMutation({
+    mutationFn: async () => {
+      await supabase.from('certifications').update({
+        review_status: 'rejected',
+        reviewed_by: user?.id,
+        reviewed_at: new Date().toISOString(),
+        review_note: `${selectedReason}${extraMessage ? ': ' + extraMessage : ''}`,
+      }).eq('id', selectedCert.id)
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['instructor-detail', instructorId] })
+      setShowModal(null)
+      setSelectedCert(null)
+      setExtraMessage('')
+    },
+    onError: (e: any) => Alert.alert('Error', e.message),
+  })
+
+  // ── Verificar instructor ──
   const verifyMutation = useMutation({
     mutationFn: async () => {
       await instructorAPI.verify(instructorId, true)
-      await saveNote('verificacion')
+      if (internalNote.trim()) {
+        await supabase.from('camara_instructor_notes').insert({
+          instructor_id: instructorId, camara_id: user?.camara_id,
+          note: internalNote.trim(), type: 'verificacion', created_by: user?.id,
+        })
+      }
     },
     onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ['camara-instructors'] })
-      qc.invalidateQueries({ queryKey: ['pending-instructors'] })
-      Alert.alert('Verificado', `${instructor?.full_name} fue verificado y ya es visible en el directorio.`, [
-        { text: 'OK', onPress: () => navigation.goBack() }
-      ])
+      qc.invalidateQueries({ queryKey: ['instructor-detail', instructorId] })
+      navigation.goBack()
     },
     onError: (e: any) => Alert.alert('Error', e.message),
   })
 
-  const rejectMutation = useMutation({
+  // ── No verificar ──
+  const noVerifyMutation = useMutation({
     mutationFn: async () => {
       await instructorAPI.verify(instructorId, false)
-      await saveNote('rechazo', rejectMessage.trim())
-      if (internalNote.trim()) await saveNote('interna')
+      await supabase.from('camara_instructor_notes').insert({
+        instructor_id: instructorId, camara_id: user?.camara_id,
+        note: `${selectedReason}${extraMessage ? ': ' + extraMessage : ''}`,
+        type: 'rechazo', reject_reason: selectedReason, created_by: user?.id,
+      })
     },
     onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ['camara-instructors'] })
-      qc.invalidateQueries({ queryKey: ['pending-instructors'] })
-      setShowRejectModal(false)
-      Alert.alert('Rechazado', 'El instructor fue notificado con el motivo del rechazo.', [
-        { text: 'OK', onPress: () => navigation.goBack() }
-      ])
+      qc.invalidateQueries({ queryKey: ['instructor-detail', instructorId] })
+      setShowModal(null)
+      navigation.goBack()
     },
     onError: (e: any) => Alert.alert('Error', e.message),
   })
 
-  const handleVerify = () => {
-    Alert.alert(
-      '¿Verificar instructor?',
-      `${instructor?.full_name} quedará activo en el directorio público y podrá recibir propuestas.`,
-      [
-        { text: 'Cancelar', style: 'cancel' },
-        { text: 'Verificar', onPress: () => verifyMutation.mutate() },
-      ]
-    )
-  }
+  // ── Toggle activo/inactivo ──
+  const toggleActiveMutation = useMutation({
+    mutationFn: async (active: boolean) => {
+      await supabase.from('instructors').update({ is_active: active }).eq('id', instructorId)
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['instructor-detail', instructorId] }),
+    onError: (e: any) => Alert.alert('Error', e.message),
+  })
 
   if (isLoading) return <LoadingScreen message="Cargando instructor..." />
   if (!instructor) return null
 
+  const isVerified = instructor.verification_status === 'verified'
+  const isActive   = instructor.is_active !== false
+  const certs      = instructor.certifications ?? []
   const specialties = instructor.specialties ?? []
-  const certs = instructor.certifications ?? []
+  const allCertsReviewed = certs.length > 0 && certs.every((c: any) => c.review_status !== 'pending')
+
+  const CertStatusIcon = ({ status }: { status: string }) => {
+    if (status === 'approved') return <Feather name="check-circle" size={20} color={colors.okTx} />
+    if (status === 'rejected') return <Feather name="x-circle" size={20} color={colors.redTx} />
+    return <Feather name="clock" size={20} color={colors.warnTx} />
+  }
 
   return (
     <View style={s.container}>
@@ -117,258 +150,314 @@ export default function VerifyInstructorScreen({ navigation, route }: any) {
         onBack={() => navigation.goBack()}
         backLabel="Directorio"
         rightElement={
-          <View style={[s.statusBadge, { backgroundColor: instructor.verification_status === 'verified' ? colors.okBg : colors.warnBg }]}>
-            <Text style={[s.statusBadgeTxt, { color: instructor.verification_status === 'verified' ? colors.okTx : colors.warnTx }]}>
-              {instructor.verification_status === 'verified' ? '✓ Verificado' : '⏳ Pendiente'}
+          <View style={[s.statusBadge, {
+            backgroundColor: isVerified ? (isActive ? colors.okBg : colors.warnBg) : colors.warnBg
+          }]}>
+            <Text style={[s.statusBadgeTxt, {
+              color: isVerified ? (isActive ? colors.okTx : colors.warnTx) : colors.warnTx
+            }]}>
+              {isVerified ? (isActive ? '✓ Activo' : '⏸ Inactivo') : '⏳ Pendiente'}
             </Text>
           </View>
         }
       />
+
       <ScrollView contentContainerStyle={s.content}>
 
-        {/* Perfil */}
-        <BlobCard style={s.profileCard}>
+        {/* Info */}
+        <BlobCard style={s.card} delay={0}>
           <View style={s.profileRow}>
             <View style={s.avatar}>
               <Text style={s.avatarLetter}>{instructor.full_name?.[0]?.toUpperCase()}</Text>
             </View>
             <View style={{ flex: 1 }}>
               <Text style={s.name}>{instructor.full_name}</Text>
-              <Text style={s.meta}>
-                {instructor.neighborhood ?? '—'}{instructor.dni ? ` · DNI ${instructor.dni}` : ''}
-              </Text>
-              {instructor.phone && <Text style={s.meta}>{instructor.phone}</Text>}
+              <Text style={s.meta}>{instructor.neighborhood ?? '—'}{instructor.phone ? ` · ${instructor.phone}` : ''}</Text>
             </View>
-            <Badge label="Pendiente" variant="warning" />
           </View>
           {instructor.bio && <Text style={s.bio}>{instructor.bio}</Text>}
         </BlobCard>
 
-        {/* Especialidades */}
-        <Text style={s.sectionTitle}>Especialidades declaradas</Text>
-        <BlobCard style={{ marginBottom: spacing.md }}>
-          <View style={s.tagRow}>
-            {specialties.length > 0
-              ? specialties.map((sp: any) => (
-                  <View key={sp.id} style={s.tag}>
-                    <Text style={s.tagText}>{sp.specialty}{sp.level ? ` · ${sp.level}` : ''}</Text>
-                  </View>
-                ))
-              : <Text style={s.emptyText}>Sin especialidades declaradas</Text>
-            }
-          </View>
-        </BlobCard>
-
         {/* Tarifas */}
         {instructor.rates && (
-          <>
-            <Text style={s.sectionTitle}>Tarifas declaradas</Text>
-            <BlobCard style={{ marginBottom: spacing.md, padding: spacing.md }}
-              blobColor="rgba(184,150,12,0.10)" blobColor2="rgba(184,150,12,0.06)">
-              <View style={{ flexDirection: 'row', gap: spacing.sm }}>
-                <View style={[s.rateBox, { backgroundColor: colors.sageLight }]}>
-                  <Text style={s.rateLabel}>REGULAR</Text>
-                  <Text style={s.rateVal}>
-                    {instructor.rates.rate_regular
-                      ? '$' + instructor.rates.rate_regular.toLocaleString('es-AR')
-                      : '—'}
-                  </Text>
-                </View>
-                <View style={[s.rateBox, { backgroundColor: colors.goldLight }]}>
-                  <Text style={[s.rateLabel, { color: '#7A5000' }]}>REEMPLAZO</Text>
-                  <Text style={[s.rateVal, { color: colors.gold }]}>
-                    {instructor.rates.rate_replacement
-                      ? '$' + instructor.rates.rate_replacement.toLocaleString('es-AR')
-                      : '—'}
-                  </Text>
-                </View>
+          <BlobCard style={s.card} delay={600}
+            blobColor="rgba(184,150,12,0.10)" blobColor2="rgba(184,150,12,0.06)">
+            <Text style={s.sectionTitle}>TARIFAS</Text>
+            <View style={{ flexDirection: 'row', gap: spacing.sm }}>
+              <View style={[s.rateBox, { backgroundColor: colors.sageLight }]}>
+                <Text style={s.rateLabel}>REGULAR</Text>
+                <Text style={s.rateVal}>{instructor.rates.rate_regular ? '$' + instructor.rates.rate_regular.toLocaleString('es-AR') : '—'}</Text>
               </View>
-            </BlobCard>
-          </>
+              <View style={[s.rateBox, { backgroundColor: colors.goldLight }]}>
+                <Text style={[s.rateLabel, { color: '#7A5000' }]}>REEMPLAZO</Text>
+                <Text style={[s.rateVal, { color: colors.gold }]}>{instructor.rates.rate_replacement ? '$' + instructor.rates.rate_replacement.toLocaleString('es-AR') : '—'}</Text>
+              </View>
+            </View>
+          </BlobCard>
         )}
 
-        {/* Certificaciones */}
-        <Text style={s.sectionTitle}>Certificaciones presentadas</Text>
-        <BlobCard style={[{ paddingHorizontal: spacing.md, paddingVertical: 0 }, { marginBottom: spacing.md }]}>
-          {certs.length === 0 && (
-            <View style={s.certRow}>
-              <Text style={s.emptyText}>Sin certificaciones cargadas</Text>
+        {/* Especialidades */}
+        {specialties.length > 0 && (
+          <BlobCard style={s.card} delay={1200}>
+            <Text style={s.sectionTitle}>ESPECIALIDADES</Text>
+            <View style={s.tagRow}>
+              {specialties.map((sp: any) => (
+                <View key={sp.id} style={s.tag}>
+                  <Text style={s.tagTxt}>{sp.specialty}</Text>
+                </View>
+              ))}
             </View>
-          )}
-          {certs.map((cert: any, idx: number) => (
-            <View key={cert.id} style={[s.certRow, idx === certs.length - 1 && { borderBottomWidth: 0 }]}>
-              <Feather name="award" size={20} color={colors.sage} style={{ flexShrink: 0, marginTop: 2 }} />
+          </BlobCard>
+        )}
+
+        {/* Certificados — uno por uno */}
+        <Text style={s.groupTitle}>CERTIFICACIONES</Text>
+        {certs.length === 0 && (
+          <Text style={s.emptyTxt}>Sin certificaciones cargadas</Text>
+        )}
+        {certs.map((cert: any, idx: number) => (
+          <View key={cert.id}>
+          <BlobCard style={s.certCard} delay={idx * 500}
+            blobColor={
+              cert.review_status === 'approved' ? 'rgba(46,107,26,0.10)' :
+              cert.review_status === 'rejected' ? 'rgba(139,31,31,0.08)' :
+              'rgba(74,93,78,0.08)'
+            }
+          >
+            <View style={s.certTop}>
+              <CertStatusIcon status={cert.review_status ?? 'pending'} />
               <View style={{ flex: 1 }}>
                 <Text style={s.certName}>{cert.name}</Text>
-                <Text style={s.certMeta}>
-                  {cert.institution}{cert.year ? ` · ${cert.year}` : ''}{cert.hours ? ` · ${cert.hours} hs` : ''}
-                </Text>
+                <Text style={s.certMeta}>{cert.institution}{cert.year ? ` · ${cert.year}` : ''}</Text>
+                {cert.review_note && (
+                  <Text style={s.certNote}>↳ {cert.review_note}</Text>
+                )}
               </View>
-              {cert.document_url ? (
+              {cert.document_url && (
                 <TouchableOpacity style={s.pdfBtn} onPress={() => Linking.openURL(cert.document_url)}>
                   <Feather name="external-link" size={12} color="#0C447C" />
-                  <Text style={s.pdfBtnText}>Ver PDF</Text>
+                  <Text style={s.pdfTxt}>PDF</Text>
                 </TouchableOpacity>
-              ) : (
-                <View style={[s.pdfBtn, { backgroundColor: colors.borderLight }]}>
-                  <Text style={[s.pdfBtnText, { color: colors.light }]}>Sin PDF</Text>
-                </View>
               )}
             </View>
-          ))}
-        </BlobCard>
+            {/* Acciones por certificado */}
+            {cert.review_status !== 'approved' && (
+              <View style={s.certActions}>
+                <TouchableOpacity
+                  style={s.certRejectBtn}
+                  onPress={() => { setSelectedCert(cert); setSelectedReason(REJECT_CERT_REASONS[0]); setShowModal('reject_cert') }}
+                >
+                  <Text style={s.certRejectTxt}>✗ Rechazar</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={s.certApproveBtn}
+                  onPress={() => approveCertMutation.mutate(cert.id)}
+                  disabled={approveCertMutation.isPending}
+                >
+                  <Text style={s.certApproveTxt}>✓ Aprobar</Text>
+                </TouchableOpacity>
+              </View>
+            )}
+            {cert.review_status === 'approved' && (
+              <TouchableOpacity style={s.undoBtn} onPress={() => approveCertMutation.mutate(cert.id)}>
+                <Text style={s.undoTxt}>Volver a pendiente</Text>
+              </TouchableOpacity>
+            )}
+          </BlobCard>
+          </View>
+        ))}
 
         {/* Nota interna */}
-        <Text style={s.sectionTitle}>Nota interna (solo visible para la Cámara)</Text>
-        <BlobCard style={{ marginBottom: spacing.md }}>
+        <BlobCard style={s.card} delay={800}>
+          <Text style={s.sectionTitle}>NOTA INTERNA (SOLO VISIBLE PARA LA CÁMARA)</Text>
           <TextInput
             style={s.noteInput}
-            placeholder="Ej: Certificados verificados telefónicamente con la institución..."
+            placeholder="Ej: Certificados verificados telefónicamente..."
             placeholderTextColor={colors.light}
             value={internalNote}
             onChangeText={setInternalNote}
-            multiline
-            numberOfLines={3}
+            multiline numberOfLines={3}
           />
         </BlobCard>
 
-        {/* Acciones */}
-        <View style={s.actions}>
-          <TouchableOpacity style={s.rejectBtn} onPress={() => setShowRejectModal(true)}>
-            <Feather name="x" size={16} color="#A32D2D" />
-            <Text style={s.rejectText}>Rechazar</Text>
+        {/* Toggle Activo/Inactivo */}
+        {isVerified && (
+          <TouchableOpacity
+            style={[s.toggleBtn, { backgroundColor: isActive ? colors.warnBg : colors.sageLight }]}
+            onPress={() => toggleActiveMutation.mutate(!isActive)}
+            disabled={toggleActiveMutation.isPending}
+            activeOpacity={0.85}
+          >
+            <Feather name={isActive ? 'pause-circle' : 'play-circle'} size={18}
+              color={isActive ? colors.warnTx : colors.sage} />
+            <Text style={[s.toggleTxt, { color: isActive ? colors.warnTx : colors.sage }]}>
+              {isActive ? 'Marcar como inactivo' : 'Reactivar instructor'}
+            </Text>
           </TouchableOpacity>
-          {instructor.verification_status !== 'verified' ? (
-            <TouchableOpacity style={s.verifyBtn} onPress={handleVerify} disabled={verifyMutation.isPending}>
-              <Feather name="check" size={16} color={colors.white} />
-              <Text style={s.verifyText}>{verifyMutation.isPending ? 'Verificando...' : 'Verificar'}</Text>
-            </TouchableOpacity>
+        )}
+
+        {/* Acciones principales */}
+        <View style={s.actions}>
+          {!isVerified ? (
+            <>
+              <TouchableOpacity style={s.noVerifyBtn}
+                onPress={() => { setSelectedReason(NO_VERIFY_REASONS[0]); setShowModal('no_verify') }}>
+                <Feather name="x" size={16} color="#A32D2D" />
+                <Text style={s.noVerifyTxt}>No verificar</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[s.verifyBtn, (!allCertsReviewed) && { opacity: 0.5 }]}
+                onPress={() => verifyMutation.mutate()}
+                disabled={verifyMutation.isPending || !allCertsReviewed}
+              >
+                <Feather name="check" size={16} color="#fff" />
+                <Text style={s.verifyTxt}>
+                  {verifyMutation.isPending ? 'Verificando...' : 'Verificar instructor'}
+                </Text>
+              </TouchableOpacity>
+            </>
           ) : (
-            <TouchableOpacity style={s.revokeBtn} onPress={() => setShowRejectModal(true)}>
+            <TouchableOpacity style={s.noVerifyBtn}
+              onPress={() => { setSelectedReason(NO_VERIFY_REASONS[0]); setShowModal('no_verify') }}>
               <Feather name="rotate-ccw" size={16} color="#A32D2D" />
-              <Text style={s.rejectText}>Revocar verificación</Text>
+              <Text style={s.noVerifyTxt}>Revocar verificación</Text>
             </TouchableOpacity>
           )}
         </View>
 
+        {!allCertsReviewed && !isVerified && certs.length > 0 && (
+          <Text style={s.hint}>Revisá todos los certificados antes de verificar</Text>
+        )}
+
       </ScrollView>
 
-      {/* Modal rechazar */}
-      <Modal visible={showRejectModal} transparent animationType="slide">
-        <View style={s.modalOverlay}>
+      {/* Modal rechazar certificado */}
+      <Modal visible={showModal === 'reject_cert'} transparent animationType="slide">
+        <View style={s.overlay}>
           <View style={s.modalBox}>
-            <Text style={s.modalTitle}>Rechazar verificación</Text>
-            <Text style={s.modalSub}>
-              {instructor.full_name} recibirá una notificación con el motivo del rechazo.
-            </Text>
-            <Text style={s.inputLabel}>Motivo del rechazo</Text>
-            <View style={s.reasonList}>
-              {REJECT_REASONS.map(r => (
-                <TouchableOpacity key={r} style={s.reasonRow} onPress={() => setRejectReason(r)}>
-                  <View style={[s.radio, rejectReason === r && s.radioSelected]}>
-                    {rejectReason === r && <View style={s.radioDot} />}
-                  </View>
-                  <Text style={s.reasonText}>{r}</Text>
-                </TouchableOpacity>
-              ))}
-            </View>
-            <Text style={s.inputLabel}>Mensaje adicional (opcional)</Text>
-            <TextInput
-              style={s.noteInput}
-              placeholder="Ej: Por favor reenviar el certificado con fecha visible."
-              placeholderTextColor={colors.light}
-              value={rejectMessage}
-              onChangeText={setRejectMessage}
-              multiline
-              numberOfLines={3}
-            />
-            <TouchableOpacity
-              style={s.rejectConfirmBtn}
-              onPress={() => rejectMutation.mutate()}
-              disabled={rejectMutation.isPending}
-            >
-              <Text style={s.rejectConfirmText}>
-                {rejectMutation.isPending ? 'Rechazando...' : 'Confirmar rechazo'}
-              </Text>
+            <Text style={s.modalTitle}>Rechazar certificado</Text>
+            <Text style={s.modalSub}>{selectedCert?.name}</Text>
+            <Text style={s.inputLabel}>Motivo</Text>
+            {REJECT_CERT_REASONS.map(r => (
+              <TouchableOpacity key={r} style={s.reasonRow} onPress={() => setSelectedReason(r)}>
+                <View style={[s.radio, selectedReason === r && s.radioOn]}>
+                  {selectedReason === r && <View style={s.radioDot} />}
+                </View>
+                <Text style={s.reasonTxt}>{r}</Text>
+              </TouchableOpacity>
+            ))}
+            <Text style={[s.inputLabel, { marginTop: spacing.md }]}>Mensaje adicional (opcional)</Text>
+            <TextInput style={s.noteInput} value={extraMessage} onChangeText={setExtraMessage}
+              placeholder="Ej: Reenviar con fecha visible" placeholderTextColor={colors.light} multiline />
+            <TouchableOpacity style={s.confirmBtn} onPress={() => rejectCertMutation.mutate()}
+              disabled={rejectCertMutation.isPending}>
+              <Text style={s.confirmTxt}>{rejectCertMutation.isPending ? 'Rechazando...' : 'Confirmar rechazo'}</Text>
             </TouchableOpacity>
-            <TouchableOpacity style={s.cancelBtn} onPress={() => setShowRejectModal(false)}>
-              <Text style={s.cancelText}>Cancelar</Text>
+            <TouchableOpacity style={s.cancelBtn} onPress={() => setShowModal(null)}>
+              <Text style={s.cancelTxt}>Cancelar</Text>
             </TouchableOpacity>
           </View>
         </View>
       </Modal>
 
-      {/* Modal PDF */}
-      <Modal visible={!!showPdfModal} transparent animationType="slide">
-        <View style={s.modalOverlay}>
+      {/* Modal no verificar / revocar */}
+      <Modal visible={showModal === 'no_verify'} transparent animationType="slide">
+        <View style={s.overlay}>
           <View style={s.modalBox}>
-            <Text style={s.modalTitle}>{showPdfModal?.name}</Text>
-            <Text style={s.modalSub}>
-              {showPdfModal?.institution}{showPdfModal?.year ? ` · ${showPdfModal.year}` : ''}
-            </Text>
-            <View style={s.pdfPreview}>
-              <Feather name="file-text" size={40} color={colors.light} />
-              <Text style={s.pdfName}>{showPdfModal?.name?.toLowerCase().replace(/ /g, '_')}.pdf</Text>
-              <Text style={s.pdfDate}>Subido por el instructor</Text>
-            </View>
-            <TouchableOpacity style={s.verifyBtn} onPress={() => setShowPdfModal(null)}>
-              <Text style={s.verifyText}>Cerrar</Text>
+            <Text style={s.modalTitle}>{isVerified ? 'Revocar verificación' : 'No verificar instructor'}</Text>
+            <Text style={s.modalSub}>{instructor.full_name} recibirá una notificación.</Text>
+            <Text style={s.inputLabel}>Motivo</Text>
+            {NO_VERIFY_REASONS.map(r => (
+              <TouchableOpacity key={r} style={s.reasonRow} onPress={() => setSelectedReason(r)}>
+                <View style={[s.radio, selectedReason === r && s.radioOn]}>
+                  {selectedReason === r && <View style={s.radioDot} />}
+                </View>
+                <Text style={s.reasonTxt}>{r}</Text>
+              </TouchableOpacity>
+            ))}
+            <Text style={[s.inputLabel, { marginTop: spacing.md }]}>Mensaje adicional (opcional)</Text>
+            <TextInput style={s.noteInput} value={extraMessage} onChangeText={setExtraMessage}
+              placeholder="Ej: Contactarse con la Cámara para más información" placeholderTextColor={colors.light} multiline />
+            <TouchableOpacity style={s.confirmBtn} onPress={() => noVerifyMutation.mutate()}
+              disabled={noVerifyMutation.isPending}>
+              <Text style={s.confirmTxt}>{noVerifyMutation.isPending ? 'Procesando...' : 'Confirmar'}</Text>
+            </TouchableOpacity>
+            <TouchableOpacity style={s.cancelBtn} onPress={() => setShowModal(null)}>
+              <Text style={s.cancelTxt}>Cancelar</Text>
             </TouchableOpacity>
           </View>
         </View>
       </Modal>
+
     </View>
   )
 }
 
 const s = StyleSheet.create({
-  statusBadge:       { borderTopLeftRadius: 10, borderTopRightRadius: 0, borderBottomLeftRadius: 0, borderBottomRightRadius: 10, paddingHorizontal: 10, paddingVertical: 4 },
-  statusBadgeTxt:    { fontFamily: 'Nunito-Bold', fontSize: 10 },
-  container:         { flex: 1, backgroundColor: colors.cream },
-  content:           { padding: spacing.md, paddingBottom: spacing.xxl },
-  profileCard:       { marginBottom: spacing.md, padding: spacing.md },
-  profileRow:        { flexDirection: 'row', alignItems: 'flex-start', gap: spacing.sm, marginBottom: spacing.sm },
-  avatar:            { width: 52, height: 52, borderRadius: 26, backgroundColor: colors.sageLight, alignItems: 'center', justifyContent: 'center' },
-  avatarLetter:      { fontFamily: 'Nunito-Bold', fontSize: 20, color: colors.sage },
-  name:              { fontFamily: 'Nunito-Bold', fontSize: 18, color: colors.dark },
-  meta:              { fontFamily: 'Nunito-Regular', fontSize: 12, color: colors.mid, marginTop: 2 },
-  bio:               { fontFamily: 'Nunito-Regular', fontSize: 13, color: colors.mid, lineHeight: 18, marginTop: spacing.sm },
-  sectionTitle:      { fontFamily: 'Nunito-Bold', fontSize: 10, color: colors.light, textTransform: 'uppercase', letterSpacing: 0.7, marginBottom: spacing.sm },
-  tagRow:            { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.xs },
-  tag:               { backgroundColor: colors.sageLight, borderTopLeftRadius: 8, borderTopRightRadius: 0, borderBottomLeftRadius: 0, borderBottomRightRadius: 8, paddingHorizontal: spacing.sm, paddingVertical: 4 },
-  tagText:           { fontFamily: 'Nunito-SemiBold', fontSize: 11, color: colors.sage },
-  emptyText:         { fontFamily: 'Nunito-Regular', fontSize: 12, color: colors.light },
-  certRow:           { flexDirection: 'row', alignItems: 'flex-start', gap: spacing.sm, paddingVertical: spacing.sm + 2, borderBottomWidth: 0.5, borderColor: colors.borderLight },
-  certName:          { fontFamily: 'Nunito-SemiBold', fontSize: 13, color: colors.dark },
-  certMeta:          { fontFamily: 'Nunito-Regular', fontSize: 11, color: colors.mid, marginTop: 2 },
-  pdfBtn:            { backgroundColor: '#E6F1FB', borderTopLeftRadius: 8, borderTopRightRadius: 0, borderBottomLeftRadius: 0, borderBottomRightRadius: 8, paddingHorizontal: spacing.sm, paddingVertical: 5 },
-  pdfBtnText:        { fontFamily: 'Nunito-SemiBold', fontSize: 11, color: '#0C447C' },
-  noteInput:         { fontFamily: 'Nunito-Regular', fontSize: 13, color: colors.dark, minHeight: 72, textAlignVertical: 'top' },
-  inputLabel:        { fontFamily: 'Nunito-Bold', fontSize: 10, color: colors.mid, textTransform: 'uppercase', letterSpacing: 0.4, marginBottom: spacing.xs },
-  actions:           { flexDirection: 'row', gap: spacing.sm, marginTop: spacing.xs },
-  revokeBtn:         { flex: 2, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: spacing.xs, backgroundColor: '#FCEBEB', borderTopLeftRadius: 14, borderTopRightRadius: 0, borderBottomLeftRadius: 0, borderBottomRightRadius: 14, paddingVertical: spacing.md, borderWidth: 0.5, borderColor: '#F09595' },
-  rejectBtn:         { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: spacing.xs, backgroundColor: '#FCEBEB', borderTopLeftRadius: 14, borderTopRightRadius: 0, borderBottomLeftRadius: 0, borderBottomRightRadius: 14, paddingVertical: spacing.md, borderWidth: 0.5, borderColor: '#F09595' },
-  rejectText:        { fontFamily: 'Nunito-SemiBold', fontSize: 14, color: '#A32D2D' },
-  verifyBtn:         { flex: 2, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: spacing.xs, backgroundColor: colors.sage, borderTopLeftRadius: 14, borderTopRightRadius: 0, borderBottomLeftRadius: 0, borderBottomRightRadius: 14, paddingVertical: spacing.md },
-  verifyText:        { fontFamily: 'Nunito-SemiBold', fontSize: 14, color: colors.white },
-  modalOverlay:      { flex: 1, backgroundColor: 'rgba(0,0,0,0.45)', justifyContent: 'flex-end' },
-  modalBox:          { backgroundColor: colors.white, borderTopLeftRadius: 20, borderTopRightRadius: 20, padding: spacing.xl, paddingBottom: spacing.xxl },
-  modalTitle:        { fontFamily: 'Nunito-Bold', fontSize: 20, color: colors.dark, marginBottom: spacing.xs },
-  modalSub:          { fontFamily: 'Nunito-Regular', fontSize: 13, color: colors.mid, marginBottom: spacing.lg, lineHeight: 20 },
-  reasonList:        { marginBottom: spacing.md },
-  reasonRow:         { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, paddingVertical: spacing.sm },
-  radio:             { width: 20, height: 20, borderTopLeftRadius: 10, borderTopRightRadius: 0, borderBottomLeftRadius: 0, borderBottomRightRadius: 10, borderWidth: 1.5, borderColor: colors.border, alignItems: 'center', justifyContent: 'center' },
-  radioSelected:     { borderColor: colors.sage },
-  radioDot:          { width: 10, height: 10, borderRadius: 5, backgroundColor: colors.sage },
-  reasonText:        { fontFamily: 'Nunito-Regular', fontSize: 13, color: colors.dark, flex: 1 },
-  rejectConfirmBtn:  { backgroundColor: '#A32D2D', borderTopLeftRadius: 14, borderTopRightRadius: 0, borderBottomLeftRadius: 0, borderBottomRightRadius: 14, paddingVertical: spacing.md, alignItems: 'center', marginTop: spacing.md, marginBottom: spacing.sm },
-  rejectConfirmText: { fontFamily: 'Nunito-SemiBold', fontSize: 14, color: colors.white },
-  cancelBtn:         { alignItems: 'center', paddingVertical: spacing.md },
-  cancelText:        { fontFamily: 'Nunito-SemiBold', fontSize: 14, color: colors.mid },
-  rateBox:           { flex: 1, borderTopLeftRadius: 12, borderTopRightRadius: 0, borderBottomLeftRadius: 0, borderBottomRightRadius: 12, padding: spacing.md },
-  rateLabel:         { fontFamily: 'Nunito-Bold', fontSize: 9, color: colors.sageMid, textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 4 },
-  rateVal:           { fontFamily: 'Nunito-Bold', fontSize: 20, color: colors.sage },
-  pdfPreview:        { backgroundColor: colors.cream, borderTopLeftRadius: 14, borderTopRightRadius: 0, borderBottomLeftRadius: 0, borderBottomRightRadius: 14, padding: spacing.xl, alignItems: 'center', marginBottom: spacing.md, borderWidth: 0.5, borderColor: colors.border },
-  pdfName:           { fontFamily: 'Nunito-SemiBold', fontSize: 13, color: colors.dark, marginTop: spacing.sm },
-  pdfDate:           { fontFamily: 'Nunito-Regular', fontSize: 11, color: colors.light, marginTop: 4 },
+  container:      { flex: 1, backgroundColor: colors.cream },
+  content:        { padding: spacing.md, paddingBottom: 48 },
+  statusBadge:    { borderTopLeftRadius: 10, borderTopRightRadius: 0, borderBottomLeftRadius: 0, borderBottomRightRadius: 10, paddingHorizontal: 10, paddingVertical: 4 },
+  statusBadgeTxt: { fontFamily: 'Nunito-Bold', fontSize: 10 },
+
+  card:           { padding: spacing.md, marginBottom: spacing.sm },
+  profileRow:     { flexDirection: 'row', alignItems: 'flex-start', gap: spacing.sm, marginBottom: spacing.sm },
+  avatar:         { width: 48, height: 48, borderRadius: 24, backgroundColor: colors.sageLight, alignItems: 'center', justifyContent: 'center' },
+  avatarLetter:   { fontFamily: 'Nunito-Bold', fontSize: 18, color: colors.sage },
+  name:           { fontFamily: 'Nunito-Bold', fontSize: 16, color: colors.dark },
+  meta:           { fontFamily: 'Nunito-Regular', fontSize: 12, color: colors.mid, marginTop: 2 },
+  bio:            { fontFamily: 'Nunito-Regular', fontSize: 13, color: colors.mid, lineHeight: 18, marginTop: spacing.sm },
+
+  sectionTitle:   { fontFamily: 'Nunito-Bold', fontSize: 9, color: colors.light, letterSpacing: 0.8, marginBottom: spacing.sm },
+  groupTitle:     { fontFamily: 'Nunito-Bold', fontSize: 9, color: colors.light, letterSpacing: 0.8, marginBottom: spacing.sm, marginTop: spacing.sm },
+
+  rateBox:        { flex: 1, borderTopLeftRadius: 12, borderTopRightRadius: 0, borderBottomLeftRadius: 0, borderBottomRightRadius: 12, padding: spacing.md },
+  rateLabel:      { fontFamily: 'Nunito-Bold', fontSize: 9, color: colors.sageMid, letterSpacing: 0.5, marginBottom: 3 },
+  rateVal:        { fontFamily: 'Nunito-Bold', fontSize: 20, color: colors.sage },
+
+  tagRow:         { flexDirection: 'row', flexWrap: 'wrap', gap: 6 },
+  tag:            { backgroundColor: colors.sageLight, borderTopLeftRadius: 8, borderTopRightRadius: 0, borderBottomLeftRadius: 0, borderBottomRightRadius: 8, paddingHorizontal: 10, paddingVertical: 4 },
+  tagTxt:         { fontFamily: 'Nunito-SemiBold', fontSize: 11, color: colors.sage },
+
+  certCard:       { padding: spacing.md, marginBottom: spacing.sm },
+  certTop:        { flexDirection: 'row', alignItems: 'flex-start', gap: spacing.sm, marginBottom: spacing.sm },
+  certName:       { fontFamily: 'Nunito-Bold', fontSize: 13, color: colors.dark },
+  certMeta:       { fontFamily: 'Nunito-Regular', fontSize: 11, color: colors.mid, marginTop: 2 },
+  certNote:       { fontFamily: 'Nunito-Regular', fontSize: 11, color: colors.redTx, marginTop: 3, fontStyle: 'italic' },
+  pdfBtn:         { flexDirection: 'row', alignItems: 'center', gap: 4, backgroundColor: '#E6F1FB', borderTopLeftRadius: 8, borderTopRightRadius: 0, borderBottomLeftRadius: 0, borderBottomRightRadius: 8, paddingHorizontal: 8, paddingVertical: 5 },
+  pdfTxt:         { fontFamily: 'Nunito-SemiBold', fontSize: 11, color: '#0C447C' },
+  certActions:    { flexDirection: 'row', gap: spacing.sm, marginTop: spacing.xs },
+  certRejectBtn:  { flex: 1, backgroundColor: colors.redBg, borderTopLeftRadius: 10, borderTopRightRadius: 0, borderBottomLeftRadius: 0, borderBottomRightRadius: 10, padding: 9, alignItems: 'center', borderWidth: 0.5, borderColor: '#F5C5C5' },
+  certRejectTxt:  { fontFamily: 'Nunito-Bold', fontSize: 12, color: colors.redTx },
+  certApproveBtn: { flex: 2, backgroundColor: colors.okBg, borderTopLeftRadius: 10, borderTopRightRadius: 0, borderBottomLeftRadius: 0, borderBottomRightRadius: 10, padding: 9, alignItems: 'center', borderWidth: 0.5, borderColor: 'rgba(46,107,26,0.25)' },
+  certApproveTxt: { fontFamily: 'Nunito-Bold', fontSize: 12, color: colors.okTx },
+  undoBtn:        { alignItems: 'center', paddingTop: spacing.xs },
+  undoTxt:        { fontFamily: 'Nunito-Regular', fontSize: 11, color: colors.light },
+
+  noteInput:      { fontFamily: 'Nunito-Regular', fontSize: 13, color: colors.dark, minHeight: 64, textAlignVertical: 'top' },
+
+  toggleBtn:      { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, borderTopLeftRadius: 14, borderTopRightRadius: 0, borderBottomLeftRadius: 0, borderBottomRightRadius: 14, padding: 13, marginBottom: spacing.sm, borderWidth: 0.5, borderColor: colors.border },
+  toggleTxt:      { fontFamily: 'Nunito-Bold', fontSize: 14 },
+
+  actions:        { flexDirection: 'row', gap: spacing.sm, marginBottom: spacing.sm },
+  noVerifyBtn:    { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, backgroundColor: colors.redBg, borderTopLeftRadius: 14, borderTopRightRadius: 0, borderBottomLeftRadius: 0, borderBottomRightRadius: 14, padding: 14, borderWidth: 0.5, borderColor: '#F5C5C5' },
+  noVerifyTxt:    { fontFamily: 'Nunito-Bold', fontSize: 13, color: colors.redTx },
+  verifyBtn:      { flex: 2, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, backgroundColor: colors.sage, borderTopLeftRadius: 14, borderTopRightRadius: 0, borderBottomLeftRadius: 0, borderBottomRightRadius: 14, padding: 14 },
+  verifyTxt:      { fontFamily: 'Nunito-Bold', fontSize: 13, color: '#fff' },
+  hint:           { fontFamily: 'Nunito-Regular', fontSize: 11, color: colors.light, textAlign: 'center', marginTop: spacing.xs },
+
+  overlay:        { flex: 1, backgroundColor: 'rgba(0,0,0,0.45)', justifyContent: 'flex-end' },
+  modalBox:       { backgroundColor: colors.white, borderTopLeftRadius: 24, borderTopRightRadius: 24, padding: spacing.xl, paddingBottom: 40, maxHeight: '85%' },
+  modalTitle:     { fontFamily: 'Nunito-Bold', fontSize: 20, color: colors.dark, marginBottom: spacing.xs },
+  modalSub:       { fontFamily: 'Nunito-Regular', fontSize: 13, color: colors.mid, marginBottom: spacing.md },
+  inputLabel:     { fontFamily: 'Nunito-Bold', fontSize: 9, color: colors.light, letterSpacing: 0.7, marginBottom: spacing.xs },
+  reasonRow:      { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, paddingVertical: 8 },
+  radio:          { width: 20, height: 20, borderRadius: 10, borderWidth: 1.5, borderColor: colors.border, alignItems: 'center', justifyContent: 'center' },
+  radioOn:        { borderColor: colors.sage },
+  radioDot:       { width: 10, height: 10, borderRadius: 5, backgroundColor: colors.sage },
+  reasonTxt:      { fontFamily: 'Nunito-Regular', fontSize: 13, color: colors.dark, flex: 1 },
+  confirmBtn:     { backgroundColor: '#A32D2D', borderTopLeftRadius: 14, borderTopRightRadius: 0, borderBottomLeftRadius: 0, borderBottomRightRadius: 14, padding: 14, alignItems: 'center', marginTop: spacing.md, marginBottom: spacing.sm },
+  confirmTxt:     { fontFamily: 'Nunito-Bold', fontSize: 14, color: '#fff' },
+  cancelBtn:      { alignItems: 'center', padding: spacing.sm },
+  cancelTxt:      { fontFamily: 'Nunito-SemiBold', fontSize: 14, color: colors.mid },
+  emptyTxt:       { fontFamily: 'Nunito-Regular', fontSize: 13, color: colors.light, marginBottom: spacing.md },
 })

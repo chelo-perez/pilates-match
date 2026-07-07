@@ -270,6 +270,23 @@ export default function ProfileEditScreen({ navigation }: any) {
         </View>
 
         <View style={{ paddingHorizontal: spacing.md }}>
+          {/* Toggle activo/inactivo */}
+          {instructor && (
+            <TouchableOpacity
+              style={[s.activeToggle, { backgroundColor: instructor.is_active !== false ? colors.sageLight : colors.warnBg }]}
+              onPress={async () => {
+                await supabase.from('instructors').update({ is_active: !(instructor.is_active !== false) }).eq('id', instructor.id)
+                qc.invalidateQueries({ queryKey: ['my-instructor-profile'] })
+              }}
+              activeOpacity={0.85}
+            >
+              <View style={[s.activeDot, { backgroundColor: instructor.is_active !== false ? colors.sage : colors.warnTx }]} />
+              <Text style={[s.activeTxt, { color: instructor.is_active !== false ? colors.sage : colors.warnTx }]}>
+                {instructor.is_active !== false ? 'Estoy activo — tocá para pausar' : 'Estoy inactivo — tocá para activarme'}
+              </Text>
+            </TouchableOpacity>
+          )}
+
           <SaveButton label="Guardar perfil" onPress={() => saveMutation.mutate()} isPending={saveMutation.isPending} isSuccess={saveMutation.isSuccess} />
         </View>
       </ScrollView>
@@ -320,6 +337,9 @@ export default function ProfileEditScreen({ navigation }: any) {
 }
 
 const s = StyleSheet.create({
+  activeToggle:        { flexDirection: 'row', alignItems: 'center', gap: 10, borderTopLeftRadius: 14, borderTopRightRadius: 0, borderBottomLeftRadius: 0, borderBottomRightRadius: 14, padding: 14, marginBottom: 12, borderWidth: 1, borderColor: colors.border },
+  activeDot:           { width: 10, height: 10, borderRadius: 5 },
+  activeTxt:           { fontFamily: 'Nunito-Bold', fontSize: 13, flex: 1 },
   rowFields:          { flexDirection: 'row', gap: spacing.sm, marginBottom: spacing.sm },
   logoutPill:         { flexDirection: 'row', alignItems: 'center', gap: 4, backgroundColor: 'rgba(255,255,255,0.1)', borderRadius: 999, paddingHorizontal: 10, paddingVertical: 6 },
   logoutPillTxt:      { fontFamily: 'Nunito-SemiBold', fontSize: 11, color: 'rgba(255,255,255,0.65)' },
