@@ -48,7 +48,6 @@ export default function CamaraDashboardScreen({ navigation }: any) {
 
   if (isLoading) return <LoadingScreen message="Cargando panel..." />
 
-  const fecha = new Date().toLocaleDateString('es-AR', { month: 'long', year: 'numeric' }).replace(/\bDe\b/g, 'de')
   const pendingCount = stats?.pending_verifications ?? 0
 
   return (
@@ -57,7 +56,6 @@ export default function CamaraDashboardScreen({ navigation }: any) {
 
         <HeroHeader
           title={user?.camara_name ?? 'Cámara de Pilates'}
-          subtitle={fecha}
           centered
           avatarUri={user?.camara_logo_url}
           avatarFallback={user?.camara_name ?? 'C'}
@@ -67,11 +65,7 @@ export default function CamaraDashboardScreen({ navigation }: any) {
               <Text style={s.logoutTxt}>Salir</Text>
             </TouchableOpacity>
           }
-          bottomElement={
-            <View style={s.camaraBadge}>
-              <Text style={s.camaraBadgeTxt}>Panel de gestión · {fecha}</Text>
-            </View>
-          }
+
         />
 
         {/* KPI grid flotante */}
