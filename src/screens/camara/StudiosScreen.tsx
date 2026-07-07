@@ -174,14 +174,14 @@ export default function CamaraStudiosScreen({ navigation }: any) {
             subtitle={search ? 'Ningún estudio coincide con tu búsqueda.' : 'No hay estudios registrados aún.'}
           />
         }
-        renderItem={({ item: studio }: any) => {
+        renderItem={({ item: studio, index }: any) => {
           const membership = Array.isArray(studio.membership) ? studio.membership[0] : studio.membership
           const isMember   = studio.is_member
           const matchUsed  = membership?.matches_used_month ?? 0
           const matchLimit = membership?.matches_limit ?? null
 
           return (
-            <BlobCard style={styles.card}>
+            <BlobCard style={styles.card} onPress={() => navigation.navigate('StudioDetail', { studioId: studio.id })} delay={index * 600}>
               {/* Fila principal */}
               <View style={styles.row}>
                 <View style={styles.avatar}>

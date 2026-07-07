@@ -74,7 +74,14 @@ export default function DirectoryScreen({ navigation }: any) {
                 <Text style={styles.name}>{item.full_name}</Text>
                 <Text style={styles.meta}>{item.neighborhood} · DNI {item.dni}</Text>
               </View>
-              <Badge label={BADGE_LABEL[item.verification_status]} color={BADGE_COLOR[item.verification_status]} />
+              <View style={{ alignItems: 'flex-end', gap: 4 }}>
+                <Badge label={BADGE_LABEL[item.verification_status]} color={BADGE_COLOR[item.verification_status]} />
+                {item.score > 0 && (
+                  <View style={{ width: 32, height: 32, borderRadius: 16, backgroundColor: colors.sageLight, alignItems: 'center', justifyContent: 'center' }}>
+                    <Text style={{ fontFamily: 'Nunito-Bold', fontSize: 11, color: colors.sage }}>{item.score.toFixed(1)}</Text>
+                  </View>
+                )}
+              </View>
             </BlobCard>
           )}
         />

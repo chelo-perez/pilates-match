@@ -12,7 +12,9 @@ import SaveButton from '../../components/SaveButton'
 import HeroHeader from '../../components/HeroHeader'
 
 
-function RangeInput({ value, onChange, min = 1, max = 20 }: { label: string; value: number; onChange: (v: number) => void; min?: number; max?: number }) {
+function RangeInput({ value, onChange, min = 1, max = 20, accent, bg }: { label: string; value: number; onChange: (v: number) => void; min?: number; max?: number; accent?: string; bg?: string }) {
+  const accentColor = accent ?? colors.sage
+  const bgColor = bg ?? colors.sageLight
   const fmt = (n: number) => '$' + (n * 1000).toLocaleString('es-AR')
   return (
     <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12, marginVertical: 8 }}>
@@ -103,10 +105,10 @@ export default function RateRangesScreen() {
         </View>
 
         <Text style={styles.fieldLabel}>MÍNIMO</Text>
-        <RangeInput label="" value={Math.round(regMin / 1000)} onChange={v => setRegMin(v * 1000)} />
+        <RangeInput label="" value={Math.round(regMin / 1000)} onChange={v => setRegMin(v * 1000)} accent={colors.sage} bg={colors.sageLight} />
 
         <Text style={styles.fieldLabel}>MÁXIMO</Text>
-        <RangeInput label="" value={Math.round(regMax / 1000)} onChange={v => setRegMax(v * 1000)} />
+        <RangeInput label="" value={Math.round(regMax / 1000)} onChange={v => setRegMax(v * 1000)} accent={colors.sage} bg={colors.sageLight} />
 
         <View style={styles.rangeSummary}>
           <Text style={styles.rangeText}>Rango actual: {formatARS(regMin)} – {formatARS(regMax)}</Text>
@@ -114,17 +116,17 @@ export default function RateRangesScreen() {
       </BlobCard>
 
       {/* Reemplazos */}
-      <BlobCard style={styles.card} blobColor="rgba(74,93,78,0.10)" blobColor2="rgba(74,93,78,0.06)">
+      <BlobCard style={styles.card} blobColor="rgba(184,150,12,0.12)" blobColor2="rgba(184,150,12,0.07)" delay={2000}>
         <View style={styles.cardHeader}>
-          <Text style={styles.cardTitle}>Reemplazo</Text>
+          <Text style={[styles.cardTitle, { color: colors.gold }]}>Reemplazo</Text>
           <Badge label="Reemplazos" color="gold" />
         </View>
 
         <Text style={styles.fieldLabel}>MÍNIMO</Text>
-        <RangeInput label="" value={Math.round(repMin / 1000)} onChange={v => setRepMin(v * 1000)} />
+        <RangeInput label="" value={Math.round(repMin / 1000)} onChange={v => setRepMin(v * 1000)} accent={colors.gold} bg={colors.goldLight} />
 
         <Text style={styles.fieldLabel}>MÁXIMO</Text>
-        <RangeInput label="" value={Math.round(repMax / 1000)} onChange={v => setRepMax(v * 1000)} />
+        <RangeInput label="" value={Math.round(repMax / 1000)} onChange={v => setRepMax(v * 1000)} accent={colors.gold} bg={colors.goldLight} />
 
         <View style={styles.rangeSummary}>
           <Text style={styles.rangeText}>Rango actual: {formatARS(repMin)} – {formatARS(repMax)}</Text>
