@@ -1,5 +1,5 @@
 import React, { useState } from 'react'
-import { View, Text, TextInput, StyleSheet, TouchableOpacity, KeyboardAvoidingView, Platform, ScrollView, ActivityIndicator } from 'react-native'
+import { View, Text, TextInput, StyleSheet, Image, TouchableOpacity, KeyboardAvoidingView, Platform, ScrollView, ActivityIndicator } from 'react-native'
 import { supabase } from '../../lib/supabase'
 import { useAuthStore } from '../../store'
 import Toast from '../../components/Toast'
@@ -57,7 +57,7 @@ export default function LoginScreen({ navigation }: any) {
         <View style={[s.hero, { paddingTop: insets.top + 32 }]}>
           <View style={s.hblob1} /><View style={s.hblob2} />
           <View style={s.heroInner}>
-            <View style={s.logoRing}><Text style={s.logoTxt}>TF</Text></View>
+            <Image source={require('../../../assets/logo-white.png')} style={s.logoImg} resizeMode="contain" />
             <Text style={s.appName}>Trabajo Más Fácil</Text>
             <Text style={s.appSub}>La comunidad de Pilates de Buenos Aires</Text>
           </View>
@@ -102,8 +102,7 @@ const s = StyleSheet.create({
   waveRow:   { position: 'absolute', bottom: -1, left: 0, right: 0, height: 28, flexDirection: 'row' },
   waveL:     { flex: 1, height: 28, backgroundColor: C.cream, borderTopRightRadius: 40 },
   waveR:     { flex: 1, height: 28, backgroundColor: C.cream, borderTopLeftRadius: 40 },
-  logoRing:  { width: 68, height: 68, borderRadius: 34, backgroundColor: 'rgba(255,255,255,0.15)', borderWidth: 1.5, borderColor: 'rgba(255,255,255,0.28)', alignItems: 'center', justifyContent: 'center', marginBottom: 16 },
-  logoTxt:   { fontFamily: 'Nunito-Bold', fontSize: 22, color: '#fff' },
+  logoImg:   { width: 160, height: 100, marginBottom: 16 },
   appName:   { fontFamily: 'Nunito-Bold', fontSize: 24, color: '#fff', letterSpacing: -0.3, marginBottom: 6 },
   appSub:    { fontFamily: 'Nunito-SemiBold', fontSize: 12, color: 'rgba(255,255,255,0.55)', textAlign: 'center' },
   form:      { padding: 20, paddingTop: 24 },

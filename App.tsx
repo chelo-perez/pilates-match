@@ -5,6 +5,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { useFonts } from 'expo-font'
 import * as SplashScreen from 'expo-splash-screen'
 import RootNavigator from './src/navigation'
+import AnimatedSplash from './src/screens/auth/SplashScreen'
 import { supabase } from './src/lib/supabase'
 import { useAuthStore } from './src/store'
 import { registerPushToken } from './src/lib/push'
@@ -13,6 +14,7 @@ SplashScreen.preventAutoHideAsync()
 const queryClient = new QueryClient()
 
 export default function App() {
+  const [showSplash, setShowSplash] = React.useState(true)
   const { setUser, setSession, setLoading } = useAuthStore()
   const [fontsLoaded] = useFonts({
     'Nunito-Regular':  require('./assets/fonts/Nunito-Regular.ttf'),
@@ -63,6 +65,9 @@ export default function App() {
     <QueryClientProvider client={queryClient}>
       <SafeAreaProvider>
         <RootNavigator />
+        {showSplash && (
+          <AnimatedSplash onFinish={() => setShowSplash(false)} />
+        )}
       </SafeAreaProvider>
     </QueryClientProvider>
   )
