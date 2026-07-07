@@ -2,7 +2,7 @@
 import React, { useState } from 'react'
 import {
   View, Text, StyleSheet, ScrollView, TouchableOpacity,
-  Alert, TextInput, Modal
+  Alert, TextInput, Modal, Linking
 } from 'react-native'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { supabase, db } from '../../lib/supabase'
@@ -37,7 +37,7 @@ export default function VerifyInstructorScreen({ navigation, route }: any) {
     queryKey: ['instructor-detail', instructorId],
     queryFn: async () => {
       const { data, error } = await db.instructors()
-        .select('*, certifications(*), specialties:instructor_specialties(*)')
+        .select('*, certifications(*), specialties:instructor_specialties(*), rates:instructor_rates(*)')
         .eq('id', instructorId)
         .single()
       if (error) throw error
@@ -159,6 +159,34 @@ export default function VerifyInstructorScreen({ navigation, route }: any) {
           </View>
         </BlobCard>
 
+        {/* Tarifas */}
+        {instructor.rates && (
+          <>
+            <Text style={s.sectionTitle}>Tarifas declaradas</Text>
+            <BlobCard style={{ marginBottom: spacing.md, padding: spacing.md }}
+              blobColor="rgba(184,150,12,0.10)" blobColor2="rgba(184,150,12,0.06)">
+              <View style={{ flexDirection: 'row', gap: spacing.sm }}>
+                <View style={[s.rateBox, { backgroundColor: colors.sageLight }]}>
+                  <Text style={s.rateLabel}>REGULAR</Text>
+                  <Text style={s.rateVal}>
+                    {instructor.rates.rate_regular
+                      ? '$' + instructor.rates.rate_regular.toLocaleString('es-AR')
+                      : '—'}
+                  </Text>
+                </View>
+                <View style={[s.rateBox, { backgroundColor: colors.goldLight }]}>
+                  <Text style={[s.rateLabel, { color: '#7A5000' }]}>REEMPLAZO</Text>
+                  <Text style={[s.rateVal, { color: colors.gold }]}>
+                    {instructor.rates.rate_replacement
+                      ? '$' + instructor.rates.rate_replacement.toLocaleString('es-AR')
+                      : '—'}
+                  </Text>
+                </View>
+              </View>
+            </BlobCard>
+          </>
+        )}
+
         {/* Certificaciones */}
         <Text style={s.sectionTitle}>Certificaciones presentadas</Text>
         <BlobCard style={[{ paddingHorizontal: spacing.md, paddingVertical: 0 }, { marginBottom: spacing.md }]}>
@@ -177,7 +205,8 @@ export default function VerifyInstructorScreen({ navigation, route }: any) {
                 </Text>
               </View>
               {cert.document_url ? (
-                <TouchableOpacity style={s.pdfBtn} onPress={() => setShowPdfModal(cert)}>
+                <TouchableOpacity style={s.pdfBtn} onPress={() => Linking.openURL(cert.document_url)}>
+                  <Feather name="external-link" size={12} color="#0C447C" />
                   <Text style={s.pdfBtnText}>Ver PDF</Text>
                 </TouchableOpacity>
               ) : (
@@ -336,6 +365,9 @@ const s = StyleSheet.create({
   rejectConfirmText: { fontFamily: 'Nunito-SemiBold', fontSize: 14, color: colors.white },
   cancelBtn:         { alignItems: 'center', paddingVertical: spacing.md },
   cancelText:        { fontFamily: 'Nunito-SemiBold', fontSize: 14, color: colors.mid },
+  rateBox:           { flex: 1, borderTopLeftRadius: 12, borderTopRightRadius: 0, borderBottomLeftRadius: 0, borderBottomRightRadius: 12, padding: spacing.md },
+  rateLabel:         { fontFamily: 'Nunito-Bold', fontSize: 9, color: colors.sageMid, textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 4 },
+  rateVal:           { fontFamily: 'Nunito-Bold', fontSize: 20, color: colors.sage },
   pdfPreview:        { backgroundColor: colors.cream, borderTopLeftRadius: 14, borderTopRightRadius: 0, borderBottomLeftRadius: 0, borderBottomRightRadius: 14, padding: spacing.xl, alignItems: 'center', marginBottom: spacing.md, borderWidth: 0.5, borderColor: colors.border },
   pdfName:           { fontFamily: 'Nunito-SemiBold', fontSize: 13, color: colors.dark, marginTop: spacing.sm },
   pdfDate:           { fontFamily: 'Nunito-Regular', fontSize: 11, color: colors.light, marginTop: 4 },
