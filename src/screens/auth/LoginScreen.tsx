@@ -85,7 +85,7 @@ export default function LoginScreen({ navigation }: any) {
           </TouchableOpacity>
         </View>
 
-        <Text style={s.footer}>Avalado por la Cámara de Pilates de Buenos Aires</Text>
+        <Text style={s.footer}>Con el aval de la Cámara de Pilates de la Ciudad Autónoma de Buenos Aires</Text>
       </ScrollView>
       <Toast visible={toast.visible} message={toast.message} type={toast.type} onHide={hideToast} />
     </KeyboardAvoidingView>
