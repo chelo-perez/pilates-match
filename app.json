@@ -26,8 +26,8 @@
     },
     "android": {
       "adaptiveIcon": {
-        "foregroundImage": "./assets/icon.png",
-        "backgroundColor": "#4A5D4E"
+        "foregroundImage": "./assets/adaptive-icon.png",
+        "backgroundColor": "#2D3F31"
       },
       "package": "com.pilates.match",
       "permissions": [
