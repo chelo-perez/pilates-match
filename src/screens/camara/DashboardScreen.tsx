@@ -59,6 +59,7 @@ export default function CamaraDashboardScreen({ navigation }: any) {
           centered
           avatarUri={user?.camara_logo_url}
           avatarFallback={user?.camara_name ?? 'C'}
+          onAvatarPress={() => navigation.navigate('CamaraProfileEdit')}
           rightElement={
             <TouchableOpacity style={s.logoutBtn} onPress={handleSignOut}>
               <Feather name="log-out" size={13} color="rgba(255,255,255,0.65)" />
