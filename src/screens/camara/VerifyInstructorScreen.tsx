@@ -259,8 +259,16 @@ export default function VerifyInstructorScreen({ navigation, route }: any) {
               </View>
             )}
             {cert.review_status === 'approved' && (
-              <TouchableOpacity style={s.undoBtn} onPress={() => approveCertMutation.mutate(cert.id)}>
-                <Text style={s.undoTxt}>Volver a pendiente</Text>
+              <TouchableOpacity
+                style={s.undoBtn}
+                onPress={async () => {
+                  await supabase.from('certifications').update({
+                    review_status: 'pending', review_note: null, reviewed_by: null, reviewed_at: null,
+                  }).eq('id', cert.id)
+                  qc.invalidateQueries({ queryKey: ['instructor-detail', instructorId] })
+                }}
+              >
+                <Text style={s.undoTxt}>↩ Volver a pendiente</Text>
               </TouchableOpacity>
             )}
           </BlobCard>
