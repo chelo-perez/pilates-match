@@ -72,14 +72,7 @@ export default function InstructorDashboardScreen({ navigation }: any) {
           avatarUri={instructor?.avatar_url}
           avatarFallback={firstName}
           onAvatarPress={() => navigation.navigate('InstructorPerfil')}
-          rightElement={
-            <View style={s.scorePill}>
-              <View style={s.scoreCircle}>
-                <Text style={s.scoreNum}>{avgScore > 0 ? avgScore.toFixed(1) : '—'}</Text>
-              </View>
-              <Text style={s.scoreLabel}>Puntaje</Text>
-            </View>
-          }
+
           bottomElement={
             isVerified ? (
               <View style={s.verifiedTag}>
@@ -173,6 +166,13 @@ const s = StyleSheet.create({
   container:       { flex: 1, backgroundColor: colors.cream },
   content:         { paddingBottom: 100 },
 
+  sponsorBanner:    { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginHorizontal: spacing.md, marginBottom: spacing.md, backgroundColor: '#F0F4F0', borderTopLeftRadius: 10, borderTopRightRadius: 0, borderBottomLeftRadius: 0, borderBottomRightRadius: 10, paddingHorizontal: spacing.md, paddingVertical: 10, borderWidth: 0.5, borderColor: colors.border, height: 60 },
+  sponsorLeft:      { flex: 1 },
+  sponsorTag:       { fontFamily: 'Nunito-Bold', fontSize: 7, color: colors.light, letterSpacing: 1, marginBottom: 2 },
+  sponsorTitle:     { fontFamily: 'Nunito-Bold', fontSize: 13, color: colors.dark },
+  sponsorSub:       { fontFamily: 'Nunito-Regular', fontSize: 10, color: colors.light },
+  sponsorLogo:      { width: 40, height: 40, borderRadius: 20, backgroundColor: colors.sageLight, alignItems: 'center', justifyContent: 'center' },
+  sponsorLogoTxt:   { fontSize: 18, color: colors.sage },
   scorePill:       { flexDirection: 'row', alignItems: 'center', gap: 7, backgroundColor: 'rgba(255,255,255,0.14)', borderRadius: 999, paddingVertical: 5, paddingLeft: 5, paddingRight: 12, borderWidth: 0.5, borderColor: 'rgba(255,255,255,0.2)' },
   scoreCircle:     { width: 30, height: 30, borderRadius: 15, backgroundColor: '#fff', alignItems: 'center', justifyContent: 'center' },
   scoreNum:        { fontFamily: 'Nunito-Bold', fontSize: 12, color: colors.sage },

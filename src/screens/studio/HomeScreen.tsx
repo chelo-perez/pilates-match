@@ -124,6 +124,18 @@ export default function StudioHomeScreen({ navigation }: any) {
           </TouchableOpacity>
         )}
 
+        {/* Banner publicitario */}
+        <View style={s.sponsorBanner}>
+          <View style={s.sponsorLeft}>
+            <Text style={s.sponsorTag}>PUBLICIDAD</Text>
+            <Text style={s.sponsorTitle}>Tu espacio aquí</Text>
+            <Text style={s.sponsorSub}>contacto@trabajomasfacil.com</Text>
+          </View>
+          <View style={s.sponsorLogo}>
+            <Text style={s.sponsorLogoTxt}>★</Text>
+          </View>
+        </View>
+
         {/* Historial reciente */}
         <BlobCard style={s.section} delay={3000}>
           <View style={s.sectionHeader}>
@@ -181,6 +193,13 @@ const s = StyleSheet.create({
 
   profileBanner:   { flexDirection: 'row', alignItems: 'center', gap: 8, marginHorizontal: spacing.md, marginBottom: spacing.sm, backgroundColor: colors.warnBg, borderTopLeftRadius: 14, borderTopRightRadius: 0, borderBottomLeftRadius: 0, borderBottomRightRadius: 14, padding: spacing.md, borderWidth: 0.5, borderColor: 'rgba(122,80,0,0.2)' },
   profileBannerTxt: { fontFamily: 'Nunito-Bold', fontSize: 12, color: colors.warnTx, flex: 1 },
+  sponsorBanner:    { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginHorizontal: spacing.md, marginBottom: spacing.md, backgroundColor: '#F0F4F0', borderTopLeftRadius: 10, borderTopRightRadius: 0, borderBottomLeftRadius: 0, borderBottomRightRadius: 10, paddingHorizontal: spacing.md, paddingVertical: 10, borderWidth: 0.5, borderColor: colors.border, height: 60 },
+  sponsorLeft:      { flex: 1 },
+  sponsorTag:       { fontFamily: 'Nunito-Bold', fontSize: 7, color: colors.light, letterSpacing: 1, marginBottom: 2 },
+  sponsorTitle:     { fontFamily: 'Nunito-Bold', fontSize: 13, color: colors.dark },
+  sponsorSub:       { fontFamily: 'Nunito-Regular', fontSize: 10, color: colors.light },
+  sponsorLogo:      { width: 40, height: 40, borderRadius: 20, backgroundColor: colors.sageLight, alignItems: 'center', justifyContent: 'center' },
+  sponsorLogoTxt:   { fontSize: 18, color: colors.sage },
   searchBtn:      { marginHorizontal: spacing.md, marginBottom: spacing.md, backgroundColor: colors.sage, borderTopLeftRadius: 14, borderTopRightRadius: 0, borderBottomLeftRadius: 0, borderBottomRightRadius: 14, padding: 14, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, elevation: 3 },
   searchBtnTxt:   { fontFamily: 'Nunito-Bold', fontSize: 15, color: '#fff', letterSpacing: 0.2 },
 
