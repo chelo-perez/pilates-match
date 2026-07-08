@@ -42,7 +42,7 @@ export default function VerifyInstructorScreen({ navigation, route }: any) {
     queryKey: ['instructor-detail', instructorId],
     queryFn: async () => {
       const { data, error } = await db.instructors()
-        .select('*, certifications(*), specialties:instructor_specialties(*), rates:instructor_rates(*)')
+        .select('*, certifications(id,name,institution,year,document_url,file_url,review_status,review_note,reviewed_at), specialties:instructor_specialties(*), rates:instructor_rates(*)')
         .eq('id', instructorId).single()
       if (error) throw error
       return data
@@ -157,7 +157,7 @@ export default function VerifyInstructorScreen({ navigation, route }: any) {
             <Text style={[s.statusBadgeTxt, {
               color: isVerified ? (isActive ? colors.okTx : colors.warnTx) : colors.warnTx
             }]}>
-              {isVerified ? (isActive ? '✓ Activo' : '⏸ Inactivo') : instructor.verification_status === 'rechazado' ? '✗ No verificado' : '⏳ Pendiente'}
+              {isVerified ? (isActive ? '✓ Activo' : '⏸ Inactivo') : '⏳ Pendiente'}
             </Text>
           </View>
         }
@@ -225,6 +225,18 @@ export default function VerifyInstructorScreen({ navigation, route }: any) {
               'rgba(74,93,78,0.08)'
             }
           >
+            {cert.review_status === 'rejected' && cert.review_note && (
+              <View style={s.rejectedBanner}>
+                <Feather name="alert-circle" size={13} color={colors.redTx} />
+                <Text style={s.rejectedBannerTxt}>Rechazado: {cert.review_note}</Text>
+              </View>
+            )}
+            {cert.review_status === 'approved' && (
+              <View style={s.approvedBanner}>
+                <Feather name="check-circle" size={13} color={colors.okTx} />
+                <Text style={s.approvedBannerTxt}>Certificado aprobado</Text>
+              </View>
+            )}
             <View style={s.certTop}>
               <CertStatusIcon status={cert.review_status ?? 'pending'} />
               <View style={{ flex: 1 }}>
@@ -234,11 +246,19 @@ export default function VerifyInstructorScreen({ navigation, route }: any) {
                   <Text style={s.certNote}>↳ {cert.review_note}</Text>
                 )}
               </View>
-              {cert.document_url && (
-                <TouchableOpacity style={s.pdfBtn} onPress={() => Linking.openURL(cert.document_url)}>
-                  <Feather name="external-link" size={12} color="#0C447C" />
-                  <Text style={s.pdfTxt}>PDF</Text>
+              {(cert.document_url || cert.file_url) && (
+                <TouchableOpacity
+                  style={s.pdfBtn}
+                  onPress={() => Linking.openURL(cert.document_url || cert.file_url)}
+                >
+                  <Feather name="file-text" size={13} color="#0C447C" />
+                  <Text style={s.pdfTxt}>Ver PDF</Text>
                 </TouchableOpacity>
+              )}
+              {!cert.document_url && !cert.file_url && (
+                <View style={s.noPdfTag}>
+                  <Text style={s.noPdfTxt}>Sin archivo</Text>
+                </View>
               )}
             </View>
             {/* Acciones por certificado */}
@@ -248,14 +268,16 @@ export default function VerifyInstructorScreen({ navigation, route }: any) {
                   style={s.certRejectBtn}
                   onPress={() => { setSelectedCert(cert); setSelectedReason(REJECT_CERT_REASONS[0]); setShowModal('reject_cert') }}
                 >
-                  <Text style={s.certRejectTxt}>✗ Rechazar</Text>
+                  <Feather name="x" size={14} color={colors.redTx} />
+                  <Text style={s.certRejectTxt}>Rechazar</Text>
                 </TouchableOpacity>
                 <TouchableOpacity
                   style={s.certApproveBtn}
                   onPress={() => approveCertMutation.mutate(cert.id)}
                   disabled={approveCertMutation.isPending}
                 >
-                  <Text style={s.certApproveTxt}>✓ Aprobar</Text>
+                  <Feather name="check" size={14} color={colors.okTx} />
+                  <Text style={s.certApproveTxt}>Aprobar</Text>
                 </TouchableOpacity>
               </View>
             )}
@@ -432,13 +454,15 @@ const s = StyleSheet.create({
   certName:       { fontFamily: 'Nunito-Bold', fontSize: 13, color: colors.dark },
   certMeta:       { fontFamily: 'Nunito-Regular', fontSize: 11, color: colors.mid, marginTop: 2 },
   certNote:       { fontFamily: 'Nunito-Regular', fontSize: 11, color: colors.redTx, marginTop: 3, fontStyle: 'italic' },
+  noPdfTag:       { backgroundColor: colors.sageLighter, borderRadius: 6, paddingHorizontal: 8, paddingVertical: 4 },
+  noPdfTxt:       { fontFamily: 'Nunito-Regular', fontSize: 10, color: colors.light },
   pdfBtn:         { flexDirection: 'row', alignItems: 'center', gap: 4, backgroundColor: '#E6F1FB', borderTopLeftRadius: 8, borderTopRightRadius: 0, borderBottomLeftRadius: 0, borderBottomRightRadius: 8, paddingHorizontal: 8, paddingVertical: 5 },
   pdfTxt:         { fontFamily: 'Nunito-SemiBold', fontSize: 11, color: '#0C447C' },
   certActions:    { flexDirection: 'row', gap: spacing.sm, marginTop: spacing.xs },
-  certRejectBtn:  { flex: 1, backgroundColor: colors.redBg, borderTopLeftRadius: 10, borderTopRightRadius: 0, borderBottomLeftRadius: 0, borderBottomRightRadius: 10, padding: 9, alignItems: 'center', borderWidth: 0.5, borderColor: '#F5C5C5' },
-  certRejectTxt:  { fontFamily: 'Nunito-Bold', fontSize: 12, color: colors.redTx },
-  certApproveBtn: { flex: 2, backgroundColor: colors.okBg, borderTopLeftRadius: 10, borderTopRightRadius: 0, borderBottomLeftRadius: 0, borderBottomRightRadius: 10, padding: 9, alignItems: 'center', borderWidth: 0.5, borderColor: 'rgba(46,107,26,0.25)' },
-  certApproveTxt: { fontFamily: 'Nunito-Bold', fontSize: 12, color: colors.okTx },
+  certRejectBtn:  { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 5, backgroundColor: colors.redBg, borderTopLeftRadius: 10, borderTopRightRadius: 0, borderBottomLeftRadius: 0, borderBottomRightRadius: 10, paddingVertical: 11, borderWidth: 0.5, borderColor: '#F5C5C5' },
+  certRejectTxt:  { fontFamily: 'Nunito-Bold', fontSize: 13, color: colors.redTx },
+  certApproveBtn: { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 5, backgroundColor: colors.okBg, borderTopLeftRadius: 10, borderTopRightRadius: 0, borderBottomLeftRadius: 0, borderBottomRightRadius: 10, paddingVertical: 11, borderWidth: 0.5, borderColor: 'rgba(46,107,26,0.25)' },
+  certApproveTxt: { fontFamily: 'Nunito-Bold', fontSize: 13, color: colors.okTx },
   undoBtn:        { alignItems: 'center', paddingTop: spacing.xs },
   undoTxt:        { fontFamily: 'Nunito-Regular', fontSize: 11, color: colors.light },
 
