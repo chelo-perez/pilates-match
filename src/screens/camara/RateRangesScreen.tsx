@@ -1,46 +1,42 @@
-// src/screens/camara/RateRangesScreen.tsx
 import React, { useState, useEffect } from 'react'
-import { View, TouchableOpacity, Text, StyleSheet, ScrollView, Alert } from 'react-native'
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from 'react-native'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { db } from '../../lib/supabase'
 import { camaraAPI } from '../../lib/api'
-import { Button, Badge, LoadingScreen, colors, spacing, typography, radius } from '../../components/ui'
+import { LoadingScreen, colors, spacing } from '../../components/ui'
 import Toast from '../../components/Toast'
 import { useToast } from '../../hooks/useToast'
-import BlobCard from '../../components/BlobCard'
 import SaveButton from '../../components/SaveButton'
 import HeroHeader from '../../components/HeroHeader'
 
-
-function RangeInput({ value, onChange, min = 1, max = 20, accent, bg }: { label: string; value: number; onChange: (v: number) => void; min?: number; max?: number; accent?: string; bg?: string }) {
-  const accentColor = accent ?? colors.sage
-  const bgColor = bg ?? colors.sageLight
-  const fmt = (n: number) => '$' + (n * 1000).toLocaleString('es-AR')
+// Stepper compacto — solo + y - con valor en el medio
+function Stepper({ value, onChange, min = 1, max = 30, accent = colors.sage }: {
+  value: number; onChange: (v: number) => void; min?: number; max?: number; accent?: string
+}) {
   return (
-    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12, marginVertical: 8 }}>
-      <TouchableOpacity
-        onPress={() => onChange(Math.max(min, value - 1))}
-        style={{ width: 44, height: 44, borderRadius: 22, backgroundColor: colors.sageLight, alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: colors.sage }}
-      >
-        <Text style={{ fontSize: 22, color: colors.sage, fontFamily: 'Nunito-Bold' }}>−</Text>
+    <View style={[st.stepper, { borderColor: accent + '40' }]}>
+      <TouchableOpacity style={st.stepBtn} onPress={() => onChange(Math.max(min, value - 1))} activeOpacity={0.7}>
+        <Text style={[st.stepIcon, { color: accent }]}>−</Text>
       </TouchableOpacity>
-      <View style={{ flex: 1, alignItems: 'center' }}>
-        <Text style={{ fontFamily: 'Nunito-Bold', fontSize: 22, color: colors.dark }}>{fmt(value)}</Text>
-        <Text style={{ fontFamily: 'Nunito-Regular', fontSize: 11, color: colors.mid }}>por hora</Text>
-      </View>
-      <TouchableOpacity
-        onPress={() => onChange(Math.min(max, value + 1))}
-        style={{ width: 44, height: 44, borderRadius: 22, backgroundColor: colors.sageLight, alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: colors.sage }}
-      >
-        <Text style={{ fontSize: 22, color: colors.sage, fontFamily: 'Nunito-Bold' }}>+</Text>
+      <Text style={[st.stepVal, { color: accent }]}>${(value * 1000).toLocaleString('es-AR')}</Text>
+      <TouchableOpacity style={st.stepBtn} onPress={() => onChange(Math.min(max, value + 1))} activeOpacity={0.7}>
+        <Text style={[st.stepIcon, { color: accent }]}>+</Text>
       </TouchableOpacity>
     </View>
   )
 }
 
-export default function RateRangesScreen() {
+const st = StyleSheet.create({
+  stepper:  { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', borderWidth: 0.5, borderTopLeftRadius: 12, borderTopRightRadius: 0, borderBottomLeftRadius: 0, borderBottomRightRadius: 12, overflow: 'hidden' },
+  stepBtn:  { width: 44, height: 44, alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(0,0,0,0.03)' },
+  stepIcon: { fontSize: 22, fontFamily: 'Nunito-Regular', lineHeight: 26 },
+  stepVal:  { fontFamily: 'Nunito-Bold', fontSize: 18, flex: 1, textAlign: 'center' },
+})
+
+export default function RateRangesScreen({ navigation }: any) {
   const qc = useQueryClient()
   const { toast, showToast, hideToast } = useToast()
+
   const { data: ranges, isLoading } = useQuery({
     queryKey: ['rate-ranges'],
     queryFn: async () => {
@@ -50,130 +46,120 @@ export default function RateRangesScreen() {
     },
   })
 
-  const regular = ranges?.find((r: any) => r.class_type === 'regular')
+  const regular     = ranges?.find((r: any) => r.class_type === 'regular')
   const replacement = ranges?.find((r: any) => r.class_type === 'reemplazo')
 
-  const [regMin, setRegMin] = useState(6000)
-  const [regMax, setRegMax] = useState(9000)
-  const [repMin, setRepMin] = useState(9000)
-  const [repMax, setRepMax] = useState(14000)
+  const [regMin, setRegMin] = useState(6)
+  const [regMax, setRegMax] = useState(9)
+  const [repMin, setRepMin] = useState(9)
+  const [repMax, setRepMax] = useState(14)
 
   useEffect(() => {
-    if (regular) { setRegMin(regular.min_ars); setRegMax(regular.max_ars) }
-    if (replacement) { setRepMin(replacement.min_ars); setRepMax(replacement.max_ars) }
+    if (regular)     { setRegMin(Math.round(regular.min_ars / 1000));     setRegMax(Math.round(regular.max_ars / 1000)) }
+    if (replacement) { setRepMin(Math.round(replacement.min_ars / 1000)); setRepMax(Math.round(replacement.max_ars / 1000)) }
   }, [regular, replacement])
 
   const updateMutation = useMutation({
     mutationFn: async () => {
       await Promise.all([
-        camaraAPI.updateRateRanges('regular', regMin, regMax),
-        camaraAPI.updateRateRanges('reemplazo', repMin, repMax),
+        camaraAPI.updateRateRanges('regular',   regMin * 1000, regMax * 1000),
+        camaraAPI.updateRateRanges('reemplazo', repMin * 1000, repMax * 1000),
       ])
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['rate-ranges'] })
-      showToast('Rangos actualizados correctamente')
+      showToast('Rangos actualizados')
     },
-    onError: (e: any) => Alert.alert('Error', e.message),
+    onError: (e: any) => showToast('Error: ' + e.message),
   })
 
   if (isLoading) return <LoadingScreen />
 
-  const formatARS = (n: number) => `$${n.toLocaleString('es-AR')}`
+  const fmt = (n: number) => `$${(n * 1000).toLocaleString('es-AR')}`
+  const lastUpdate = regular?.updated_at
+    ? new Date(regular.updated_at).toLocaleDateString('es-AR', { day: 'numeric', month: 'long' })
+    : null
 
   return (
-    <>
-    <HeroHeader
-      title="Rangos de tarifas"
-      subtitle="Referencia del mercado para toda la red"
-      onBack={() => navigation.navigate('CamaraHome')}
-      backLabel="Inicio"
-    />
-    <ScrollView contentContainerStyle={styles.content}>
+    <View style={{ flex: 1, backgroundColor: colors.cream }}>
+      <HeroHeader
+        title="Rangos de tarifas"
+        subtitle="Referencia del mercado para la red"
+        onBack={() => navigation.navigate('CamaraHome')}
+        backLabel="Inicio"
+      />
 
-      <View style={styles.info}>
-        <Text style={styles.infoText}>
-          Estos rangos son visibles para todos los instructores y estudios como referencia del mercado. Actualizar regularmente según las condiciones actuales.
-        </Text>
-      </View>
+      <ScrollView contentContainerStyle={s.content} showsVerticalScrollIndicator={false}>
 
-      {/* Clases Regulares */}
-      <BlobCard style={styles.card} blobColor="rgba(74,93,78,0.10)" blobColor2="rgba(74,93,78,0.06)">
-        <View style={styles.cardHeader}>
-          <Text style={styles.cardTitle}>Clases regulares</Text>
-          <Badge label="Clases Regulares" color="sage" />
-        </View>
-
-        <Text style={styles.fieldLabel}>MÍNIMO</Text>
-        <RangeInput label="" value={Math.round(regMin / 1000)} onChange={v => setRegMin(v * 1000)} accent={colors.sage} bg={colors.sageLight} />
-
-        <Text style={styles.fieldLabel}>MÁXIMO</Text>
-        <RangeInput label="" value={Math.round(regMax / 1000)} onChange={v => setRegMax(v * 1000)} accent={colors.sage} bg={colors.sageLight} />
-
-        <View style={styles.rangeSummary}>
-          <Text style={styles.rangeText}>Rango actual: {formatARS(regMin)} – {formatARS(regMax)}</Text>
-        </View>
-      </BlobCard>
-
-      {/* Reemplazos */}
-      <BlobCard style={styles.card} blobColor="rgba(184,150,12,0.12)" blobColor2="rgba(184,150,12,0.07)" delay={2000}>
-        <View style={styles.cardHeader}>
-          <Text style={[styles.cardTitle, { color: colors.gold }]}>Reemplazo</Text>
-          <Badge label="Reemplazos" color="gold" />
-        </View>
-
-        <Text style={styles.fieldLabel}>MÍNIMO</Text>
-        <RangeInput label="" value={Math.round(repMin / 1000)} onChange={v => setRepMin(v * 1000)} accent={colors.gold} bg={colors.goldLight} />
-
-        <Text style={styles.fieldLabel}>MÁXIMO</Text>
-        <RangeInput label="" value={Math.round(repMax / 1000)} onChange={v => setRepMax(v * 1000)} accent={colors.gold} bg={colors.goldLight} />
-
-        <View style={styles.rangeSummary}>
-          <Text style={styles.rangeText}>Rango actual: {formatARS(repMin)} – {formatARS(repMax)}</Text>
-        </View>
-
-        {repMin < regMin && (
-          <View style={styles.warning}>
-            <Text style={styles.warningText}>
-              ⚠️ El mínimo de reemplazo ({formatARS(repMin)}) es menor al de clase regular ({formatARS(regMin)}). El reemplazo siempre debe ser mayor.
-            </Text>
+        {/* Regular */}
+        <View style={s.rangeCard}>
+          <View style={s.rangeHeader}>
+            <Text style={s.rangeTitle}>Clase regular</Text>
+            <Text style={s.rangeSummary}>{fmt(regMin)} – {fmt(regMax)}</Text>
           </View>
+          <View style={s.row}>
+            <View style={s.half}>
+              <Text style={s.halfLabel}>MÍNIMO</Text>
+              <Stepper value={regMin} onChange={setRegMin} max={regMax - 1} accent={colors.sage} />
+            </View>
+            <View style={s.divider} />
+            <View style={s.half}>
+              <Text style={s.halfLabel}>MÁXIMO</Text>
+              <Stepper value={regMax} onChange={setRegMax} min={regMin + 1} accent={colors.sage} />
+            </View>
+          </View>
+        </View>
+
+        {/* Reemplazo */}
+        <View style={[s.rangeCard, s.rangeCardGold]}>
+          <View style={s.rangeHeader}>
+            <Text style={[s.rangeTitle, { color: colors.gold }]}>Reemplazo</Text>
+            <Text style={[s.rangeSummary, { color: colors.gold }]}>{fmt(repMin)} – {fmt(repMax)}</Text>
+          </View>
+          <View style={s.row}>
+            <View style={s.half}>
+              <Text style={[s.halfLabel, { color: '#7A5000' }]}>MÍNIMO</Text>
+              <Stepper value={repMin} onChange={setRepMin} max={repMax - 1} accent={colors.gold} />
+            </View>
+            <View style={[s.divider, { backgroundColor: 'rgba(184,150,12,0.2)' }]} />
+            <View style={s.half}>
+              <Text style={[s.halfLabel, { color: '#7A5000' }]}>MÁXIMO</Text>
+              <Stepper value={repMax} onChange={setRepMax} min={repMin + 1} accent={colors.gold} />
+            </View>
+          </View>
+          {repMin < regMin && (
+            <Text style={s.warning}>⚠ El mínimo de reemplazo debería ser mayor al de clase regular</Text>
+          )}
+        </View>
+
+        <SaveButton
+          label="Guardar rangos"
+          onPress={() => updateMutation.mutate()}
+          isPending={updateMutation.isPending}
+          isSuccess={updateMutation.isSuccess}
+        />
+
+        {lastUpdate && (
+          <Text style={s.lastUpdate}>Última actualización: {lastUpdate}</Text>
         )}
-      </BlobCard>
 
-      <SaveButton label="Guardar rangos" onPress={() => updateMutation.mutate()} isPending={updateMutation.isPending} isSuccess={updateMutation.isSuccess} />
-
-      <Text style={styles.lastUpdate}>
-        Última actualización:{' '}
-        {regular?.updated_at
-          ? new Date(regular.updated_at).toLocaleDateString('es-AR', { day: 'numeric', month: 'long', year: 'numeric' })
-          : 'Nunca'
-        }
-      </Text>
-    </ScrollView>
-    <Toast visible={toast.visible} message={toast.message} type={toast.type} onHide={hideToast} />
-    </>
+      </ScrollView>
+      <Toast visible={toast.visible} message={toast.message} type={toast.type} onHide={hideToast} />
+    </View>
   )
 }
 
-const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: colors.cream },
-  content: { padding: spacing.lg, paddingTop: 52, paddingBottom: spacing.xxl },
-  info: {
-    flexDirection: 'row', alignItems: 'flex-start',
-    backgroundColor: colors.sageLight, borderTopLeftRadius: 14, borderTopRightRadius: 0, borderBottomLeftRadius: 0, borderBottomRightRadius: 14,
-    padding: spacing.md, marginBottom: spacing.lg,
-  },
-  infoText: { ...typography.small, color: colors.mid, flex: 1, lineHeight: 18 },
-  card: { padding: spacing.lg, marginBottom: spacing.md, backgroundColor: colors.white },
-  cardHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: spacing.lg },
-  cardTitle: { fontFamily: 'Nunito-SemiBold', fontSize: 16, color: colors.dark },
-  fieldLabel: { ...typography.label, color: colors.mid, marginBottom: spacing.xs },
-  sliderRow: { flexDirection: 'row', justifyContent: 'flex-end', marginBottom: spacing.xs },
-  sliderVal: { fontFamily: 'Nunito-SemiBold', fontSize: 18, color: colors.dark },
-  rangeSummary: { backgroundColor: colors.sageLight, borderTopLeftRadius: 8, borderTopRightRadius: 0, borderBottomLeftRadius: 0, borderBottomRightRadius: 8, padding: spacing.sm, marginTop: spacing.sm },
-  rangeText: { ...typography.small, color: colors.sage, textAlign: 'center', fontFamily: 'Nunito-Medium' },
-  warning: { backgroundColor: colors.warnBg, borderTopLeftRadius: 8, borderTopRightRadius: 0, borderBottomLeftRadius: 0, borderBottomRightRadius: 8, padding: spacing.sm, marginTop: spacing.sm },
-  warningText: { ...typography.small, color: colors.warnTx, lineHeight: 18 },
-  lastUpdate: { ...typography.small, color: colors.light, textAlign: 'center', marginTop: spacing.lg },
+const s = StyleSheet.create({
+  content:       { padding: spacing.md, paddingBottom: 40 },
+  rangeCard:     { backgroundColor: colors.white, borderTopLeftRadius: 20, borderTopRightRadius: 0, borderBottomLeftRadius: 0, borderBottomRightRadius: 20, padding: spacing.md, marginBottom: spacing.md, borderWidth: 0.5, borderColor: colors.border, shadowColor: '#2D3F31', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.06, shadowRadius: 6, elevation: 2 },
+  rangeCardGold: { borderColor: 'rgba(184,150,12,0.3)', backgroundColor: '#FFFDF5' },
+  rangeHeader:   { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: spacing.md },
+  rangeTitle:    { fontFamily: 'Nunito-Bold', fontSize: 17, color: colors.sage },
+  rangeSummary:  { fontFamily: 'Nunito-Bold', fontSize: 13, color: colors.sage },
+  row:           { flexDirection: 'row', alignItems: 'center', gap: spacing.md },
+  half:          { flex: 1 },
+  halfLabel:     { fontFamily: 'Nunito-Bold', fontSize: 9, color: colors.sageMid, letterSpacing: 0.7, marginBottom: 6 },
+  divider:       { width: 1, height: 50, backgroundColor: colors.borderLight },
+  warning:       { fontFamily: 'Nunito-SemiBold', fontSize: 11, color: colors.warnTx, marginTop: spacing.sm },
+  lastUpdate:    { fontFamily: 'Nunito-Regular', fontSize: 11, color: colors.light, textAlign: 'center', marginTop: spacing.sm },
 })
