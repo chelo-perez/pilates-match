@@ -23,3 +23,15 @@ ALTER TABLE certifications ADD COLUMN IF NOT EXISTS review_status text DEFAULT '
 ALTER TABLE certifications ADD COLUMN IF NOT EXISTS review_note text DEFAULT NULL;
 ALTER TABLE certifications ADD COLUMN IF NOT EXISTS reviewed_by uuid DEFAULT NULL;
 ALTER TABLE certifications ADD COLUMN IF NOT EXISTS reviewed_at timestamptz DEFAULT NULL;
+
+-- Datos adicionales del estudio para la ficha de la Cámara
+ALTER TABLE studios
+  ADD COLUMN IF NOT EXISTS cuit text DEFAULT NULL,
+  ADD COLUMN IF NOT EXISTS owner_name text DEFAULT NULL,
+  ADD COLUMN IF NOT EXISTS owner_phone text DEFAULT NULL,
+  ADD COLUMN IF NOT EXISTS owner_email text DEFAULT NULL;
+
+-- Tipo de membresía en la tabla memberships
+ALTER TABLE memberships
+  ADD COLUMN IF NOT EXISTS plan_type text DEFAULT 'basico', -- basico | profesional | ilimitado
+  ADD COLUMN IF NOT EXISTS price_ars integer DEFAULT NULL;

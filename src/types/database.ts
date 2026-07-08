@@ -47,6 +47,10 @@ export interface Studio {
   budget_regular: number | null    // máx que paga por clase regular
   budget_replacement: number | null // máx que paga por reemplazo
   bio: string | null
+  cuit: string | null
+  owner_name: string | null
+  owner_phone: string | null
+  owner_email: string | null
 }
 
 export interface Membership {
@@ -61,6 +65,8 @@ export interface Membership {
   last_reset_date: string
   created_at: string
   updated_at: string
+  plan_type: string | null
+  price_ars: number | null
 }
 
 export interface Instructor {
