@@ -1,7 +1,9 @@
 // src/screens/studio/ProfileEditScreen.tsx
 import React, { useState, useEffect } from 'react'
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, TextInput } from 'react-native'
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, TextInput, Alert } from 'react-native'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
+import * as ImagePicker from 'expo-image-picker'
+import * as FileSystem from 'expo-file-system'
 import { supabase } from '../../lib/supabase'
 import { useAuthStore } from '../../store'
 import { useMyStudio } from '../../hooks'
@@ -34,6 +36,7 @@ export default function StudioProfileEditScreen({ navigation }: any) {
   const [equipment,  setEquipment]  = useState<string[]>([])
   const [budgetReg,  setBudgetReg]  = useState('')
   const [budgetRep,  setBudgetRep]  = useState('')
+  const [uploading,  setUploading]  = useState(false)
 
   useEffect(() => {
     if (!studio) return
@@ -44,6 +47,34 @@ export default function StudioProfileEditScreen({ navigation }: any) {
     setBudgetReg(studio.budget_regular?.toString() ?? '')
     setBudgetRep(studio.budget_replacement?.toString() ?? '')
   }, [studio])
+
+
+  const pickLogo = async () => {
+    const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync()
+    if (status !== 'granted') { Alert.alert('Permiso requerido', 'Necesitamos acceso a la galería'); return }
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      allowsEditing: true, aspect: [1, 1], quality: 0.7,
+    })
+    if (result.canceled || !result.assets[0]) return
+    try {
+      setUploading(true)
+      const cacheUri = FileSystem.cacheDirectory + 'logo_' + Date.now() + '.jpg'
+      await FileSystem.copyAsync({ from: result.assets[0].uri, to: cacheUri })
+      const base64 = await FileSystem.readAsStringAsync(cacheUri, { encoding: FileSystem.EncodingType.Base64 })
+      const binary = atob(base64)
+      const bytes = new Uint8Array(binary.length)
+      for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i)
+      const path = `${studio!.id}/logo.jpg`
+      const { error } = await supabase.storage.from('studio-logos').upload(path, bytes, { upsert: true, contentType: 'image/jpeg' })
+      if (error) throw error
+      const url = supabase.storage.from('studio-logos').getPublicUrl(path).data.publicUrl + '?t=' + Date.now()
+      await supabase.from('studios').update({ logo_url: url }).eq('id', studio!.id)
+      qc.invalidateQueries({ queryKey: ['my-studio'] })
+      showToast('Logo actualizado')
+    } catch (e: any) { Alert.alert('Error', e.message) }
+    finally { setUploading(false) }
+  }
 
   const saveMutation = useMutation({
     mutationFn: async () => {
@@ -78,7 +109,17 @@ export default function StudioProfileEditScreen({ navigation }: any) {
       <ScrollView contentContainerStyle={s.content} showsVerticalScrollIndicator={false}>
 
         {/* Info básica */}
+        {/* Logo del estudio */}
         <BlobCard style={s.card} delay={0}>
+          <Text style={s.sectionTitle}>LOGO DEL ESTUDIO</Text>
+          <TouchableOpacity style={s.logoBtn} onPress={pickLogo} disabled={uploading} activeOpacity={0.8}>
+            <Feather name="upload" size={16} color={colors.sage} />
+            <Text style={s.logoBtnTxt}>{uploading ? 'Subiendo...' : studio?.logo_url ? 'Cambiar logo' : 'Subir logo'}</Text>
+          </TouchableOpacity>
+          <Text style={s.hint}>PNG con fondo transparente, mínimo 512×512px</Text>
+        </BlobCard>
+
+        <BlobCard style={s.card} delay={300}>
           <Text style={s.sectionTitle}>INFORMACIÓN BÁSICA</Text>
           <Text style={s.label}>DESCRIPCIÓN</Text>
           <TextInput
@@ -213,6 +254,8 @@ const s = StyleSheet.create({
   sectionTitle:   { fontFamily: 'Nunito-Bold', fontSize: 9, color: colors.light, letterSpacing: 0.8 },
   matchTag:       { flexDirection: 'row', alignItems: 'center', gap: 3, backgroundColor: colors.sageLight, borderTopLeftRadius: 8, borderTopRightRadius: 0, borderBottomLeftRadius: 0, borderBottomRightRadius: 8, paddingHorizontal: 7, paddingVertical: 2 },
   matchTagTxt:    { fontFamily: 'Nunito-Bold', fontSize: 9, color: colors.sage },
+  logoBtn:  { flexDirection: 'row', alignItems: 'center', gap: 8, backgroundColor: colors.sageLight, borderTopLeftRadius: 12, borderTopRightRadius: 0, borderBottomLeftRadius: 0, borderBottomRightRadius: 12, padding: 14, borderWidth: 0.5, borderColor: colors.border },
+  logoBtnTxt: { fontFamily: 'Nunito-Bold', fontSize: 14, color: colors.sage },
   hint:           { fontFamily: 'Nunito-Regular', fontSize: 12, color: colors.mid, lineHeight: 17, marginBottom: spacing.md },
   label:          { fontFamily: 'Nunito-Bold', fontSize: 9, color: colors.light, letterSpacing: 0.7, marginBottom: 5 },
   input:          { backgroundColor: colors.sageLighter, borderTopLeftRadius: 12, borderTopRightRadius: 0, borderBottomLeftRadius: 0, borderBottomRightRadius: 12, borderWidth: 0.5, borderColor: colors.border, padding: 12, fontFamily: 'Nunito-Regular', fontSize: 13, color: colors.dark },

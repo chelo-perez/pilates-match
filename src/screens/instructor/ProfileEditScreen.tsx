@@ -3,6 +3,7 @@ import React, { useState, useEffect } from 'react'
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Modal, FlatList, ActivityIndicator, Alert } from 'react-native'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import * as ImagePicker from 'expo-image-picker'
+import * as FileSystem from 'expo-file-system'
 import * as DocumentPicker from 'expo-document-picker'
 import { supabase } from '../../lib/supabase'
 import { storage } from '../../lib/supabase'
@@ -82,27 +83,43 @@ export default function ProfileEditScreen({ navigation }: any) {
     },
   })
 
-  const pickAvatar = async () => {
+
+  const pickAndUploadAvatar = async (
+    bucketName: string,
+    storagePath: string,
+    onSuccess: (url: string) => void
+  ) => {
     const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync()
     if (status !== 'granted') { Alert.alert('Permiso requerido', 'Necesitamos acceso a tu galería'); return }
 
     const result = await ImagePicker.launchImageLibraryAsync({
       mediaTypes: ImagePicker.MediaTypeOptions.Images,
-      allowsEditing: true, aspect: [1, 1], quality: 0.5,
+      allowsEditing: true, aspect: [1, 1], quality: 0.7,
     })
     if (result.canceled || !result.assets[0]) return
 
     try {
       setUploading(true)
-      const uri = result.assets[0].uri
-      const resp = await fetch(uri)
-      const blob = await resp.blob()
-      const path = `${user!.id}/avatar.jpg`
-      const { error } = await supabase.storage.from('avatars').upload(path, blob, { upsert: true, contentType: 'image/jpeg' })
+      const sourceUri = result.assets[0].uri
+      // Copy to cache to resolve content:// URIs on Android
+      const cacheUri = FileSystem.cacheDirectory + 'upload_' + Date.now() + '.jpg'
+      await FileSystem.copyAsync({ from: sourceUri, to: cacheUri })
+      // Read base64 from cached file:// URI
+      const base64 = await FileSystem.readAsStringAsync(cacheUri, {
+        encoding: FileSystem.EncodingType.Base64,
+      })
+      // Decode base64 to bytes without external library
+      const binary = atob(base64)
+      const bytes = new Uint8Array(binary.length)
+      for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i)
+
+      const { error } = await supabase.storage
+        .from(bucketName)
+        .upload(storagePath, bytes, { upsert: true, contentType: 'image/jpeg' })
       if (error) throw error
-      const url = supabase.storage.from('avatars').getPublicUrl(path).data.publicUrl + '?t=' + Date.now()
-      await supabase.from('instructors').update({ avatar_url: url }).eq('id', instructor!.id)
-      qc.invalidateQueries({ queryKey: ['my-instructor-profile'] })
+
+      const url = supabase.storage.from(bucketName).getPublicUrl(storagePath).data.publicUrl + '?t=' + Date.now()
+      onSuccess(url)
       showToast('Foto actualizada')
     } catch (e: any) {
       Alert.alert('Error', e.message)
@@ -110,6 +127,15 @@ export default function ProfileEditScreen({ navigation }: any) {
       setUploading(false)
     }
   }
+
+  const pickAvatar = () => pickAndUploadAvatar(
+    'avatars',
+    `${user!.id}/avatar.jpg`,
+    async (url) => {
+      await supabase.from('instructors').update({ avatar_url: url }).eq('id', instructor!.id)
+      qc.invalidateQueries({ queryKey: ['my-instructor-profile'] })
+    }
+  )
 
   const addCertification = async () => {
     if (!certName.trim()) { Alert.alert('Ingresá el nombre del certificado'); return }

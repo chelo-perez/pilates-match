@@ -1,9 +1,8 @@
 import React, { useState, useEffect } from 'react'
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, TextInput } from 'react-native'
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, TextInput, Alert } from 'react-native'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import * as ImagePicker from 'expo-image-picker'
 import * as FileSystem from 'expo-file-system'
-import { decode } from 'base64-arraybuffer'
 import { supabase } from '../../lib/supabase'
 import { useAuthStore } from '../../store'
 import { LoadingScreen, colors, spacing } from '../../components/ui'
@@ -57,40 +56,60 @@ export default function CamaraProfileEditScreen({ navigation }: any) {
     onError: (e: any) => showToast('Error: ' + e.message),
   })
 
-  const pickLogo = async () => {
+
+  const pickAndUploadAvatar = async (
+    bucketName: string,
+    storagePath: string,
+    onSuccess: (url: string) => void
+  ) => {
     const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync()
-    if (status !== 'granted') return
+    if (status !== 'granted') { Alert.alert('Permiso requerido', 'Necesitamos acceso a tu galería'); return }
 
     const result = await ImagePicker.launchImageLibraryAsync({
       mediaTypes: ImagePicker.MediaTypeOptions.Images,
-      allowsEditing: true, aspect: [1, 1], quality: 0.8,
+      allowsEditing: true, aspect: [1, 1], quality: 0.7,
     })
     if (result.canceled || !result.assets[0]) return
 
     try {
       setUploading(true)
-      const uri = result.assets[0].uri
-      const cacheUri = FileSystem.cacheDirectory + 'camara_logo.jpg'
-      await FileSystem.copyAsync({ from: uri, to: cacheUri })
+      const sourceUri = result.assets[0].uri
+      // Copy to cache to resolve content:// URIs on Android
+      const cacheUri = FileSystem.cacheDirectory + 'upload_' + Date.now() + '.jpg'
+      await FileSystem.copyAsync({ from: sourceUri, to: cacheUri })
+      // Read base64 from cached file:// URI
       const base64 = await FileSystem.readAsStringAsync(cacheUri, {
         encoding: FileSystem.EncodingType.Base64,
       })
-      const path = `${user?.camara_id}/logo.jpg`
+      // Decode base64 to bytes without external library
+      const binary = atob(base64)
+      const bytes = new Uint8Array(binary.length)
+      for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i)
+
       const { error } = await supabase.storage
-        .from('camara-logos')
-        .upload(path, decode(base64), { upsert: true, contentType: 'image/jpeg' })
+        .from(bucketName)
+        .upload(storagePath, bytes, { upsert: true, contentType: 'image/jpeg' })
       if (error) throw error
-      const url = supabase.storage.from('camara-logos').getPublicUrl(path).data.publicUrl
-      await supabase.from('camaras').update({ logo_url: url }).eq('id', user?.camara_id)
-      setLogoUrl(url)
-      qc.invalidateQueries({ queryKey: ['camara-profile'] })
-      showToast('Logo actualizado')
+
+      const url = supabase.storage.from(bucketName).getPublicUrl(storagePath).data.publicUrl + '?t=' + Date.now()
+      onSuccess(url)
+      showToast('Foto actualizada')
     } catch (e: any) {
-      showToast('Error: ' + e.message)
+      Alert.alert('Error', e.message)
     } finally {
       setUploading(false)
     }
   }
+
+  const pickLogo = () => pickAndUploadAvatar(
+    'camara-logos',
+    `${user?.camara_id}/logo.jpg`,
+    async (url) => {
+      await supabase.from('camaras').update({ logo_url: url }).eq('id', user?.camara_id)
+      setLogoUrl(url)
+      qc.invalidateQueries({ queryKey: ['camara-profile'] })
+    }
+  )
 
   if (isLoading) return <LoadingScreen />
 
