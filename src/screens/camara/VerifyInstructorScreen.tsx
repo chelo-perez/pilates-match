@@ -85,7 +85,7 @@ export default function VerifyInstructorScreen({ navigation, route }: any) {
   // ── Verificar instructor ──
   const verifyMutation = useMutation({
     mutationFn: async () => {
-      await instructorAPI.verify(instructorId, true)
+      await instructorAPI.verify(instructorId, true) // sets 'verificado'
       if (internalNote.trim()) {
         await supabase.from('camara_instructor_notes').insert({
           instructor_id: instructorId, camara_id: user?.camara_id,
@@ -103,7 +103,8 @@ export default function VerifyInstructorScreen({ navigation, route }: any) {
   // ── No verificar ──
   const noVerifyMutation = useMutation({
     mutationFn: async () => {
-      await instructorAPI.verify(instructorId, false)
+      // 'No verificar' → vuelve a pendiente con nota, no rechazado definitivo
+      await supabase.from('instructors').update({ verification_status: 'pendiente' }).eq('id', instructorId)
       await supabase.from('camara_instructor_notes').insert({
         instructor_id: instructorId, camara_id: user?.camara_id,
         note: `${selectedReason}${extraMessage ? ': ' + extraMessage : ''}`,
@@ -130,7 +131,7 @@ export default function VerifyInstructorScreen({ navigation, route }: any) {
   if (isLoading) return <LoadingScreen message="Cargando instructor..." />
   if (!instructor) return null
 
-  const isVerified = instructor.verification_status === 'verified'
+  const isVerified = instructor.verification_status === 'verificado' || instructor.verification_status === 'verified'
   const isActive   = instructor.is_active !== false
   const certs      = instructor.certifications ?? []
   const specialties = instructor.specialties ?? []
@@ -156,7 +157,7 @@ export default function VerifyInstructorScreen({ navigation, route }: any) {
             <Text style={[s.statusBadgeTxt, {
               color: isVerified ? (isActive ? colors.okTx : colors.warnTx) : colors.warnTx
             }]}>
-              {isVerified ? (isActive ? '✓ Activo' : '⏸ Inactivo') : '⏳ Pendiente'}
+              {isVerified ? (isActive ? '✓ Activo' : '⏸ Inactivo') : instructor.verification_status === 'rechazado' ? '✗ No verificado' : '⏳ Pendiente'}
             </Text>
           </View>
         }
@@ -311,7 +312,7 @@ export default function VerifyInstructorScreen({ navigation, route }: any) {
               <TouchableOpacity style={s.noVerifyBtn}
                 onPress={() => { setSelectedReason(NO_VERIFY_REASONS[0]); setShowModal('no_verify') }}>
                 <Feather name="x" size={16} color="#A32D2D" />
-                <Text style={s.noVerifyTxt}>No verificar</Text>
+                <Text style={s.noVerifyTxt}>Solicitar corrección</Text>
               </TouchableOpacity>
               <TouchableOpacity
                 style={[s.verifyBtn, (!allCertsReviewed) && { opacity: 0.5 }]}
@@ -372,8 +373,8 @@ export default function VerifyInstructorScreen({ navigation, route }: any) {
       <Modal visible={showModal === 'no_verify'} transparent animationType="slide">
         <View style={s.overlay}>
           <View style={s.modalBox}>
-            <Text style={s.modalTitle}>{isVerified ? 'Revocar verificación' : 'No verificar instructor'}</Text>
-            <Text style={s.modalSub}>{instructor.full_name} recibirá una notificación.</Text>
+            <Text style={s.modalTitle}>{isVerified ? 'Revocar verificación' : 'Solicitar corrección al instructor'}</Text>
+            <Text style={s.modalSub}>{instructor.full_name} recibirá una notificación con el motivo y podrá corregir su documentación.</Text>
             <Text style={s.inputLabel}>Motivo</Text>
             {NO_VERIFY_REASONS.map(r => (
               <TouchableOpacity key={r} style={s.reasonRow} onPress={() => setSelectedReason(r)}>

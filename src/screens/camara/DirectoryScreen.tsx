@@ -35,10 +35,16 @@ export default function DirectoryScreen({ navigation }: any) {
     : allInstructors
 
   const BADGE_COLOR: Record<string, any> = {
-    verificado: 'success', pendiente: 'warning', rechazado: 'danger', inactivo: 'sand',
+    verificado: 'success', verified: 'success',
+    pendiente: 'warning', pending: 'warning',
+    rechazado: 'default', rejected: 'default',
+    inactivo: 'default',
   }
   const BADGE_LABEL: Record<string, string> = {
-    verificado: '✓ Verificado', pendiente: '⏳ Pendiente', rechazado: '✗ Rechazado', inactivo: 'Inactivo',
+    verificado: '✓ Verificado', verified: '✓ Verificado',
+    pendiente: '⏳ Pendiente', pending: '⏳ Pendiente',
+    rechazado: '✗ No verificado', rejected: '✗ No verificado',
+    inactivo: '⏸ Inactivo',
   }
 
   return (
