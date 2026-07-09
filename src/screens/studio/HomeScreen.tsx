@@ -106,6 +106,17 @@ export default function StudioHomeScreen({ navigation }: any) {
           </TouchableOpacity>
         )}
 
+        {/* Membresía */}
+        <TouchableOpacity
+          style={s.membershipBtn}
+          onPress={() => navigation.navigate('Membership')}
+          activeOpacity={0.85}
+        >
+          <Feather name="star" size={14} color={colors.gold} />
+          <Text style={s.membershipBtnTxt}>Plan {isMember ? 'activo' : 'Freemium'} · Ver planes</Text>
+          <Feather name="chevron-right" size={14} color={colors.gold} />
+        </TouchableOpacity>
+
         {/* Buscar */}
         <TouchableOpacity style={s.searchBtn} onPress={() => navigation.navigate('Search')} activeOpacity={0.85}>
           <Feather name="search" size={18} color="#fff" />
@@ -200,6 +211,8 @@ const s = StyleSheet.create({
   sponsorSub:       { fontFamily: 'Nunito-Regular', fontSize: 10, color: colors.light },
   sponsorLogo:      { width: 40, height: 40, borderRadius: 20, backgroundColor: colors.sageLight, alignItems: 'center', justifyContent: 'center' },
   sponsorLogoTxt:   { fontSize: 18, color: colors.sage },
+  membershipBtn:    { flexDirection: 'row', alignItems: 'center', gap: 8, marginHorizontal: spacing.md, marginBottom: spacing.sm, backgroundColor: colors.goldLight, borderTopLeftRadius: 10, borderTopRightRadius: 0, borderBottomLeftRadius: 0, borderBottomRightRadius: 10, padding: 11, borderWidth: 0.5, borderColor: 'rgba(184,150,12,0.3)' },
+  membershipBtnTxt: { fontFamily: 'Nunito-Bold', fontSize: 12, color: colors.gold, flex: 1 },
   searchBtn:      { marginHorizontal: spacing.md, marginBottom: spacing.md, backgroundColor: colors.sage, borderTopLeftRadius: 14, borderTopRightRadius: 0, borderBottomLeftRadius: 0, borderBottomRightRadius: 14, padding: 14, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, elevation: 3 },
   searchBtnTxt:   { fontFamily: 'Nunito-Bold', fontSize: 15, color: '#fff', letterSpacing: 0.2 },
 
