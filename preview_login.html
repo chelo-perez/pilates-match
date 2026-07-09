@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Login Preview</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { font-family: 'Segoe UI', system-ui, sans-serif; background: #E8EDE8; display: flex; gap: 24px; padding: 24px; justify-content: center; flex-wrap: wrap; }
+  .phone { width: 320px; height: 640px; background: #F9F9F6; border-radius: 40px; overflow: hidden; box-shadow: 0 20px 60px rgba(0,0,0,0.25); position: relative; display: flex; flex-direction: column; }
+  .label { text-align: center; font-size: 13px; font-weight: 600; color: #4A5D4E; margin-bottom: 12px; letter-spacing: 1px; text-transform: uppercase; }
+
+  /* ── OPCIÓN A: Hero + sociales prominentes ── */
+  .a-hero { background: linear-gradient(160deg, #2D3F31 0%, #4A5D4E 100%); padding: 36px 24px 48px; position: relative; overflow: hidden; flex-shrink: 0; }
+  .a-hero::before { content: ''; position: absolute; width: 200px; height: 200px; border-radius: 50%; background: rgba(255,255,255,0.06); top: -60px; right: -40px; }
+  .a-hero::after { content: ''; position: absolute; width: 120px; height: 120px; border-radius: 50%; background: rgba(255,255,255,0.04); bottom: -30px; left: -20px; }
+  .a-logo { display: flex; align-items: center; gap: 10px; margin-bottom: 4px; position: relative; z-index: 1; }
+  .a-logo-hand { font-size: 32px; filter: sepia(1) saturate(3) hue-rotate(10deg); }
+  .a-logo-text { font-size: 22px; font-weight: 800; color: #fff; line-height: 1.1; }
+  .a-logo-text span { color: #FFD060; }
+  .a-tagline { font-size: 11px; color: rgba(255,255,255,0.55); position: relative; z-index: 1; }
+  .a-wave { position: absolute; bottom: -1px; left: 0; right: 0; height: 24px; }
+  .a-wave-l { position: absolute; left: 0; width: 50%; height: 100%; background: #F9F9F6; border-top-right-radius: 40px; }
+  .a-wave-r { position: absolute; right: 0; width: 50%; height: 100%; background: #F9F9F6; border-top-left-radius: 40px; }
+  .a-body { padding: 24px 20px; display: flex; flex-direction: column; gap: 10px; flex: 1; }
+  .a-google { display: flex; align-items: center; justify-content: center; gap: 10px; background: #fff; border: 1.5px solid #D8E2D8; border-radius: 14px 0 14px 0; padding: 14px; font-size: 14px; font-weight: 600; color: #1A1A1A; cursor: pointer; }
+  .a-google .g { font-size: 18px; font-weight: 800; background: linear-gradient(135deg, #4285F4,#EA4335,#FBBC05,#34A853); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+  .a-apple { display: flex; align-items: center; justify-content: center; gap: 10px; background: #1A1A1A; border-radius: 14px 0 14px 0; padding: 14px; font-size: 14px; font-weight: 600; color: #fff; cursor: pointer; }
+  .a-divider { display: flex; align-items: center; gap: 8px; color: #9A9A9A; font-size: 11px; }
+  .a-divider-line { flex: 1; height: 0.5px; background: #D8E2D8; }
+  .a-field { display: flex; flex-direction: column; gap: 4px; }
+  .a-field label { font-size: 9px; font-weight: 700; color: #9A9A9A; letter-spacing: 0.8px; }
+  .a-field input { background: #F2F5F2; border: 0.5px solid #D8E2D8; border-radius: 12px 0 12px 0; padding: 10px 12px; font-size: 13px; color: #1A1A1A; }
+  .a-btn { background: #4A5D4E; color: #fff; border-radius: 14px 0 14px 0; padding: 13px; font-size: 14px; font-weight: 700; text-align: center; margin-top: 2px; }
+  .a-link { text-align: center; font-size: 12px; color: #5C5C5C; }
+  .a-link b { color: #4A5D4E; }
+
+  /* ── OPCIÓN B: Full screen gradiente ── */
+  .b-bg { background: linear-gradient(180deg, #1E2E22 0%, #2D3F31 50%, #3D5440 100%); flex: 1; display: flex; flex-direction: column; padding: 40px 24px 32px; }
+  .b-top { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8px; }
+  .b-circle { width: 80px; height: 80px; border-radius: 50%; border: 2px solid rgba(255,208,96,0.4); background: rgba(255,208,96,0.1); display: flex; align-items: center; justify-content: center; font-size: 36px; }
+  .b-title { font-size: 26px; font-weight: 800; color: #fff; text-align: center; }
+  .b-sub { font-size: 12px; color: rgba(255,255,255,0.5); text-align: center; }
+  .b-bottom { display: flex; flex-direction: column; gap: 10px; }
+  .b-google { display: flex; align-items: center; justify-content: center; gap: 10px; background: #fff; border-radius: 999px; padding: 14px; font-size: 14px; font-weight: 700; color: #1A1A1A; }
+  .b-google .g { font-size: 16px; font-weight: 800; background: linear-gradient(135deg, #4285F4,#EA4335); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+  .b-apple { display: flex; align-items: center; justify-content: center; gap: 10px; background: rgba(255,255,255,0.12); border: 1px solid rgba(255,255,255,0.2); border-radius: 999px; padding: 14px; font-size: 14px; font-weight: 700; color: #fff; }
+  .b-email { text-align: center; font-size: 12px; color: rgba(255,255,255,0.5); text-decoration: underline; }
+
+  /* ── OPCIÓN C: Minimalista ── */
+  .c-top { background: #2D3F31; padding: 48px 24px 64px; position: relative; overflow: hidden; }
+  .c-blob { position: absolute; width: 280px; height: 280px; border-radius: 50%; background: radial-gradient(circle, rgba(255,208,96,0.15) 0%, transparent 70%); top: -80px; right: -80px; }
+  .c-name { font-size: 13px; font-weight: 700; color: rgba(255,255,255,0.5); letter-spacing: 3px; text-transform: uppercase; margin-bottom: 6px; position: relative; z-index: 1; }
+  .c-headline { font-size: 28px; font-weight: 800; color: #fff; line-height: 1.1; position: relative; z-index: 1; }
+  .c-headline em { color: #FFD060; font-style: normal; }
+  .c-wave { height: 40px; position: relative; }
+  .c-wave-l { position: absolute; left: 0; width: 50%; height: 100%; background: #F9F9F6; border-top-right-radius: 40px; }
+  .c-wave-r { position: absolute; right: 0; width: 50%; height: 100%; background: #F9F9F6; border-top-left-radius: 40px; }
+  .c-body { padding: 16px 20px; flex: 1; display: flex; flex-direction: column; gap: 10px; }
+  .c-row { display: flex; gap: 8px; }
+  .c-google { flex: 1; display: flex; align-items: center; justify-content: center; gap: 8px; background: #fff; border: 1.5px solid #D8E2D8; border-radius: 14px 0 14px 0; padding: 14px 8px; font-size: 13px; font-weight: 700; color: #1A1A1A; }
+  .c-apple { flex: 1; display: flex; align-items: center; justify-content: center; gap: 8px; background: #1A1A1A; border-radius: 14px 0 14px 0; padding: 14px 8px; font-size: 13px; font-weight: 700; color: #fff; }
+  .c-divider { display: flex; align-items: center; gap: 8px; color: #9A9A9A; font-size: 11px; }
+  .c-line { flex: 1; height: 0.5px; background: #D8E2D8; }
+  .c-input { background: #F2F5F2; border: 0.5px solid #D8E2D8; border-radius: 12px 0 12px 0; padding: 11px 14px; font-size: 13px; color: #1A1A1A; }
+  .c-btn { background: linear-gradient(135deg, #4A5D4E, #2D3F31); color: #fff; border-radius: 14px 0 14px 0; padding: 14px; font-size: 14px; font-weight: 700; text-align: center; }
+  .c-link { text-align: center; font-size: 12px; color: #9A9A9A; }
+  .c-footer { text-align: center; font-size: 10px; color: #B0B8B0; padding-bottom: 8px; }
+</style>
+</head>
+<body>
+
+<!-- OPCIÓN A -->
+<div>
+  <p class="label">A — Logo + formulario</p>
+  <div class="phone">
+    <div class="a-hero">
+      <div class="a-logo">
+        <div class="a-logo-hand">👋</div>
+        <div class="a-logo-text">Trabajo <span>Más</span><br>Fácil</div>
+      </div>
+      <div class="a-tagline">La comunidad de Pilates de Buenos Aires</div>
+      <div class="a-wave"><div class="a-wave-l"></div><div class="a-wave-r"></div></div>
+    </div>
+    <div class="a-body">
+      <div class="a-google"><span class="g">G</span> Continuar con Google</div>
+      <div class="a-apple">🍎 Continuar con Apple</div>
+      <div class="a-divider"><div class="a-divider-line"></div>o con email<div class="a-divider-line"></div></div>
+      <div class="a-field"><label>EMAIL</label><input placeholder="hola@mipilates.com"/></div>
+      <div class="a-field"><label>CONTRASEÑA</label><input type="password" placeholder="••••••••"/></div>
+      <div class="a-btn">Iniciar sesión</div>
+      <div class="a-link">¿No tenés cuenta? <b>Registrate</b></div>
+    </div>
+  </div>
+</div>
+
+<!-- OPCIÓN B -->
+<div>
+  <p class="label">B — Full screen oscuro</p>
+  <div class="phone">
+    <div class="b-bg">
+      <div class="b-top">
+        <div class="b-circle">👋</div>
+        <div class="b-title">Trabajo<br>Más Fácil</div>
+        <div class="b-sub">La comunidad de Pilates<br>de Buenos Aires</div>
+      </div>
+      <div class="b-bottom">
+        <div class="b-google"><span class="g">G</span> Continuar con Google</div>
+        <div class="b-apple">🍎 Continuar con Apple</div>
+        <div class="b-email">Iniciar sesión con email</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- OPCIÓN C -->
+<div>
+  <p class="label">C — Hero + botones en fila</p>
+  <div class="phone">
+    <div class="c-top">
+      <div class="c-blob"></div>
+      <div class="c-name">Trabajo Más Fácil</div>
+      <div class="c-headline">Tu próxima<br>clase, <em>más fácil</em></div>
+    </div>
+    <div class="c-wave"><div class="c-wave-l"></div><div class="c-wave-r"></div></div>
+    <div class="c-body">
+      <div class="c-row">
+        <div class="c-google"><span style="font-weight:800;color:#4285F4">G</span> Google</div>
+        <div class="c-apple">🍎 Apple</div>
+      </div>
+      <div class="c-divider"><div class="c-line"></div>o con email<div class="c-line"></div></div>
+      <input class="c-input" placeholder="Email"/>
+      <input class="c-input" type="password" placeholder="Contraseña"/>
+      <div class="c-btn">Iniciar sesión</div>
+      <div class="c-link">¿No tenés cuenta? <b style="color:#4A5D4E">Registrate</b></div>
+    </div>
+    <div class="c-footer">Con el aval de la Cámara de Pilates de CABA</div>
+  </div>
+</div>
+
+</body>
+</html>
