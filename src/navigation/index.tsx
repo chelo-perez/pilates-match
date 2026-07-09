@@ -25,6 +25,7 @@ const ICONS = {
 
 // Auth
 import LoginScreen from '../screens/auth/LoginScreen'
+import SelectRoleScreen from '../screens/auth/SelectRoleScreen'
 import RegisterRoleScreen from '../screens/auth/RegisterRoleScreen'
 import RegisterInstructorScreen from '../screens/auth/RegisterInstructorScreen'
 import RegisterStudioScreen from '../screens/auth/RegisterStudioScreen'
@@ -191,6 +192,7 @@ export default function RootNavigator() {
         {!user ? (
           <>
             <Stack.Screen name="Login" component={LoginScreen} />
+        <Stack.Screen name="SelectRole" component={SelectRoleScreen} options={{ headerShown: false }} />
             <Stack.Screen name="RegisterRole" component={RegisterRoleScreen} />
             <Stack.Screen name="RegisterInstructor" component={RegisterInstructorScreen} />
             <Stack.Screen name="RegisterStudio" component={RegisterStudioScreen} />
@@ -218,7 +220,10 @@ export default function RootNavigator() {
         ) : user.role === 'super_admin' ? (
           <Stack.Screen name="AdminTabs" component={AdminHome} />
         ) : (
-          <Stack.Screen name="Login" component={LoginScreen} />
+          <>
+            <Stack.Screen name="Login" component={LoginScreen} />
+            <Stack.Screen name="SelectRole" component={SelectRoleScreen} options={{ headerShown: false }} />
+          </>
         )}
       </Stack.Navigator>
     </NavigationContainer>
