@@ -46,8 +46,22 @@ export default function App() {
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
         setSession(session)
-        if (event === 'SIGNED_OUT') { setUser(null); setLoading(false) }
-        if (event === 'SIGNED_IN' && session?.user) {
+        if (event === 'SIGNED_OUT') {
+          setUser(null)
+          setLoading(false)
+        }
+        if ((event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') && session?.user) {
+          // Load user profile from DB
+          const { data: profile } = await supabase
+            .from('users')
+            .select('*')
+            .eq('id', session.user.id)
+            .single()
+          if (profile?.role) {
+            setUser(profile)
+          }
+          // else: new user without role — LoginScreen handles SelectRole navigation
+          setLoading(false)
           registerPushToken(session.user.id).catch(console.error)
         }
       }

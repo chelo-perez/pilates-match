@@ -106,7 +106,7 @@ export default function LoginScreen({ navigation }: any) {
       setSession(sessionData.session)
 
       // Check if user has a profile with role
-      const { data: profile } = await supabase.from('users').select('*').eq('id', sessionData.user!.id).single()
+      const { data: profile } = await supabase.from('users').select('*').eq('id', sessionData.user!.id).maybeSingle()
       if (profile?.role) {
         setUser(profile)
         navigateByRole(profile.role, navigation)
