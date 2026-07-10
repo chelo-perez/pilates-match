@@ -49,15 +49,32 @@ export default function StudioDetailScreen({ navigation, route }: any) {
       const end = new Date()
       end.setMonth(end.getMonth() + 1)
 
-      await supabase.from('memberships').upsert({
-        studio_id: studioId,
-        status: 'activa',
-        plan_type: plan,
-        start_date: new Date().toISOString().split('T')[0],
-        end_date: end.toISOString().split('T')[0],
-        matches_limit: matchLimit,
-        matches_used_month: 0,
-      }, { onConflict: 'studio_id' })
+      // Check if membership exists
+      const { data: existing } = await supabase
+        .from('memberships').select('id').eq('studio_id', studioId).maybeSingle()
+
+      if (existing?.id) {
+        const { error: upErr } = await supabase.from('memberships').update({
+          status: 'activa',
+          plan_type: plan,
+          start_date: new Date().toISOString().split('T')[0],
+          end_date: end.toISOString().split('T')[0],
+          matches_limit: matchLimit,
+          matches_used_month: 0,
+        }).eq('id', existing.id)
+        if (upErr) throw upErr
+      } else {
+        const { error: insErr } = await supabase.from('memberships').insert({
+          studio_id: studioId,
+          status: 'activa',
+          plan_type: plan,
+          start_date: new Date().toISOString().split('T')[0],
+          end_date: end.toISOString().split('T')[0],
+          matches_limit: matchLimit,
+          matches_used_month: 0,
+        })
+        if (insErr) throw insErr
+      }
 
       await supabase.from('studios').update({
         is_member: plan !== 'freemium',
