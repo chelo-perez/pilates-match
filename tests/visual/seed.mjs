@@ -1,0 +1,53 @@
+// Crea cuentas de prueba con datos para sacar capturas de la app (tests/visual/screens.mjs).
+// Usa el dominio @e2e.pilatesmatch.test: se borran con `node tests/visual/seed.mjs --cleanup`.
+import { createClient } from '@supabase/supabase-js'
+
+const URL = 'https://tkhaiovstwgqzabvxxss.supabase.co'
+const KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InRraGFpb3ZzdHdncXphYnZ4eHNzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzg3MzU4NzksImV4cCI6MjA5NDMxMTg3OX0.KuuF4sOr4Bs51vvgCJQz0C1ophIyFLLpTNwFgrcS1Sc'
+export const PASSWORD = 'e2e-Test-Password-1'
+export const STUDIO_EMAIL = 'visual-estudio@e2e.pilatesmatch.test'
+export const INSTRUCTOR_EMAIL = 'visual-instructora@e2e.pilatesmatch.test'
+const client = () => createClient(URL, KEY, { auth: { persistSession: false, autoRefreshToken: false } })
+const must = (r, what) => { if (r.error) throw new Error(`${what}: ${r.error.message}`); return r.data }
+
+async function signUp(email, role, full_name) {
+  const c = client()
+  const { data, error } = await c.auth.signUp({ email, password: PASSWORD, options: { data: { role, full_name } } })
+  if (error) throw error
+  return { c, user: data.user }
+}
+
+if (process.argv.includes('--cleanup')) {
+  const r = await client().rpc('e2e_cleanup'); console.log('borradas:', r.data, r.error?.message ?? ''); process.exit(0)
+}
+
+await client().rpc('e2e_cleanup')
+
+const ins = await signUp(INSTRUCTOR_EMAIL, 'instructor', 'Lucía Fernández')
+const instructor = must(await ins.c.from('instructors').insert({
+  user_id: ins.user.id, full_name: 'Lucía Fernández', dni: '30111222', phone: '1155550000',
+  neighborhood: 'Palermo', bio: 'Instructora de reformer y mat. 8 años dando clases en estudios de Palermo y Belgrano.',
+}).select('id').single(), 'instructor')
+must(await ins.c.from('instructor_rates').insert({ instructor_id: instructor.id, rate_regular: 18000, rate_replacement: 22000 }), 'tarifas')
+must(await ins.c.from('instructor_zones').insert([{ instructor_id: instructor.id, neighborhood: 'Palermo' }, { instructor_id: instructor.id, neighborhood: 'Belgrano' }]), 'zonas')
+must(await ins.c.from('instructor_specialties').insert([{ instructor_id: instructor.id, specialty: 'reformer' }, { instructor_id: instructor.id, specialty: 'mat' }]), 'especialidades')
+must(await ins.c.from('availability').insert([
+  { instructor_id: instructor.id, day_of_week: 'lunes', start_time: '08:00', end_time: '12:00', class_type: 'regular', is_active: true },
+  { instructor_id: instructor.id, day_of_week: 'miercoles', start_time: '17:00', end_time: '21:00', class_type: 'reemplazo', is_active: true },
+]), 'disponibilidad')
+must(await ins.c.from('certifications').insert({ instructor_id: instructor.id, name: 'Formación integral en Pilates', institution: 'Escuela de Pilates BA', year: 2018 }), 'certificado')
+
+const st = await signUp(STUDIO_EMAIL, 'estudio', 'Estudio Núcleo')
+const studio = must(await st.c.from('studios').insert({
+  user_id: st.user.id, name: 'Estudio Núcleo', neighborhood: 'Palermo', phone: '1144440000',
+  equipment: ['reformer', 'mat'], budget_regular: 20000, budget_replacement: 25000,
+  bio: 'Estudio boutique con 6 reformers.',
+}).select('id').single(), 'estudio')
+must(await st.c.from('memberships').insert({ studio_id: studio.id, status: 'activa', plan_type: 'freemium', matches_limit: 1, matches_used_month: 0, end_date: '2036-01-01' }), 'membresía')
+must(await st.c.from('matches').insert({
+  studio_id: studio.id, instructor_id: instructor.id, class_type: 'reemplazo',
+  class_date: new Date(Date.now() + 3 * 864e5).toISOString().slice(0, 10), start_time: '18:00', end_time: '19:00',
+  note_studio: 'Reemplazo de la clase de reformer intermedio.',
+}), 'match')
+
+console.log('listo')
