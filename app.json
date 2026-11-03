@@ -56,13 +56,22 @@
           "photosPermission": "Para seleccionar tu foto de perfil.",
           "cameraPermission": "Para tomar una foto de perfil."
         }
-      ]
+      ],
+      "expo-web-browser"
     ],
     "extra": {
       "eas": {
         "projectId": "7361ef1f-f2a3-4499-ad2f-8608913cce33"
       }
     },
-    "scheme": "trabajomasfacil"
+    "scheme": "trabajomasfacil",
+    "runtimeVersion": {
+      "policy": "appVersion"
+    },
+    "updates": {
+      "url": "https://u.expo.dev/7361ef1f-f2a3-4499-ad2f-8608913cce33",
+      "checkAutomatically": "ON_LOAD",
+      "fallbackToCacheTimeout": 0
+    }
   }
 }

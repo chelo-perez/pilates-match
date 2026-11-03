@@ -30,6 +30,28 @@ eas build --platform android --profile preview
 
 ---
 
+---
+
+## Actualizaciones sin rebuild (EAS Update)
+
+Desde que el APK incluye `expo-updates`, los cambios de código (pantallas, textos,
+lógica) se publican sin hacer un build nuevo:
+
+```bash
+npm run update:preview -- --message "Qué cambió"
+```
+
+- La app instalada busca la actualización al abrirse y la aplica la **siguiente** vez
+  que se abre (cerrala del todo y volvé a abrirla).
+- Las actualizaciones solo llegan a builds con la misma versión (`version` en app.json).
+
+**Cuándo SÍ hace falta un build nuevo:** si cambian permisos, íconos, el splash,
+librerías nativas (`npx expo install ...`) o la `version` en app.json.
+
+**Antes de publicar:** `npm run typecheck` y `npm run test:e2e`.
+
+---
+
 ## Paso 2 — Build de producción (AAB para Play Store)
 
 ```bash
