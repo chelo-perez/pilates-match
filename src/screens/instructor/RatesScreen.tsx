@@ -47,7 +47,7 @@ function RateSection({ title, badge, value, setValue, range, accent, textColor, 
         </TouchableOpacity>
         <View style={{ alignItems: 'center', flex: 1 }}>
           <Text style={[s.stepVal, { color: textColor }]}>{fmt(value)}</Text>
-          <Text style={s.stepUnit}>por hora</Text>
+          <Text style={s.stepUnit}>por clase</Text>
         </View>
         <TouchableOpacity style={s.stepBtn} onPress={() => setValue(v => Math.min(max, v + STEP))} activeOpacity={0.7}>
           <Text style={s.stepIcon}>+</Text>
@@ -126,9 +126,9 @@ export default function InstructorRatesScreen() {
 
   return (
     <View style={{ flex: 1, backgroundColor: colors.cream }}>
-      <HeroHeader title="Mis tarifas" subtitle="Lo que cobrás por hora de clase" />
+      <HeroHeader title="Mis tarifas" subtitle="Lo que cobrás por clase" />
       <ScrollView contentContainerStyle={s.content} showsVerticalScrollIndicator={false}>
-        <Text style={s.intro}>Definí el valor mínimo que aceptás por hora. Los estudios no ven el número: solo si entra en su presupuesto.</Text>
+        <Text style={s.intro}>Definí el valor mínimo que aceptás por clase. Los estudios no ven el número: solo si entra en su presupuesto.</Text>
 
         <RateSection title="Clase regular" badge="Regular" value={rateRegular} setValue={fn => setRateRegular(v => clamp(fn(v), regular))}
           range={regular} accent="74,93,78" textColor={colors.sage} bg={colors.sageLight} />

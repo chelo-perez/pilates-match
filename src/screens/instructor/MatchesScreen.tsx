@@ -211,7 +211,7 @@ export default function InstructorMatchesScreen({ navigation }: any) {
           {match.agreed_rate ? (
             <View style={styles.datetimeItem}>
               <Feather name="dollar-sign" size={13} color={colors.sage} />
-              <Text style={styles.datetimeText}>${Number(match.agreed_rate).toLocaleString('es-AR')} por hora</Text>
+              <Text style={styles.datetimeText}>${Number(match.agreed_rate).toLocaleString('es-AR')} por clase</Text>
             </View>
           ) : null}
         </View>

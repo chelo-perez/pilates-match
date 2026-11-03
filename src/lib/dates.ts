@@ -20,12 +20,16 @@ export function parseLocalDate(s: string): Date {
 /** Formato corto es-AR, por defecto "3 nov". */
 export function formatDate(
   s: string | Date | null | undefined,
-  opts: Intl.DateTimeFormatOptions = { day: 'numeric', month: 'short' },
+  opts?: Intl.DateTimeFormatOptions,
 ): string {
   if (!s) return ''
   const d = typeof s === 'string' ? parseLocalDate(s) : s
   if (isNaN(d.getTime())) return ''
-  return d.toLocaleDateString('es-AR', opts).replace('.', '')
+  // Por defecto "3 nov"; si es de otro año, "1 ene 2036"
+  const o = opts ?? (d.getFullYear() === new Date().getFullYear()
+    ? { day: 'numeric', month: 'short' }
+    : { day: 'numeric', month: 'short', year: 'numeric' })
+  return d.toLocaleDateString('es-AR', o).replace('.', '')
 }
 
 /** Date → 'HH:MM' (24 h), para mandar a columnas time de la base. */

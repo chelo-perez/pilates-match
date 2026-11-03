@@ -279,7 +279,7 @@ export default function VerifyInstructorScreen({ navigation, route }: any) {
 
         {rates ? (
           <BlobCard style={s.card} delay={600} blobColor="rgba(184,150,12,0.10)" blobColor2="rgba(184,150,12,0.06)">
-            <Text style={s.sectionTitle}>TARIFAS POR HORA</Text>
+            <Text style={s.sectionTitle}>TARIFAS POR CLASE</Text>
             <View style={{ flexDirection: 'row', gap: spacing.sm }}>
               <View style={[s.rateBox, { backgroundColor: colors.sageLight }]}>
                 <Text style={s.rateLabel}>REGULAR</Text>

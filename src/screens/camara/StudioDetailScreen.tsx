@@ -186,7 +186,7 @@ export default function StudioDetailScreen({ navigation, route }: any) {
         </BlobCard>
 
         <BlobCard style={s.card} delay={1800} blobColor="rgba(184,150,12,0.10)" blobColor2="rgba(184,150,12,0.06)">
-          <Text style={s.sectionTitle}>PRESUPUESTO POR HORA</Text>
+          <Text style={s.sectionTitle}>PRESUPUESTO POR CLASE</Text>
           <Row icon="dollar-sign" label="Regular"
             value={studio.budget_regular ? '$' + studio.budget_regular.toLocaleString('es-AR') : 'Sin configurar'}
             valueColor={studio.budget_regular ? colors.sage : colors.light} />

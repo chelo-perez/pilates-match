@@ -84,7 +84,7 @@ function useTabStyle() {
     borderTopColor: colors.border,
     paddingBottom: insets.bottom || 8,
     paddingTop: 8,
-    height: 64 + (insets.bottom || 0),
+    height: 70 + (insets.bottom || 0),
   }
 }
 

@@ -92,7 +92,7 @@ export default function RateRangesScreen() {
       />
 
       <ScrollView contentContainerStyle={s.content} showsVerticalScrollIndicator={false}>
-        <Text style={s.intro}>Los instructores ven este rango como guía al cargar sus tarifas por hora. Los valores van de a $1.000.</Text>
+        <Text style={s.intro}>Los instructores ven este rango como guía al cargar sus tarifas por clase. Los valores van de a $1.000.</Text>
 
         {/* Regular */}
         <View style={s.rangeCard}>

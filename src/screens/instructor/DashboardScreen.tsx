@@ -164,7 +164,7 @@ export default function InstructorDashboardScreen({ navigation }: any) {
         {/* Tarifas */}
         <BlobCard style={s.section} delay={1500}>
           <View style={s.sectionHeader}>
-            <Text style={s.sectionTitle}>MIS TARIFAS POR HORA</Text>
+            <Text style={s.sectionTitle}>MIS TARIFAS POR CLASE</Text>
             <TouchableOpacity onPress={() => navigation.navigate('InstructorTarifas')}>
               <Text style={s.editLink}>Editar</Text>
             </TouchableOpacity>
