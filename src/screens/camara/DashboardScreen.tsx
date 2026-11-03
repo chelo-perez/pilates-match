@@ -50,7 +50,7 @@ export default function CamaraDashboardScreen({ navigation }: any) {
       const { data } = await supabase
         .from('studios').select('id, name')
         .eq('camara_id', user?.camara_id)
-        .is('membership', null).limit(5)
+        .eq('is_member', false).limit(5)
       return data ?? []
     },
     enabled: !!user?.camara_id,

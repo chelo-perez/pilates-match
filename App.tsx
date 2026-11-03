@@ -43,26 +43,32 @@ export default function App() {
       setLoading(false)
     })
 
+    // Ojo: este callback NO puede esperar (await) otras llamadas a Supabase.
+    // Si lo hace, la librería se traba al renovar la sesión y ninguna consulta
+    // posterior responde (la app queda en "Cargando..."). Por eso el trabajo
+    // se difiere con setTimeout.
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      async (event, session) => {
+      (event, session) => {
         setSession(session)
         if (event === 'SIGNED_OUT') {
           setUser(null)
           setLoading(false)
         }
         if ((event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') && session?.user) {
-          // Load user profile from DB
-          const { data: profile } = await supabase
-            .from('users')
-            .select('*')
-            .eq('id', session.user.id)
-            .single()
-          if (profile?.role) {
-            setUser(profile)
-          }
-          // else: new user without role — LoginScreen handles SelectRole navigation
-          setLoading(false)
-          registerPushToken(session.user.id).catch(console.error)
+          const userId = session.user.id
+          setTimeout(async () => {
+            const { data: profile } = await supabase
+              .from('users')
+              .select('*')
+              .eq('id', userId)
+              .single()
+            if (profile?.role) {
+              setUser(profile)
+            }
+            // else: new user without role — LoginScreen handles SelectRole navigation
+            setLoading(false)
+            registerPushToken(userId).catch(console.error)
+          }, 0)
         }
       }
     )
