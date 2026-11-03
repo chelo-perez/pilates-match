@@ -298,12 +298,8 @@ export const instructorAPI = {
     const user = await authAPI.getUser()
     if (!user) throw new Error('Not authenticated')
 
-    const { data, error } = await db.instructors()
-      .update({ user_id: user.id })
-      .eq('id', instructorId)
-      .is('user_id', null)  // solo si no tiene dueño
-      .select()
-      .single()
+    // La base valida que el perfil no tenga dueño y que el usuario no tenga otro
+    const { data, error } = await supabase.rpc('claim_instructor_profile', { p_instructor_id: instructorId })
     if (error) throw error
     return data
   },

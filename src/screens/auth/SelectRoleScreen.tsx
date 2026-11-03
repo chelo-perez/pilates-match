@@ -6,6 +6,8 @@ import { useAuthStore } from '../../store'
 import { colors, spacing } from '../../components/ui'
 import { Feather } from '@expo/vector-icons'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
+import Toast from '../../components/Toast'
+import { useToast } from '../../hooks/useToast'
 
 const ROLES = [
   {
@@ -29,6 +31,7 @@ const ROLES = [
 ]
 
 export default function SelectRoleScreen({ navigation }: any) {
+  const { toast, showToast, hideToast } = useToast()
   const { user } = useAuthStore()
   const insets = useSafeAreaInsets()
   const [loading, setLoading] = useState(false)
@@ -42,36 +45,39 @@ export default function SelectRoleScreen({ navigation }: any) {
       if (!authUser) throw new Error('No hay sesión activa')
 
       // Create user record
-      await supabase.from('users').upsert({
+      const { error: userError } = await supabase.from('users').upsert({
         id: authUser.id,
         email: authUser.email,
         full_name: authUser.user_metadata?.full_name ?? authUser.email?.split('@')[0],
         role,
       }, { onConflict: 'id' })
+      if (userError) throw userError
 
       if (role === 'instructor') {
         // Create instructor profile
-        await supabase.from('instructors').upsert({
+        const { error: instrError } = await supabase.from('instructors').upsert({
           user_id: authUser.id,
           full_name: authUser.user_metadata?.full_name ?? '',
           verification_status: 'pendiente',
           is_active: true,
         }, { onConflict: 'user_id' })
+        if (instrError) throw instrError
         navigation.replace('InstructorTabs')
       } else {
         // Create studio with Freemium membership
-        const { data: studio } = await supabase.from('studios').upsert({
+        const { data: studio, error: studioError } = await supabase.from('studios').upsert({
           user_id: authUser.id,
           name: authUser.user_metadata?.full_name ?? 'Mi estudio',
           neighborhood: '',
           is_member: false,
         }, { onConflict: 'user_id' }).select().single()
+        if (studioError) throw studioError
 
         if (studio) {
           // Auto-assign Freemium
           const end = new Date()
           end.setFullYear(end.getFullYear() + 10) // Freemium no vence
-          await supabase.from('memberships').upsert({
+          const { error: memError } = await supabase.from('memberships').upsert({
             studio_id: studio.id,
             status: 'activa',
             plan_type: 'freemium',
@@ -80,11 +86,13 @@ export default function SelectRoleScreen({ navigation }: any) {
             start_date: new Date().toISOString().split('T')[0],
             end_date: end.toISOString().split('T')[0],
           }, { onConflict: 'studio_id' })
+          if (memError) throw memError
         }
         navigation.replace('EstudioHome')
       }
     } catch (e: any) {
       console.error(e)
+      showToast('No pudimos crear tu perfil: ' + (e?.message ?? 'intentá de nuevo'), 'error')
       setLoading(false)
       setSelected(null)
     }
@@ -129,6 +137,7 @@ export default function SelectRoleScreen({ navigation }: any) {
       <Text style={s.footer}>
         Si sos administrador de una Cámara, contactá directamente a Trabajo Más Fácil.
       </Text>
+      <Toast visible={toast.visible} message={toast.message} type={toast.type} onHide={hideToast} />
     </View>
   )
 }

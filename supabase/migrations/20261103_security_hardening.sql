@@ -1,4 +1,3 @@
--- PENDIENTE: no aplicada todavía. Probar por rol antes de moverla a supabase/migrations/.
 -- =====================================================================
 -- Endurecimiento de seguridad (revisión 2026-11-03)
 --
@@ -14,7 +13,13 @@
 --  5. increment_match_counter se podía llamar sin sesión para cualquier estudio.
 --  6. Los instructores no podían responder sus matches (no había policy de UPDATE).
 --  7. Funciones sin search_path fijo.
+--  8. instructors.user_id y studios.user_id no eran únicos: los upsert de
+--     "Elegí tu rol" fallaban y el usuario quedaba sin perfil/estudio.
 -- =====================================================================
+
+-- ── Unicidad que necesitan los upsert de la app ─────────────────────
+ALTER TABLE public.instructors ADD CONSTRAINT instructors_user_id_key UNIQUE (user_id);
+ALTER TABLE public.studios     ADD CONSTRAINT studios_user_id_key     UNIQUE (user_id);
 
 -- ── Funciones auxiliares ─────────────────────────────────────────────
 

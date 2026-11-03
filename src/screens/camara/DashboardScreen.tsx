@@ -17,10 +17,10 @@ export default function CamaraDashboardScreen({ navigation }: any) {
     queryFn: async () => {
       const [instructors, studios, pending] = await Promise.all([
         supabase.from('instructors').select('id, verification_status').eq('camara_id', user?.camara_id),
-        supabase.from('studios').select('id, membership:studio_memberships(status)').eq('camara_id', user?.camara_id),
-        supabase.from('instructors').select('id').eq('camara_id', user?.camara_id).eq('verification_status', 'pending'),
+        supabase.from('studios').select('id, membership:memberships(status)').eq('camara_id', user?.camara_id),
+        supabase.from('instructors').select('id').eq('camara_id', user?.camara_id).eq('verification_status', 'pendiente'),
       ])
-      const verified  = (instructors.data ?? []).filter((i: any) => i.verification_status === 'verified').length
+      const verified  = (instructors.data ?? []).filter((i: any) => i.verification_status === 'verificado').length
       const members   = (studios.data ?? []).filter((s: any) => s.membership?.status === 'activa').length
       return {
         verified_instructors:  verified,

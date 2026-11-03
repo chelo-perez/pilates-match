@@ -51,7 +51,7 @@ export default function InstructorDashboardScreen({ navigation }: any) {
 
   if (isLoading) return <LoadingScreen message="Cargando tu perfil..." />
 
-  const isVerified    = instructor?.verification_status === 'verified'
+  const isVerified    = instructor?.verification_status === 'verificado'
   const firstName     = instructor?.full_name?.split(' ')?.[0] ?? 'Hola'
   const avgScore      = stats?.avg_score ?? instructor?.score ?? 0
   const totalClasses  = stats?.total_classes ?? 0

@@ -92,7 +92,7 @@ export default function SearchScreen({ navigation, route }: Props) {
           specialties:instructor_specialties(specialty),
           zones:instructor_zones(neighborhood)
         `)
-        .eq('verification_status', 'verified')
+        .eq('verification_status', 'verificado')
         .eq('is_active', true)
       if (error) throw error
       // El puntaje no es una columna: se calcula con get_instructor_stats (igual que en el perfil)

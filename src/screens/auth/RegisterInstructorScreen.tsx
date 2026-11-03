@@ -71,12 +71,8 @@ export default function RegisterInstructorScreen({ navigation }: Props) {
   const searchInDirectory = async () => {
     if (!searchQuery.trim()) return
     setSearching(true)
-    const { data } = await supabase
-      .from('instructors')
-      .select('id, full_name, neighborhood, verification_status')
-      .ilike('full_name', `%${searchQuery}%`)
-      .is('user_id', null)
-      .limit(5)
+    // Sin sesión no se puede leer la tabla: esta función devuelve solo datos no sensibles
+    const { data } = await supabase.rpc('search_unclaimed_instructors', { p_query: searchQuery.trim() })
     setSearchResults(data ?? [])
     setSearching(false)
   }
