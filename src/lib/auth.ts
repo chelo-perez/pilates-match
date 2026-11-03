@@ -148,6 +148,8 @@ export function subscribeAuth() {
     if (event === 'INITIAL_SESSION' || event === 'SIGNED_IN' || event === 'USER_UPDATED'
       || (event === 'TOKEN_REFRESHED' && !st.user)) {
       const userId = session.user.id
+      // Sin perfil todavía: mostramos "cargando" en vez de una pantalla intermedia
+      if (!st.user) st.setLoading(true)
       setTimeout(() => { syncAuthUser(userId) }, 0)
     }
   })

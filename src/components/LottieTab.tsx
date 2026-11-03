@@ -3,6 +3,7 @@
 import React, { useRef, useEffect } from 'react'
 import { View } from 'react-native'
 import LottieView from 'lottie-react-native'
+import { colors } from './ui'
 
 interface LottieTabProps {
   source: any
@@ -32,7 +33,7 @@ export default function LottieTab({ source, focused, size = 26 }: LottieTabProps
         colorFilters={[
           {
             keypath: '**',
-            color: focused ? '#4A5D4E' : '#9A9A9A',
+            color: focused ? colors.sage : colors.light,
           },
         ]}
         speed={1.2}

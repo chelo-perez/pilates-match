@@ -5,7 +5,7 @@
 import React, { useEffect, useRef } from 'react'
 import { TouchableOpacity, Text, StyleSheet, Animated, ActivityIndicator, View } from 'react-native'
 import { Feather } from '@expo/vector-icons'
-import { colors } from './ui'
+import { colors, radius } from './ui'
 
 interface SaveButtonProps {
   label?: string
@@ -47,7 +47,7 @@ export default function SaveButton({
   const isSecondary = variant === 'secondary'
 
   const bgColor = isSuccess
-    ? '#2E6B1A'
+    ? colors.okTx
     : isPending
       ? colors.sageMid
       : isSecondary ? colors.sageLight : colors.sage
@@ -69,10 +69,10 @@ export default function SaveButton({
         activeOpacity={0.85}
       >
         {isPending ? (
-          <ActivityIndicator color={isSecondary ? colors.sage : '#fff'} size="small" />
+          <ActivityIndicator color={isSecondary ? colors.sage : colors.white} size="small" />
         ) : isSuccess ? (
           <View style={s.successRow}>
-            <Feather name="check" size={16} color="#fff" />
+            <Feather name="check" size={16} color={colors.white} />
             <Text style={s.btnTxt}>{labelSuccess}</Text>
           </View>
         ) : (
@@ -85,14 +85,13 @@ export default function SaveButton({
 
 const s = StyleSheet.create({
   btn: {
-    borderTopLeftRadius: 14, borderTopRightRadius: 0,
-    borderBottomLeftRadius: 0, borderBottomRightRadius: 14,
+    ...radius.leaf,
     padding: 15, alignItems: 'center', justifyContent: 'center',
     borderWidth: 0.5, minHeight: 50,
   },
   btnSecondary: { backgroundColor: colors.sageLight },
   btnDisabled:  { opacity: 0.7 },
   successRow:   { flexDirection: 'row', alignItems: 'center', gap: 8 },
-  btnTxt:       { fontFamily: 'Nunito-Bold', fontSize: 15, color: '#fff' },
+  btnTxt:       { fontFamily: 'Nunito-Bold', fontSize: 15, color: colors.white },
   btnTxtSecondary: { color: colors.sage },
 })

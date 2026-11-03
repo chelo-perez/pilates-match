@@ -1,6 +1,7 @@
 // src/screens/auth/SplashScreen.tsx
 import React, { useEffect, useRef } from 'react'
 import { View, Image, Animated, StyleSheet, Dimensions } from 'react-native'
+import { colors } from '../../components/ui'
 
 const { width } = Dimensions.get('window')
 
@@ -63,11 +64,11 @@ const s = StyleSheet.create({
     ...StyleSheet.absoluteFillObject,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#2D3F31',
+    backgroundColor: colors.forestDark,
     zIndex: 999,
   },
-  gradTop:    { ...StyleSheet.absoluteFillObject, backgroundColor: '#2D3F31', opacity: 1 },
-  gradBottom: { position: 'absolute', bottom: 0, left: 0, right: 0, height: '60%', backgroundColor: '#4A5D4E', opacity: 0.6 },
+  gradTop:    { ...StyleSheet.absoluteFillObject, backgroundColor: colors.forestDark, opacity: 1 },
+  gradBottom: { position: 'absolute', bottom: 0, left: 0, right: 0, height: '60%', backgroundColor: colors.sage, opacity: 0.6 },
   blob1: { position: 'absolute', width: 300, height: 300, borderRadius: 150, backgroundColor: 'rgba(255,255,255,0.04)', top: -80, right: -60 },
   blob2: { position: 'absolute', width: 200, height: 200, borderRadius: 100, backgroundColor: 'rgba(255,255,255,0.03)', bottom: -50, left: -40 },
   logo:  { width: width * 0.6, height: width * 0.4 },

@@ -79,14 +79,6 @@ export const useInstructor = (instructorId: string | undefined) =>
     staleTime: 5 * 60 * 1000,
   })
 
-/** Instructores pendientes de verificación (Cámara). */
-export const usePendingInstructors = () =>
-  useQuery({
-    queryKey: ['pending-instructors'],
-    queryFn: instructorAPI.getPending,
-    staleTime: 60 * 1000,
-  })
-
 // ── Evaluaciones ────────────────────────────────────────────
 export const useEvaluationHistory = (studioId: string | undefined) =>
   useQuery({

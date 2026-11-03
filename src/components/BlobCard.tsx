@@ -1,5 +1,6 @@
 import React, { useEffect, useRef } from 'react'
 import { View, StyleSheet, Animated, TouchableOpacity, Easing } from 'react-native'
+import { colors, radius } from './ui'
 
 interface BlobCardProps {
   children: React.ReactNode
@@ -62,15 +63,12 @@ export default function BlobCard({
 
 const s = StyleSheet.create({
   card: {
-    backgroundColor: '#fff',
-    borderTopLeftRadius: 20,
-    borderTopRightRadius: 0,
-    borderBottomLeftRadius: 0,
-    borderBottomRightRadius: 20,
+    backgroundColor: colors.white,
+    ...radius.leafLg,
     borderWidth: 0.5,
-    borderColor: '#D8E2D8',
+    borderColor: colors.mint,
     overflow: 'hidden',
-    shadowColor: '#2D3F31',
+    shadowColor: colors.forestDark,
     shadowOffset: { width: 0, height: 3 },
     shadowOpacity: 0.07,
     shadowRadius: 8,

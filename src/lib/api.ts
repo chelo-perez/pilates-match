@@ -5,9 +5,9 @@
 import { supabase, db } from './supabase'
 import { todayISO } from './dates'
 import type {
-  StudioWithMembership, Studio, Evaluation, EvaluationWithInstructor, Match,
-  CreateEvaluationDTO, CreateMatchDTO, UpdateRatesDTO, UpdateBudgetDTO,
-  Membership, InstructorStats, InstructorWithDetails,
+  StudioWithMembership, Evaluation, Match,
+  CreateEvaluationDTO, CreateMatchDTO, UpdateRatesDTO,
+  InstructorStats, InstructorWithDetails,
 } from '../types/database'
 
 // ============================================================
@@ -38,35 +38,6 @@ export const studioAPI = {
     // memberships.studio_id es UNIQUE → PostgREST devuelve objeto, pero por las dudas
     const m = (data as any).membership
     return { ...(data as any), membership: Array.isArray(m) ? (m[0] ?? null) : (m ?? null) } as StudioWithMembership
-  },
-
-  updateStudio: async (studioId: string, updates: Partial<Studio>) => {
-    // El dueño no puede cambiar is_member / member_since / camara_id
-    const { is_member, member_since, camara_id, id, user_id, created_at, ...safe } = updates as any
-    const { data, error } = await db.studios().update(safe).eq('id', studioId).select().single()
-    if (error) throw error
-    return data
-  },
-
-  getMembership: async (studioId: string): Promise<Membership | null> => {
-    const { data, error } = await db.memberships().select('*').eq('studio_id', studioId).maybeSingle()
-    if (error) throw error
-    return data
-  },
-
-  getBudget: async (studioId: string) => {
-    const { data, error } = await db.budgets().select('*').eq('studio_id', studioId).maybeSingle()
-    if (error) throw error
-    return data
-  },
-
-  upsertBudget: async (studioId: string, budget: UpdateBudgetDTO) => {
-    const { data, error } = await db.budgets()
-      .upsert({ studio_id: studioId, ...budget, updated_at: new Date().toISOString() }, { onConflict: 'studio_id' })
-      .select()
-      .single()
-    if (error) throw error
-    return data
   },
 
   canMatch: async (studioId: string): Promise<boolean> => {
@@ -143,41 +114,6 @@ export const instructorAPI = {
     return data
   },
 
-  /** Reemplaza toda la disponibilidad del instructor. */
-  upsertAvailability: async (instructorId: string, slots: { day_of_week: string; start_time: string; end_time: string; class_type: string; is_active?: boolean }[]) => {
-    const { error: delError } = await db.availability().delete().eq('instructor_id', instructorId)
-    if (delError) throw delError
-    if (!slots.length) return []
-    const { data, error } = await db.availability()
-      .insert(slots.map(s => ({ ...s, instructor_id: instructorId })))
-      .select()
-    if (error) throw error
-    return data
-  },
-
-  /** Reemplaza todas las zonas (barrios) del instructor. */
-  upsertZones: async (instructorId: string, neighborhoods: string[]) => {
-    const { error: delError } = await db.zones().delete().eq('instructor_id', instructorId)
-    if (delError) throw delError
-    const unique = Array.from(new Set(neighborhoods))
-    if (!unique.length) return []
-    const { data, error } = await db.zones()
-      .insert(unique.map(n => ({ instructor_id: instructorId, neighborhood: n })))
-      .select()
-    if (error) throw error
-    return data
-  },
-
-  // Para la Cámara
-  getPending: async () => {
-    const { data, error } = await db.instructors()
-      .select('*, certifications(*)')
-      .eq('verification_status', 'pendiente')
-      .order('created_at', { ascending: true })
-    if (error) throw error
-    return data ?? []
-  },
-
   /** La Cámara aprueba o rechaza. `note` queda en verification_note (el instructor la ve). */
   verify: async (instructorId: string, approved: boolean, note?: string | null) => {
     const user = await authAPI.getUser()
@@ -217,37 +153,6 @@ export const evaluationAPI = {
       .single()
     if (error) throw error
     return data
-  },
-
-  getByInstructor: async (instructorId: string, studioId?: string): Promise<EvaluationWithInstructor[]> => {
-    let query = db.evaluations()
-      .select('*, studio:studios(id, name, neighborhood)')
-      .eq('instructor_id', instructorId)
-      .order('class_date', { ascending: false })
-    if (studioId) query = query.eq('studio_id', studioId)
-    const { data, error } = await query
-    if (error) throw error
-    return (data ?? []) as any
-  },
-
-  /** Clases aceptadas ya dictadas (fecha local) que el estudio todavía no evaluó. */
-  getPendingForStudio: async (studioId: string) => {
-    const { data: completed, error } = await db.matches()
-      .select('*, instructor:instructors(id, full_name, avatar_url)')
-      .eq('studio_id', studioId)
-      .eq('status', 'aceptado')
-      .lt('class_date', todayISO())
-      .order('class_date', { ascending: false })
-      .limit(50)
-    if (error) throw error
-
-    const { data: evaluated, error: evalError } = await db.evaluations()
-      .select('instructor_id, class_date')
-      .eq('studio_id', studioId)
-    if (evalError) throw evalError
-
-    const done = new Set((evaluated ?? []).map(e => `${e.instructor_id}_${e.class_date}`))
-    return (completed ?? []).filter(m => !done.has(`${m.instructor_id}_${m.class_date}`))
   },
 
   getStudioHistory: async (studioId: string, limit = 20) => {
