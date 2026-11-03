@@ -53,7 +53,7 @@ export default function CamaraProfileEditScreen({ navigation }: any) {
       if (error) throw error
     },
     onSuccess: () => qc.invalidateQueries({ queryKey: ['camara-profile'] }),
-    onError: (e: any) => showToast('Error: ' + e.message),
+    onError: (e: any) => showToast('Error: ' + e.message, 'error'),
   })
 
 
@@ -63,7 +63,7 @@ export default function CamaraProfileEditScreen({ navigation }: any) {
     onSuccess: (url: string) => void
   ) => {
     const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync()
-    if (status !== 'granted') { Alert.alert('Permiso requerido', 'Necesitamos acceso a tu galería'); return }
+    if (status !== 'granted') { showToast('Necesitamos acceso a tu galería', 'warning'); return }
 
     const result = await ImagePicker.launchImageLibraryAsync({
       mediaTypes: ImagePicker.MediaTypeOptions.Images,
@@ -95,7 +95,7 @@ export default function CamaraProfileEditScreen({ navigation }: any) {
       onSuccess(url)
       showToast('Foto actualizada')
     } catch (e: any) {
-      Alert.alert('Error', e.message)
+      showToast(e.message, 'error')
     } finally {
       setUploading(false)
     }

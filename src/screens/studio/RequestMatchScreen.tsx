@@ -61,7 +61,7 @@ export default function RequestMatchScreen({ navigation, route }: Props) {
     : selectedDays.length > 0
 
   const handleSubmit = async () => {
-    if (!canSubmit) { showToast('Seleccioná al menos un día'); return }
+    if (!canSubmit) { showToast('Seleccioná al menos un día', 'warning'); return }
     try {
       await createMatch.mutateAsync({
         instructor_id: instructorId,
@@ -84,7 +84,7 @@ export default function RequestMatchScreen({ navigation, route }: Props) {
       setTimeout(() => navigation.goBack(), 1800)
     } catch (e: any) {
       if (e.message === 'MATCH_LIMIT_REACHED') navigation.navigate('MembershipPaywall')
-      else showToast('Error: ' + e.message)
+      else showToast('Error: ' + e.message, 'error')
     }
   }
 

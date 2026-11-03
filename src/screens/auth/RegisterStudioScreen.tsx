@@ -10,6 +10,8 @@ import { supabase } from '../../lib/supabase'
 import { authAPI } from '../../lib/api'
 import { Button, Input, Badge, colors, spacing, radius, typography } from '../../components/ui'
 import type { NativeStackScreenProps } from '@react-navigation/native-stack'
+import Toast from '../../components/Toast'
+import { useToast } from '../../hooks/useToast'
 
 const NEIGHBORHOODS = [
   'Palermo', 'Villa Crespo', 'Almagro', 'Caballito', 'Belgrano',
@@ -29,6 +31,7 @@ type Form = z.infer<typeof schema>
 type Props = NativeStackScreenProps<any, 'RegisterStudio'>
 
 export default function RegisterStudioScreen({ navigation, route }: Props) {
+  const { toast, showToast, hideToast } = useToast()
   const role = route.params?.role ?? 'estudio'
   const [loading, setLoading] = useState(false)
   const [step, setStep] = useState(1)
@@ -50,7 +53,7 @@ export default function RegisterStudioScreen({ navigation, route }: Props) {
     const { data } = await supabase.from('studios').select('id').eq('camara_code', camaraCode).single()
     setVerifyingCode(false)
     setCodeVerified(!data) // Si no hay estudio con ese código, es válido
-    if (data) Alert.alert('Código en uso', 'Este código ya está asociado a otro estudio.')
+    if (data) showToast('Este código ya está asociado a otro estudio', 'warning')
   }
 
   const onSubmit = async (data: Form) => {
@@ -102,7 +105,7 @@ export default function RegisterStudioScreen({ navigation, route }: Props) {
 
     } catch (e: any) {
       console.log('ERROR FINAL:', e.message)
-      Alert.alert('Error al registrarse', e.message)
+      showToast('Error al registrarse: ' + e.message, 'error')
     } finally {
       setLoading(false)
     }
@@ -209,6 +212,7 @@ export default function RegisterStudioScreen({ navigation, route }: Props) {
           )}
         </View>
       </ScrollView>
+      <Toast visible={toast.visible} message={toast.message} type={toast.type} onHide={hideToast} />
     </KeyboardAvoidingView>
   )
 }

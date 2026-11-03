@@ -95,7 +95,7 @@ export default function StudioDetailScreen({ navigation, route }: any) {
       setPlanNote('')
       showToast('Plan actualizado correctamente')
     },
-    onError: (e: any) => showToast('Error: ' + e.message),
+    onError: (e: any) => showToast('Error: ' + e.message, 'error'),
   })
 
   const blockMutation = useMutation({
@@ -108,7 +108,7 @@ export default function StudioDetailScreen({ navigation, route }: any) {
       qc.invalidateQueries({ queryKey: ['studio-detail', studioId] })
       showToast(block ? 'Estudio bloqueado' : 'Estudio desbloqueado')
     },
-    onError: (e: any) => showToast('Error: ' + e.message),
+    onError: (e: any) => showToast('Error: ' + e.message, 'error'),
   })
 
   if (isLoading || !studio) return <LoadingScreen />

@@ -60,14 +60,14 @@ export default function LoginScreen({ navigation }: any) {
       if (profile?.role) { setUser(profile); navigateByRole(profile.role) }
       else navigation.replace('SelectRole')
     } catch (e: any) {
-      showToast(e.message ?? 'Error al conectar con ' + provider)
+      showToast(e.message ?? 'Error al conectar con ' + provider, 'error')
     } finally {
       setSocialLoading(null)
     }
   }
 
   const handleEmailLogin = async () => {
-    if (!email.trim() || !password) { showToast('Completá email y contraseña'); return }
+    if (!email.trim() || !password) { showToast('Completá email y contraseña', 'warning'); return }
     setLoading(true)
     try {
       const { data, error } = await supabase.auth.signInWithPassword({ email: email.trim().toLowerCase(), password })
@@ -76,7 +76,7 @@ export default function LoginScreen({ navigation }: any) {
       if (profile) { setSession(data.session); setUser(profile); navigateByRole(profile.role) }
       else navigation.replace('SelectRole')
     } catch (e: any) {
-      showToast(e.message?.includes('Invalid') ? 'Email o contraseña incorrectos' : e.message)
+      showToast(e.message?.includes('Invalid') ? 'Email o contraseña incorrectos' : e.message, 'error')
     } finally {
       setLoading(false)
     }

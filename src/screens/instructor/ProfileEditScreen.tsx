@@ -90,7 +90,7 @@ export default function ProfileEditScreen({ navigation }: any) {
     onSuccess: (url: string) => void
   ) => {
     const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync()
-    if (status !== 'granted') { Alert.alert('Permiso requerido', 'Necesitamos acceso a tu galería'); return }
+    if (status !== 'granted') { showToast('Necesitamos acceso a tu galería', 'warning'); return }
 
     const result = await ImagePicker.launchImageLibraryAsync({
       mediaTypes: ImagePicker.MediaTypeOptions.Images,
@@ -122,7 +122,7 @@ export default function ProfileEditScreen({ navigation }: any) {
       onSuccess(url)
       showToast('Foto actualizada')
     } catch (e: any) {
-      Alert.alert('Error', e.message)
+      showToast(e.message, 'error')
     } finally {
       setUploading(false)
     }
@@ -342,6 +342,7 @@ export default function ProfileEditScreen({ navigation }: any) {
           </View>
         </View>
       </Modal>
+      <Toast visible={toast.visible} message={toast.message} type={toast.type} onHide={hideToast} />
     </View>
   )
 }

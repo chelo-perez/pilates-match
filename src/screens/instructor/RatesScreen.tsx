@@ -53,7 +53,7 @@ export default function InstructorRatesScreen({ navigation }: any) {
       showToast('Tarifas guardadas correctamente')
       setTimeout(() => navigation.goBack(), 1200)
     },
-    onError: (e: any) => showToast(e.message ?? 'Error al guardar'),
+    onError: (e: any) => showToast(e.message ?? 'Error al guardar', 'error'),
   })
 
   const fmt     = (n: number) => '$' + n.toLocaleString('es-AR')

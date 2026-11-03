@@ -12,6 +12,8 @@ import type { NativeStackScreenProps } from '@react-navigation/native-stack'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { Feather } from '@expo/vector-icons'
 import { TouchableOpacity as TO } from 'react-native'
+import Toast from '../../components/Toast'
+import { useToast } from '../../hooks/useToast'
 
 function SimpleSlider({ value, onValueChange, min = 1, max = 10, step = 1 }: any) {
   const steps = []
@@ -30,6 +32,7 @@ function SimpleSlider({ value, onValueChange, min = 1, max = 10, step = 1 }: any
 type Props = NativeStackScreenProps<any, 'EvaluateInstructor'>
 
 export default function EvaluateInstructorScreen({ navigation, route }: Props) {
+  const { toast, showToast, hideToast } = useToast()
   const insets = useSafeAreaInsets()
   const { instructorId, classDate, classType } = (route.params || {}) as any
   const { data: instructor, isLoading } = useInstructor(instructorId)
@@ -64,7 +67,7 @@ export default function EvaluateInstructorScreen({ navigation, route }: Props) {
         { text: 'Aceptar', onPress: () => navigation.popToTop() }
       ])
     } catch (e: any) {
-      Alert.alert('Error', 'No pudimos registrar tu evaluación en este momento. Volvé a intentarlo.')
+      showToast('No pudimos registrar tu evaluación. Volvé a intentarlo.', 'error')
     }
   }
 
@@ -125,6 +128,7 @@ export default function EvaluateInstructorScreen({ navigation, route }: Props) {
           style={{ marginTop: spacing.md, backgroundColor: '#4A5D4E' }}
         />
       </ScrollView>
+      <Toast visible={toast.visible} message={toast.message} type={toast.type} onHide={hideToast} />
     </KeyboardAvoidingView>
   )
 }

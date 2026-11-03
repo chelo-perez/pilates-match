@@ -91,6 +91,7 @@ export default function AvailabilityScreen() {
       qc.invalidateQueries({ queryKey: ['my-instructor-availability'] })
       showToast('Disponibilidad guardada correctamente')
     },
+    onError: (e: any) => showToast('Error al guardar: ' + e.message, 'error'),
   })
 
   const addSlot = () => {
@@ -262,6 +263,7 @@ export default function AvailabilityScreen() {
           </View>
         </View>
       </Modal>
+      <Toast visible={toast.visible} message={toast.message} type={toast.type} onHide={hideToast} />
     </View>
   )
 }

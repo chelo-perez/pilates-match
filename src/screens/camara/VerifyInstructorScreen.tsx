@@ -8,6 +8,8 @@ import { Feather } from '@expo/vector-icons'
 import HeroHeader from '../../components/HeroHeader'
 import BlobCard from '../../components/BlobCard'
 import { useAuthStore } from '../../store'
+import Toast from '../../components/Toast'
+import { useToast } from '../../hooks/useToast'
 
 const REJECT_CERT_REASONS = [
   'Certificado inválido o vencido',
@@ -28,6 +30,7 @@ const NO_VERIFY_REASONS = [
 ]
 
 export default function VerifyInstructorScreen({ navigation, route }: any) {
+  const { toast, showToast, hideToast } = useToast()
   const { instructorId } = route.params
   const qc = useQueryClient()
   const user = useAuthStore(s => s.user)
@@ -60,7 +63,7 @@ export default function VerifyInstructorScreen({ navigation, route }: any) {
       }).eq('id', certId)
     },
     onSuccess: () => qc.invalidateQueries({ queryKey: ['instructor-detail', instructorId] }),
-    onError: (e: any) => Alert.alert('Error', e.message),
+    onError: (e: any) => showToast(e.message, 'error'),
   })
 
   // ── Rechazar certificado ──
@@ -97,7 +100,7 @@ export default function VerifyInstructorScreen({ navigation, route }: any) {
       qc.invalidateQueries({ queryKey: ['instructor-detail', instructorId] })
       navigation.goBack()
     },
-    onError: (e: any) => Alert.alert('Error', e.message),
+    onError: (e: any) => showToast(e.message, 'error'),
   })
 
   // ── No verificar ──
@@ -125,7 +128,7 @@ export default function VerifyInstructorScreen({ navigation, route }: any) {
       await supabase.from('instructors').update({ is_active: active }).eq('id', instructorId)
     },
     onSuccess: () => qc.invalidateQueries({ queryKey: ['instructor-detail', instructorId] }),
-    onError: (e: any) => Alert.alert('Error', e.message),
+    onError: (e: any) => showToast(e.message, 'error'),
   })
 
   if (isLoading) return <LoadingScreen message="Cargando instructor..." />
@@ -420,6 +423,7 @@ export default function VerifyInstructorScreen({ navigation, route }: any) {
         </View>
       </Modal>
 
+      <Toast visible={toast.visible} message={toast.message} type={toast.type} onHide={hideToast} />
     </View>
   )
 }

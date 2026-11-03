@@ -70,7 +70,7 @@ export default function RateRangesScreen({ navigation }: any) {
       qc.invalidateQueries({ queryKey: ['rate-ranges'] })
       showToast('Rangos actualizados')
     },
-    onError: (e: any) => showToast('Error: ' + e.message),
+    onError: (e: any) => showToast('Error: ' + e.message, 'error'),
   })
 
   if (isLoading) return <LoadingScreen />

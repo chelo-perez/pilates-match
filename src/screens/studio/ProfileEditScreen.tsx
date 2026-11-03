@@ -51,7 +51,7 @@ export default function StudioProfileEditScreen({ navigation }: any) {
 
   const pickLogo = async () => {
     const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync()
-    if (status !== 'granted') { Alert.alert('Permiso requerido', 'Necesitamos acceso a la galería'); return }
+    if (status !== 'granted') { showToast('Necesitamos acceso a la galería', 'warning'); return }
     const result = await ImagePicker.launchImageLibraryAsync({
       mediaTypes: ImagePicker.MediaTypeOptions.Images,
       allowsEditing: true, aspect: [1, 1], quality: 0.7,
@@ -72,7 +72,7 @@ export default function StudioProfileEditScreen({ navigation }: any) {
       await supabase.from('studios').update({ logo_url: url }).eq('id', studio!.id)
       qc.invalidateQueries({ queryKey: ['my-studio'] })
       showToast('Logo actualizado')
-    } catch (e: any) { Alert.alert('Error', e.message) }
+    } catch (e: any) { showToast(e.message, 'error') }
     finally { setUploading(false) }
   }
 
@@ -89,7 +89,7 @@ export default function StudioProfileEditScreen({ navigation }: any) {
       if (error) throw error
     },
     onSuccess: () => qc.invalidateQueries({ queryKey: ['my-studio'] }),
-    onError: (e: any) => showToast('Error: ' + e.message),
+    onError: (e: any) => showToast('Error: ' + e.message, 'error'),
   })
 
   const toggleEquip = (key: string) =>

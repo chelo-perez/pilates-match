@@ -12,6 +12,8 @@ import { authAPI, instructorAPI } from '../../lib/api'
 import { Button, Input, Card, Avatar, Badge, colors, spacing, radius, typography } from '../../components/ui'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import type { NativeStackScreenProps } from '@react-navigation/native-stack'
+import Toast from '../../components/Toast'
+import { useToast } from '../../hooks/useToast'
 
 // ── Schemas por paso ────────────────────────────────────────
 
@@ -46,6 +48,7 @@ const NEIGHBORHOODS = [
 type Props = NativeStackScreenProps<any, 'RegisterInstructor'>
 
 export default function RegisterInstructorScreen({ navigation }: Props) {
+  const { toast, showToast, hideToast } = useToast()
   const [loading, setLoading]           = useState(false)
   const [step, setStep]                 = useState(1)
   const [searchQuery, setSearchQuery]   = useState('')
@@ -146,7 +149,7 @@ export default function RegisterInstructorScreen({ navigation }: Props) {
       )
 
     } catch (e: any) {
-      Alert.alert('Error al registrarse', e.message)
+      showToast('Error al registrarse: ' + e.message, 'error')
     } finally {
       setLoading(false)
     }
@@ -407,6 +410,7 @@ export default function RegisterInstructorScreen({ navigation }: Props) {
         )}
 
       </ScrollView>
+      <Toast visible={toast.visible} message={toast.message} type={toast.type} onHide={hideToast} />
     </KeyboardAvoidingView>
   )
 }

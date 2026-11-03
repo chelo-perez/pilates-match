@@ -15,6 +15,8 @@ import {
 } from '../../components/ui'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { Feather } from '@expo/vector-icons'
+import Toast from '../../components/Toast'
+import { useToast } from '../../hooks/useToast'
 
 type Props = {
   navigation: any
@@ -36,6 +38,7 @@ const ISSUES = [
 ] as const
 
 export default function EvaluateStudioScreen({ navigation, route }: Props) {
+  const { toast, showToast, hideToast } = useToast()
   const { matchId, studioId, studioName, classDate, classType } = route.params
   const user = useAuthStore(s => s.user)
   const qc   = useQueryClient()
@@ -100,7 +103,7 @@ export default function EvaluateStudioScreen({ navigation, route }: Props) {
         [{ text: 'OK', onPress: () => navigation.goBack() }]
       )
     },
-    onError: (e: any) => Alert.alert('Error', e.message),
+    onError: (e: any) => showToast(e.message, 'error'),
   })
 
   const handleSubmit = () => {
@@ -235,6 +238,7 @@ export default function EvaluateStudioScreen({ navigation, route }: Props) {
           <Text style={styles.skipText}>Omitir por ahora</Text>
         </TouchableOpacity>
       </ScrollView>
+      <Toast visible={toast.visible} message={toast.message} type={toast.type} onHide={hideToast} />
     </KeyboardAvoidingView>
   )
 }

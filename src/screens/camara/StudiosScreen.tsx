@@ -75,11 +75,12 @@ export default function CamaraStudiosScreen({ navigation }: any) {
         )
       }
     },
-    onSuccess: () => {
+    onSuccess: (_data, vars) => {
       qc.invalidateQueries({ queryKey: ['camara-studios-full'] })
       qc.invalidateQueries({ queryKey: ['camara-dashboard'] })
+      showToast(vars.isMember ? 'Membresía activada' : 'Membresía removida')
     },
-    onError: (e: any) => Alert.alert('Error', e.message),
+    onError: (e: any) => showToast(e.message, 'error'),
   })
 
   const handleToggleMember = (studio: any) => {
@@ -240,6 +241,7 @@ export default function CamaraStudiosScreen({ navigation }: any) {
           )
         }}
       />
+      <Toast visible={toast.visible} message={toast.message} type={toast.type} onHide={hideToast} />
     </View>
   )
 }
