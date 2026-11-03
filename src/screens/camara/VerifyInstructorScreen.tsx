@@ -454,6 +454,10 @@ const s = StyleSheet.create({
   tagTxt:         { fontFamily: 'Nunito-SemiBold', fontSize: 11, color: colors.sage },
 
   certCard:       { padding: spacing.md, marginBottom: spacing.sm },
+  rejectedBanner:    { flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: colors.redBg, borderTopLeftRadius: 8, borderTopRightRadius: 0, borderBottomLeftRadius: 0, borderBottomRightRadius: 8, paddingHorizontal: 10, paddingVertical: 6, marginBottom: spacing.sm },
+  rejectedBannerTxt: { fontFamily: 'Nunito-SemiBold', fontSize: 12, color: colors.redTx, flex: 1 },
+  approvedBanner:    { flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: colors.okBg, borderTopLeftRadius: 8, borderTopRightRadius: 0, borderBottomLeftRadius: 0, borderBottomRightRadius: 8, paddingHorizontal: 10, paddingVertical: 6, marginBottom: spacing.sm },
+  approvedBannerTxt: { fontFamily: 'Nunito-SemiBold', fontSize: 12, color: colors.okTx, flex: 1 },
   certTop:        { flexDirection: 'row', alignItems: 'flex-start', gap: spacing.sm, marginBottom: spacing.sm },
   certName:       { fontFamily: 'Nunito-Bold', fontSize: 13, color: colors.dark },
   certMeta:       { fontFamily: 'Nunito-Regular', fontSize: 11, color: colors.mid, marginTop: 2 },

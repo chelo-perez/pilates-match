@@ -30,7 +30,7 @@ interface MatchedInstructor {
   missing_reasons: string[]
 }
 
-function calcMatch(instructor: any, studio: any): Omit<MatchedInstructor, keyof any> {
+function calcMatch(instructor: any, studio: any): Pick<MatchedInstructor, 'match_level' | 'match_score' | 'match_reasons' | 'missing_reasons'> {
   const budgetReg = studio.budget_regular ?? 0
   const budgetRep = studio.budget_replacement ?? 0
   const studioEquip = studio.equipment ?? []
@@ -103,7 +103,7 @@ export default function SearchScreen({ navigation, route }: Props) {
   if (studioLoading) return <LoadingScreen />
 
   // Calcular match para cada instructor
-  const matched: MatchedInstructor[] = instructors.map((ins: any) => ({
+  const matched: MatchedInstructor[] = instructors.map((ins: any): MatchedInstructor => ({
     id:               ins.id,
     full_name:        ins.full_name,
     neighborhood:     ins.neighborhood,

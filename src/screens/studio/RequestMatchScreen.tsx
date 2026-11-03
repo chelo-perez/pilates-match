@@ -238,8 +238,8 @@ export default function RequestMatchScreen({ navigation, route }: Props) {
                   </TouchableOpacity>
                   {showFromPicker && (
                     <DateTimePicker
-                      value={scheduleFrom} mode="time" display="spinner" minuteInterval={60}
-                      onChange={(_, t) => { setShowFromPicker(false); if (t) { const d = new Date(t); d.setSeconds(0,0); setScheduleFrom(d) } }}
+                      value={scheduleFrom} mode="time" display="spinner"
+                      onChange={(_, t) => { setShowFromPicker(false); if (t) { const d = new Date(t); d.setMinutes(0,0,0); setScheduleFrom(d) } }}
                     />
                   )}
                 </View>
@@ -253,8 +253,8 @@ export default function RequestMatchScreen({ navigation, route }: Props) {
                   </TouchableOpacity>
                   {showToPicker && (
                     <DateTimePicker
-                      value={scheduleTo} mode="time" display="spinner" minuteInterval={60}
-                      onChange={(_, t) => { setShowToPicker(false); if (t) { const d = new Date(t); d.setSeconds(0,0); setScheduleTo(d) } }}
+                      value={scheduleTo} mode="time" display="spinner"
+                      onChange={(_, t) => { setShowToPicker(false); if (t) { const d = new Date(t); d.setMinutes(0,0,0); setScheduleTo(d) } }}
                     />
                   )}
                 </View>

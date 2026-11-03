@@ -46,12 +46,12 @@ export default function InstructorProfileScreen({ navigation, route }: Props) {
     <View style={{ flex: 1, backgroundColor: colors.cream }}>
       <HeroHeader
         title={instructor.full_name}
-        subtitle={[instructor.neighborhood, instructor.years_experience > 0 && `${instructor.years_experience} años exp.`].filter(Boolean).join(' · ')}
+        subtitle={[instructor.neighborhood, (instructor.years_experience ?? 0) > 0 && `${instructor.years_experience} años exp.`].filter(Boolean).join(' · ')}
         onBack={() => navigation.goBack()}
         backLabel="Resultados"
         rightElement={
           <View style={s.scoreWrap}>
-            <Text style={s.scoreNum}>{stats?.avg_score > 0 ? stats.avg_score.toFixed(1) : '—'}</Text>
+            <Text style={s.scoreNum}>{stats && stats.avg_score > 0 ? stats.avg_score.toFixed(1) : '—'}</Text>
             <Text style={s.scoreLbl}>Puntaje</Text>
           </View>
         }

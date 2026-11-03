@@ -79,6 +79,7 @@ export interface Instructor {
   neighborhood: string | null
   bio: string | null
   avatar_url: string | null
+  years_experience?: number | null
   verification_status: VerificationStatus
   verified_at: string | null
   verified_by: string | null

@@ -32,6 +32,18 @@ export default function CamaraDashboardScreen({ navigation }: any) {
     enabled: !!user?.camara_id,
   })
 
+  // Mismo queryKey que CamaraProfileEdit: al editar el perfil se refresca acá también
+  const { data: camara } = useQuery({
+    queryKey: ['camara-profile', user?.camara_id],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('camaras').select('*').eq('id', user?.camara_id).single()
+      if (error) throw error
+      return data
+    },
+    enabled: !!user?.camara_id,
+  })
+
   const { data: potentialMembers = [] } = useQuery({
     queryKey: ['potential-members', user?.camara_id],
     queryFn: async () => {
@@ -55,10 +67,10 @@ export default function CamaraDashboardScreen({ navigation }: any) {
       <ScrollView contentContainerStyle={{ paddingBottom: 100 }} showsVerticalScrollIndicator={false}>
 
         <HeroHeader
-          title={user?.camara_name ?? 'Cámara de Pilates'}
+          title={camara?.name ?? 'Cámara de Pilates'}
           centered
-          avatarUri={user?.camara_logo_url}
-          avatarFallback={user?.camara_name ?? 'C'}
+          avatarUri={camara?.logo_url ?? undefined}
+          avatarFallback={camara?.name ?? 'C'}
           onAvatarPress={() => navigation.navigate('CamaraProfileEdit')}
           rightElement={
             <TouchableOpacity style={s.logoutBtn} onPress={handleSignOut}>
