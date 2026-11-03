@@ -7,11 +7,25 @@ import * as SplashScreen from 'expo-splash-screen'
 import RootNavigator from './src/navigation'
 import AnimatedSplash from './src/screens/auth/SplashScreen'
 import { supabase } from './src/lib/supabase'
-import { useAuthStore } from './src/store'
+import { useAuthStore, useStudioStore, useSearchStore } from './src/store'
 import { registerPushToken } from './src/lib/push'
 
 SplashScreen.preventAutoHideAsync()
 const queryClient = new QueryClient()
+
+// Al cambiar de usuario hay que borrar todo lo que quedó en memoria del anterior:
+// si no, la app muestra datos del usuario previo (p. ej. su estudio) hasta 5 min.
+let lastUserId: string | null | undefined
+function onUserChanged(userId: string | null) {
+  if (lastUserId !== undefined && lastUserId !== userId) {
+    queryClient.clear()
+    useStudioStore.getState().setStudio(null)
+    useStudioStore.getState().setStats(null)
+    useSearchStore.getState().clearFilters()
+    useSearchStore.getState().setResults([])
+  }
+  lastUserId = userId
+}
 
 export default function App() {
   const [showSplash, setShowSplash] = React.useState(true)
@@ -31,6 +45,7 @@ export default function App() {
 
   useEffect(() => {
     supabase.auth.getSession().then(async ({ data: { session } }) => {
+      onUserChanged(session?.user?.id ?? null)
       setSession(session)
       if (session?.user) {
         const { data: profile } = await supabase
@@ -49,6 +64,7 @@ export default function App() {
     // se difiere con setTimeout.
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       (event, session) => {
+        onUserChanged(session?.user?.id ?? null)
         setSession(session)
         if (event === 'SIGNED_OUT') {
           setUser(null)
