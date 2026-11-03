@@ -37,6 +37,9 @@ export default function LottieTab({ source, focused, size = 26 }: LottieTabProps
           },
         ]}
         speed={1.2}
+        // Al terminar vuelve al cuadro inicial: el último cuadro de algunas
+        // animaciones es una pose intermedia y el ícono queda deforme
+        onAnimationFinish={() => ref.current?.reset()}
       />
     </View>
   )
