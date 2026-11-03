@@ -293,13 +293,14 @@ export const instructorAPI = {
     return data
   },
 
-  claimProfile: async (instructorId: string) => {
+  claimProfile: async (instructorId: string, dni: string) => {
     // El instructor reclama su perfil ya existente en el directorio
     const user = await authAPI.getUser()
     if (!user) throw new Error('Not authenticated')
 
     // La base valida que el perfil no tenga dueño y que el usuario no tenga otro
-    const { data, error } = await supabase.rpc('claim_instructor_profile', { p_instructor_id: instructorId })
+    // La base valida el DNI, que el perfil no tenga dueño y lo deja pendiente de revisión
+    const { data, error } = await supabase.rpc('claim_instructor_profile', { p_instructor_id: instructorId, p_dni: dni })
     if (error) throw error
     return data
   },
@@ -381,10 +382,8 @@ export const matchAPI = {
       .insert({ studio_id: studioId, ...dto })
       .select()
       .single()
+    // El límite y el contador del mes los controla la base al insertar
     if (error) throw error
-
-    // Incrementar contador de matches del mes
-    await supabase.rpc('increment_match_counter', { p_studio_id: studioId })
 
     return data
   },

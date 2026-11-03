@@ -23,7 +23,7 @@ const schema = z.object({
   neighborhood: z.string().min(1, 'Barrio requerido'),
   phone: z.string().optional(),
   email: z.string().email('Email inválido'),
-  password: z.string().min(6, 'Mínimo 6 caracteres'),
+  password: z.string().min(8, 'Mínimo 8 caracteres'),
   camaraCode: z.string().optional(),
 })
 type Form = z.infer<typeof schema>
@@ -49,7 +49,7 @@ export default function RegisterStudioScreen({ navigation, route }: Props) {
   const verifyCode = async () => {
     if (!camaraCode) return
     setVerifyingCode(true)
-    // Verificar que el código existe en la DB y no está usado
+    // Solo revisa que el código no esté usado; la Cámara lo valida y activa la membresía
     const { data } = await supabase.from('studios').select('id').eq('camara_code', camaraCode).single()
     setVerifyingCode(false)
     setCodeVerified(!data) // Si no hay estudio con ese código, es válido
@@ -78,8 +78,6 @@ export default function RegisterStudioScreen({ navigation, route }: Props) {
           neighborhood: selectedNeighborhood || data.neighborhood,
           phone: data.phone || null,
           camara_code: data.camaraCode || null,
-          is_member: codeVerified,
-          member_since: codeVerified ? new Date().toISOString().split('T')[0] : null,
         })
         .select('id')
         .single()
@@ -92,10 +90,12 @@ export default function RegisterStudioScreen({ navigation, route }: Props) {
       console.log('PASO 4: Creando membresia con studio_id:', studioData.id)
       const { error: memError } = await supabase.from('memberships').insert({
         studio_id: studioData.id,
+        // Todos arrancan en Freemium; la Cámara cambia el plan al validar el código
         status: 'activa',
-        end_date: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
-        matches_limit: codeVerified ? null : 3,
-        monthly_price_ars: 15000,
+        plan_type: 'freemium',
+        end_date: new Date(new Date().setFullYear(new Date().getFullYear() + 10)).toISOString().split('T')[0],
+        matches_limit: 1,
+        matches_used_month: 0,
       })
 
       console.log('PASO 4 memError:', JSON.stringify(memError))
@@ -185,7 +185,7 @@ export default function RegisterStudioScreen({ navigation, route }: Props) {
                     style={{ flex: 1, marginBottom: 0 }} />
                 )}
               />
-              {codeVerified && <Badge label="✓ Verificado" color="success" />}
+              {codeVerified && <Badge label="✓ Disponible" color="success" />}
             </View>
             {camaraCode && !codeVerified && (
               <Button label="Verificar código" variant="secondary" size="sm"
@@ -193,7 +193,7 @@ export default function RegisterStudioScreen({ navigation, route }: Props) {
             )}
             <View style={styles.infoBox}>
               <Text style={styles.infoText}>
-                Si tu estudio ya es socio de la Cámara, ingresá el código que recibiste. Si no, podés omitirlo y asociarte más adelante.
+                Si tu estudio ya es socio de la Cámara, ingresá el código que recibiste. La Cámara lo va a validar y activar tu membresía. Si no, podés omitirlo y asociarte más adelante.
               </Text>
             </View>
           </>

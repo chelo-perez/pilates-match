@@ -32,7 +32,7 @@ const schemaCert = z.object({
 
 const schemaAccess = z.object({
   email:    z.string().email('Email inválido'),
-  password: z.string().min(6, 'Mínimo 6 caracteres'),
+  password: z.string().min(8, 'Mínimo 8 caracteres'),
 })
 
 type PersonalForm = z.infer<typeof schemaPersonal>
@@ -79,7 +79,7 @@ export default function RegisterInstructorScreen({ navigation }: Props) {
 
   const claimProfile = (profile: any) => {
     setSelectedProfile(profile)
-    setStep(4) // Si reclama perfil va directo al acceso
+    setStep(2) // Pide datos personales (el DNI valida el reclamo) y después salta el certificado
   }
 
   // ── Submit final ────────────────────────────────────────
@@ -100,7 +100,7 @@ export default function RegisterInstructorScreen({ navigation }: Props) {
 
       if (selectedProfile) {
         // Reclamar perfil existente del directorio
-        await instructorAPI.claimProfile(selectedProfile.id)
+        await instructorAPI.claimProfile(selectedProfile.id, personalData.dni)
 
         // Actualizar con los datos nuevos que ingresó
         await supabase.from('instructors').update({
@@ -284,7 +284,7 @@ export default function RegisterInstructorScreen({ navigation }: Props) {
             <Button label="Continuar →" size="lg" fullWidth
               onPress={personal.handleSubmit(data => {
                 setPersonalData(data)
-                setStep(3)
+                setStep(selectedProfile ? 4 : 3)
               })}
               style={{ marginTop: spacing.lg }}
             />
@@ -388,7 +388,8 @@ export default function RegisterInstructorScreen({ navigation }: Props) {
         {step > 1 && (
           <Button label="← Atrás" variant="ghost"
             onPress={() => {
-              if (step === 4 && selectedProfile) setStep(1)
+              if (step === 4 && selectedProfile) setStep(2)
+              else if (step === 2 && selectedProfile) { setSelectedProfile(null); setStep(1) }
               else setStep(s => s - 1)
             }}
             fullWidth style={{ marginTop: spacing.sm }}

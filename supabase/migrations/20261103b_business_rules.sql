@@ -1,4 +1,3 @@
--- PENDIENTE: no aplicada todavía.
 -- =====================================================================
 -- Reglas de negocio del lado del servidor (revisión 2026-11-03)
 --
@@ -152,10 +151,13 @@ GRANT EXECUTE ON FUNCTION public.claim_instructor_profile(uuid, text) TO authent
 
 -- ── 4. Estudios existentes sin membresía ─────────────────────────────
 -- Socios de la Cámara -> plan Socio (5/mes); el resto -> Freemium (1/mes)
-INSERT INTO public.memberships (studio_id, status, plan_type, matches_limit, matches_used_month, start_date, last_reset_date)
+-- Vencimiento como en la app: Freemium a 10 años, socio a 1 año
+INSERT INTO public.memberships (studio_id, status, plan_type, matches_limit, matches_used_month, start_date, end_date, last_reset_date)
 SELECT s.id, 'activa',
        CASE WHEN s.is_member THEN 'socio' ELSE 'freemium' END,
        CASE WHEN s.is_member THEN 5 ELSE 1 END,
-       0, CURRENT_DATE, CURRENT_DATE
+       0, CURRENT_DATE,
+       CASE WHEN s.is_member THEN CURRENT_DATE + interval '1 year' ELSE CURRENT_DATE + interval '10 years' END,
+       CURRENT_DATE
 FROM public.studios s
 WHERE NOT EXISTS (SELECT 1 FROM public.memberships m WHERE m.studio_id = s.id);

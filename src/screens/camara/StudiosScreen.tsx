@@ -59,21 +59,21 @@ export default function CamaraStudiosScreen({ navigation }: any) {
         .eq('id', studioId)
       if (error) throw error
 
-      if (isMember) {
-        // Crear membresía activa por 1 año
-        const endDate = new Date()
-        endDate.setFullYear(endDate.getFullYear() + 1)
-        await db.memberships().upsert(
-          {
-            studio_id: studioId,
-            status: 'activa',
-            start_date: new Date().toISOString().split('T')[0],
-            end_date: endDate.toISOString().split('T')[0],
-            matches_limit: null, // ilimitado
-          },
-          { onConflict: 'studio_id' }
-        )
-      }
+      // Socio de la Cámara -> plan Socio (5/mes, 1 año). Al quitarla vuelve a Freemium (1/mes).
+      const endDate = new Date()
+      endDate.setFullYear(endDate.getFullYear() + (isMember ? 1 : 10))
+      const { error: memError } = await db.memberships().upsert(
+        {
+          studio_id: studioId,
+          status: 'activa',
+          plan_type: isMember ? 'socio' : 'freemium',
+          matches_limit: isMember ? 5 : 1,
+          start_date: new Date().toISOString().split('T')[0],
+          end_date: endDate.toISOString().split('T')[0],
+        },
+        { onConflict: 'studio_id' }
+      )
+      if (memError) throw memError
     },
     onSuccess: (_data, vars) => {
       qc.invalidateQueries({ queryKey: ['camara-studios-full'] })
@@ -89,7 +89,7 @@ export default function CamaraStudiosScreen({ navigation }: any) {
       nowMember ? 'Quitar membresía' : 'Activar membresía',
       nowMember
         ? `¿Querés remover a "${studio.name}" como estudio miembro?`
-        : `¿Querés activar la membresía de "${studio.name}"? Se creará una membresía por 12 meses.`,
+        : `¿Querés activar la membresía de "${studio.name}"? Pasa al plan Socio (5 propuestas por mes) por 12 meses.`,
       [
         { text: 'Cancelar', style: 'cancel' },
         {
