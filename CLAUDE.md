@@ -8,7 +8,7 @@ App mobile multi-tenant que conecta **instructores de Pilates** con **estudios**
 - Estado: Zustand (`src/store/index.ts`). El auth store **no persiste sesión** (`partialize: () => ({})`); la sesión se valida siempre contra Supabase en `App.tsx`
 - Datos: Supabase (proyecto `tkhaiovstwgqzabvxxss`) + TanStack Query
 - Íconos de tabs: Lottie (`lottie-react-native`, JSON en `assets/lottie/`, componente `src/components/LottieTab.tsx`). Íconos internos: Feather
-- Build: EAS, cuenta **chelo.perez3** (`owner` en app.json), perfil `preview` (APK). Plan gratis = cupo mensual limitado de builds
+- Build: EAS, cuenta **chelo.perez** (`owner` en app.json), perfil `preview` (APK). Plan gratis = cupo mensual limitado de builds
 
 ## Roles (valores exactos en DB)
 `instructor`, `estudio` (NO "studio"), `camara_admin`, `super_admin`
