@@ -9,7 +9,7 @@ import {
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { supabase } from '../../lib/supabase'
 import { useMyInstructor } from '../../hooks'
-import { errorText, UserError } from './userError'
+import { errorText, UserError } from '../../lib/errors'
 import { formatDate } from '../../lib/dates'
 import {
   Card, Button, Input, ErrorState,

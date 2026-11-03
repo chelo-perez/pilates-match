@@ -1,6 +1,6 @@
 // src/screens/camara/planUtils.ts
 // Cambio de plan de un estudio desde la Cámara: una sola lógica para StudiosScreen y StudioDetailScreen
-import { errorText, UserError } from '../instructor/userError'
+import { errorText, UserError } from '../../lib/errors'
 import { supabase } from '../../lib/supabase'
 import { toLocalISODate } from '../../lib/dates'
 import { PLANS } from '../../constants/plans'

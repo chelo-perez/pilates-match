@@ -5,7 +5,7 @@ import {
 } from 'react-native'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { db } from '../../lib/supabase'
-import { errorText, UserError } from '../instructor/userError'
+import { errorText, UserError } from '../../lib/errors'
 import { formatDate } from '../../lib/dates'
 import { planLabel, usedThisMonth } from '../../constants/plans'
 import { Badge, Button, EmptyState, ErrorState, LoadingScreen, colors, spacing, radius, typography } from '../../components/ui'

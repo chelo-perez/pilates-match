@@ -5,7 +5,7 @@ import { View, Text, StyleSheet, ScrollView, TouchableOpacity, TextInput, Modal,
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { supabase, db } from '../../lib/supabase'
 import { instructorAPI } from '../../lib/api'
-import { errorText, UserError } from '../instructor/userError'
+import { errorText, UserError } from '../../lib/errors'
 import { formatDate } from '../../lib/dates'
 import { SPECIALTY_LABELS, VERIFICATION_STATUS } from '../../constants/labels'
 import { LoadingScreen, ErrorState, Button, colors, spacing, radius, typography } from '../../components/ui'

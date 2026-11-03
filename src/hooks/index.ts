@@ -100,6 +100,8 @@ export const useCreateEvaluation = () => {
       qc.invalidateQueries({ queryKey: ['evaluation-history'] })
       qc.invalidateQueries({ queryKey: ['studio-stats'] })
       qc.invalidateQueries({ queryKey: ['instructor'] })
+      qc.invalidateQueries({ queryKey: ['instructor-detail'] })
+      qc.invalidateQueries({ queryKey: ['camara-instructors'] })
     },
   })
 }
@@ -123,4 +125,13 @@ export const useCreateMatch = () => {
       qc.invalidateQueries({ queryKey: ['studio-stats'] })
     },
   })
+}
+
+// ── Invalidación del perfil de instructor ───────────────────
+/** Llamar después de tocar certificados, datos o verificación de un instructor. */
+export function invalidateInstructorProfile(qc: ReturnType<typeof useQueryClient>) {
+  qc.invalidateQueries({ queryKey: ['my-instructor'] })
+  qc.invalidateQueries({ queryKey: ['instructor'] })
+  qc.invalidateQueries({ queryKey: ['instructor-detail'] })
+  qc.invalidateQueries({ queryKey: ['camara-instructors'] })
 }

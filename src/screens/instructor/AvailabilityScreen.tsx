@@ -4,7 +4,7 @@ import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Modal } from 'rea
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { supabase } from '../../lib/supabase'
 import { useMyInstructor } from '../../hooks'
-import { errorText, UserError } from './userError'
+import { errorText, UserError } from '../../lib/errors'
 import { BARRIOS_CABA } from '../../constants/barrios'
 import { Button, LoadingScreen, ErrorState, colors, spacing, typography, radius } from '../../components/ui'
 import SaveButton from '../../components/SaveButton'
