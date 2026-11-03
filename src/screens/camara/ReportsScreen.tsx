@@ -2,8 +2,8 @@ import React, { useState } from 'react'
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from 'react-native'
 import { useQuery } from '@tanstack/react-query'
 import { supabase } from '../../lib/supabase'
-import { useAuthStore } from '../../store'
-import { LoadingScreen, colors, spacing } from '../../components/ui'
+import { parseLocalDate } from '../../lib/dates'
+import { LoadingScreen, ErrorState, colors, spacing, radius, typography } from '../../components/ui'
 import BlobCard from '../../components/BlobCard'
 import HeroHeader from '../../components/HeroHeader'
 import { Feather } from '@expo/vector-icons'
@@ -30,87 +30,96 @@ const SectionTitle = ({ icon, title }: any) => (
   </View>
 )
 
-export default function ReportsScreen({ navigation }: any) {
+export default function ReportsScreen() {
   const [period, setPeriod] = useState<Period>('month')
-  const user = useAuthStore(s => s.user)
 
-  const { data: stats, isLoading } = useQuery({
-    queryKey: ['camara-reports', period, user?.camara_id],
+  const { data: stats, isLoading, isError, refetch } = useQuery({
+    queryKey: ['camara-reports', period],
     queryFn: async () => {
       const now   = new Date()
-      const start = new Date(now)
-      if (period === 'month')   start.setDate(1)
-      if (period === 'quarter') start.setMonth(now.getMonth() - 3)
-      if (period === 'year')    start.setFullYear(now.getFullYear() - 1)
-      const startStr = start.toISOString().split('T')[0]
+      let start: Date
+      if (period === 'month')        start = new Date(now.getFullYear(), now.getMonth(), 1)
+      else if (period === 'quarter') start = new Date(now.getFullYear(), now.getMonth() - 3, now.getDate())
+      else                           start = new Date(now.getFullYear(), 0, 1)
+      const startIso = start.toISOString()
 
-      const [
-        matchesRes, evalsRes, instructorsRes, studiosRes,
-        membershipsRes, newInstructorsRes, newStudiosRes,
-      ] = await Promise.all([
-        supabase.from('matches').select('status, class_type, created_at').gte('created_at', startStr),
-        supabase.from('evaluations').select('average_score, score_technique, score_punctuality, created_at').gte('created_at', startStr),
-        supabase.from('instructors').select('id, full_name, score, verification_status, is_active, created_at'),
-        supabase.from('studios').select('id, name, neighborhood, is_member, created_at'),
-        supabase.from('memberships').select('studio_id, plan_type, status, end_date, price_ars, studio:studios(name)'),
-        supabase.from('instructors').select('id, full_name').gte('created_at', startStr),
-        supabase.from('studios').select('id, name').gte('created_at', startStr),
+      // Sin filtrar por camara_id: los registros nuevos llegan con camara_id null
+      const results = await Promise.all([
+        supabase.from('matches').select('status, class_type, created_at').gte('created_at', startIso),
+        supabase.from('evaluations').select('instructor_id, average_score, score_technique, created_at').gte('created_at', startIso),
+        supabase.from('instructors').select('id, full_name, verification_status, is_active, created_at'),
+        supabase.from('studios').select('id, is_member, created_at'),
+        supabase.from('memberships').select('studio_id, plan_type, status, end_date, price_ars, monthly_price_ars'),
+        supabase.from('evaluations').select('instructor_id, average_score'),
       ])
+      const failed = results.find(r => r.error)
+      if (failed?.error) throw failed.error
+      const [matchesRes, evalsRes, instructorsRes, studiosRes, membershipsRes, allEvalsRes] = results
 
-      const matches    = matchesRes.data ?? []
-      const evals      = evalsRes.data ?? []
+      const matches     = matchesRes.data ?? []
+      const evals       = evalsRes.data ?? []
       const instructors = instructorsRes.data ?? []
-      const studios    = studiosRes.data ?? []
+      const studios     = studiosRes.data ?? []
       const memberships = membershipsRes.data ?? []
+      const inPeriod = (d: string) => new Date(d) >= start
 
       // ── Actividad ──
       const total      = matches.length
+      const answered   = matches.filter((m: any) => m.status === 'aceptado' || m.status === 'rechazado').length
       const accepted   = matches.filter((m: any) => m.status === 'aceptado').length
-      const acceptRate = total > 0 ? Math.round((accepted / total) * 100) : 0
+      const acceptRate = answered > 0 ? Math.round((accepted / answered) * 100) : null
       const regular    = matches.filter((m: any) => m.class_type === 'regular').length
       const reemplazo  = matches.filter((m: any) => m.class_type === 'reemplazo').length
 
       // ── Evaluaciones ──
-      const scores     = evals.map((e: any) => e.average_score).filter(Boolean)
-      const avgScore   = scores.length > 0 ? (scores.reduce((a: number, b: number) => a + b) / scores.length).toFixed(1) : '—'
-      const techScores = evals.map((e: any) => e.score_technique).filter(Boolean)
-      const avgTech    = techScores.length > 0 ? (techScores.reduce((a: number, b: number) => a + b) / techScores.length).toFixed(1) : '—'
+      const avg = (xs: number[]) => xs.length ? (xs.reduce((a, b) => a + b, 0) / xs.length).toFixed(1) : '—'
+      const avgScore = avg(evals.map((e: any) => Number(e.average_score)).filter(n => !isNaN(n) && n > 0))
+      const avgTech  = avg(evals.map((e: any) => Number(e.score_technique)).filter(n => !isNaN(n) && n > 0))
 
       // ── Instructores ──
-      const verified   = instructors.filter((i: any) => i.verification_status === 'verificado')
-      const pending    = instructors.filter((i: any) => i.verification_status === 'pendiente')
-      const active     = instructors.filter((i: any) => i.is_active)
-      const topInst    = [...verified].filter((i: any) => i.score).sort((a: any, b: any) => b.score - a.score).slice(0, 5)
+      const verified = instructors.filter((i: any) => i.verification_status === 'verificado')
+      const pending  = instructors.filter((i: any) => i.verification_status === 'pendiente')
+      // Ranking: promedio histórico de evaluaciones de cada instructor verificado (mínimo 1)
+      const byInstructor: Record<string, number[]> = {}
+      ;(allEvalsRes.data ?? []).forEach((e: any) => {
+        if (e.average_score == null) return
+        ;(byInstructor[e.instructor_id] ??= []).push(Number(e.average_score))
+      })
+      const topInst = verified
+        .filter((i: any) => byInstructor[i.id]?.length)
+        .map((i: any) => {
+          const xs = byInstructor[i.id]
+          return { id: i.id, full_name: i.full_name, score: xs.reduce((a, b) => a + b, 0) / xs.length, count: xs.length }
+        })
+        .sort((a, b) => b.score - a.score)
+        .slice(0, 5)
 
       // ── Estudios ──
-      const members    = studios.filter((s: any) => s.is_member)
-      const nonMembers = studios.filter((s: any) => !s.is_member)
+      const members = studios.filter((s: any) => s.is_member).length
 
-      // ── Financiero ──
+      // ── Membresías ──
       const activeMemberships = memberships.filter((m: any) => m.status === 'activa')
-      const monthlyRevenue    = activeMemberships.reduce((sum: number, m: any) => sum + (m.price_ars ?? 0), 0)
+      const paid = activeMemberships.filter((m: any) => m.plan_type && m.plan_type !== 'freemium')
+      const priced = paid.filter((m: any) => m.price_ars != null)
+      const monthlyRevenue = priced.reduce((sum: number, m: any) => sum + (m.price_ars ?? 0), 0)
       const planCounts: Record<string, number> = {}
-      activeMemberships.forEach((m: any) => { planCounts[m.plan_type ?? 'freemium'] = (planCounts[m.plan_type ?? 'freemium'] ?? 0) + 1 })
-
-      // Vencimientos próximos (30 días)
+      activeMemberships.forEach((m: any) => {
+        const k = m.plan_type ?? 'freemium'
+        planCounts[k] = (planCounts[k] ?? 0) + 1
+      })
       const in30 = new Date(); in30.setDate(in30.getDate() + 30)
-      const expiringSoon = activeMemberships.filter((m: any) => m.end_date && new Date(m.end_date) <= in30)
+      const expiringSoon = paid.filter((m: any) => m.end_date && parseLocalDate(m.end_date) <= in30).length
 
       return {
-        // Actividad
         total, accepted, acceptRate, regular, reemplazo,
-        // Evaluaciones
         totalEvals: evals.length, avgScore, avgTech,
-        // Instructores
         totalInstructors: instructors.length, verified: verified.length,
-        pending: pending.length, active: active.length,
-        topInst, newInstructors: newInstructorsRes.data?.length ?? 0,
-        // Estudios
-        totalStudios: studios.length, members: members.length,
-        nonMembers: nonMembers.length, newStudios: newStudiosRes.data?.length ?? 0,
-        // Financiero
-        monthlyRevenue, planCounts, expiringSoon: expiringSoon.length,
-        activeMemberships: activeMemberships.length,
+        pending: pending.length, topInst,
+        newInstructors: instructors.filter((i: any) => inPeriod(i.created_at)).length,
+        totalStudios: studios.length, members, nonMembers: studios.length - members,
+        newStudios: studios.filter((s: any) => inPeriod(s.created_at)).length,
+        monthlyRevenue, revenueKnown: priced.length > 0, missingPrices: paid.length - priced.length,
+        planCounts, expiringSoon, activeMemberships: activeMemberships.length, paidMemberships: paid.length,
       }
     },
   })
@@ -133,14 +142,17 @@ export default function ReportsScreen({ navigation }: any) {
         }
       />
 
-      {isLoading ? <LoadingScreen /> : !stats ? null : (
+      {isLoading ? <LoadingScreen message="Armando reportes..." /> : isError || !stats ? (
+        <ErrorState message="No pudimos cargar los reportes." onRetry={refetch} />
+      ) : (
         <ScrollView contentContainerStyle={s.content} showsVerticalScrollIndicator={false}>
 
           {/* ── 1. ACTIVIDAD ── */}
           <SectionTitle icon="activity" title="ACTIVIDAD DE LA RED" />
           <View style={s.kpiGrid}>
             <KPI num={stats.total}      label="Propuestas"  delay={0} />
-            <KPI num={`${stats.acceptRate}%`} label="Aceptación" color={stats.acceptRate >= 60 ? colors.okTx : colors.warnTx} delay={800} />
+            <KPI num={stats.acceptRate === null ? '—' : `${stats.acceptRate}%`} label="Aceptación" sub="de las respondidas"
+              color={stats.acceptRate === null ? colors.mid : stats.acceptRate >= 60 ? colors.okTx : colors.warnTx} delay={800} />
             <KPI num={stats.regular}    label="Regulares"   color={colors.sage} delay={1600} />
             <KPI num={stats.reemplazo}  label="Reemplazos"  color={colors.gold} delay={2400} />
           </View>
@@ -164,13 +176,13 @@ export default function ReportsScreen({ navigation }: any) {
 
           {stats.topInst.length > 0 && (
             <BlobCard style={s.rankCard} delay={500}>
-              <Text style={s.rankTitle}>Top instructores por puntaje</Text>
+              <Text style={s.rankTitle}>Mejores instructores por puntaje (histórico)</Text>
               {stats.topInst.map((i: any, idx: number) => (
                 <View key={i.id} style={s.rankRow}>
                   <View style={s.rankNum}><Text style={s.rankNumTxt}>#{idx + 1}</Text></View>
                   <View style={s.rankAv}><Text style={s.rankAvTxt}>{i.full_name[0]}</Text></View>
                   <Text style={s.rankName}>{i.full_name}</Text>
-                  <Text style={s.rankScore}>{i.score?.toFixed(1) ?? '—'}</Text>
+                  <Text style={s.rankScore}>{i.score.toFixed(1)}</Text>
                 </View>
               ))}
             </BlobCard>
@@ -189,10 +201,10 @@ export default function ReportsScreen({ navigation }: any) {
           {stats.totalStudios > 0 && (
             <BlobCard style={[s.rankCard, { marginBottom: spacing.md }]} delay={300}
               blobColor="rgba(184,150,12,0.10)" blobColor2="rgba(184,150,12,0.06)">
-              <Text style={s.rankTitle}>Conversión Freemium → Pago</Text>
+              <Text style={s.rankTitle}>Estudios socios de la Cámara</Text>
               <View style={s.convRow}>
                 <Text style={s.convPct}>{Math.round((stats.members / stats.totalStudios) * 100)}%</Text>
-                <Text style={s.convDesc}>de los estudios son socios</Text>
+                <Text style={s.convDesc}>de los estudios registrados son socios</Text>
               </View>
               <View style={s.progressBar}>
                 <View style={[s.progressFill, { width: `${Math.round((stats.members / stats.totalStudios) * 100)}%` }]} />
@@ -203,9 +215,10 @@ export default function ReportsScreen({ navigation }: any) {
           {/* ── 5. FINANCIERO ── */}
           <SectionTitle icon="dollar-sign" title="MEMBRESÍAS Y FACTURACIÓN" />
           <View style={s.kpiGrid}>
-            <KPI num={fmt(stats.monthlyRevenue)} label="Ingresos mensuales" color={colors.gold} delay={0} />
-            <KPI num={stats.activeMemberships}   label="Membresías activas" color={colors.okTx} delay={700} />
-            <KPI num={stats.expiringSoon}         label="Vencen en 30 días"  color={stats.expiringSoon > 0 ? colors.redTx : colors.mid} delay={1400} />
+            <KPI num={stats.revenueKnown ? fmt(stats.monthlyRevenue) : '—'} label="Ingresos mensuales" color={colors.gold}
+              sub={stats.missingPrices > 0 ? `${stats.missingPrices} plan${stats.missingPrices > 1 ? 'es' : ''} sin precio cargado` : undefined} delay={0} />
+            <KPI num={stats.paidMemberships}   label="Planes pagos activos" color={colors.okTx} sub={`${stats.activeMemberships} activas en total`} delay={700} />
+            <KPI num={stats.expiringSoon}       label="Pagos que vencen en 30 días" color={stats.expiringSoon > 0 ? colors.redTx : colors.mid} delay={1400} />
           </View>
 
           {/* Distribución de planes */}
@@ -215,7 +228,7 @@ export default function ReportsScreen({ navigation }: any) {
               <Text style={s.rankTitle}>Distribución de planes</Text>
               {[
                 { key: 'premium',  label: 'Premium',      color: colors.gold },
-                { key: 'socio',    label: 'Socio Cámara', color: '#0C447C'   },
+                { key: 'socio',    label: 'Socio Cámara', color: colors.blueTx },
                 { key: 'starter',  label: 'Starter',      color: colors.sage },
                 { key: 'freemium', label: 'Freemium',     color: colors.mid  },
               ].map(plan => {
@@ -243,22 +256,22 @@ export default function ReportsScreen({ navigation }: any) {
 const s = StyleSheet.create({
   tabs:         { flexDirection: 'row', gap: 6, marginTop: 12 },
   tab:          { paddingVertical: 5, paddingHorizontal: 12, borderRadius: 999, backgroundColor: 'rgba(255,255,255,0.15)', borderWidth: 0.5, borderColor: 'rgba(255,255,255,0.3)' },
-  tabActive:    { backgroundColor: '#fff' },
+  tabActive:    { backgroundColor: colors.white },
   tabTxt:       { fontFamily: 'Nunito-SemiBold', fontSize: 11, color: 'rgba(255,255,255,0.7)' },
   tabTxtActive: { color: colors.sage, fontFamily: 'Nunito-Bold' },
   content:      { padding: spacing.md, paddingBottom: 48 },
   sectionRow:   { flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 8, marginTop: 4 },
-  sectionTitle: { fontFamily: 'Nunito-Bold', fontSize: 9, color: colors.sage, letterSpacing: 0.8 },
+  sectionTitle: { ...typography.caption, color: colors.sage },
   kpiGrid:      { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm, marginBottom: spacing.md },
   kpi:          { flexBasis: '47%', padding: spacing.md },
   kpiNum:       { fontFamily: 'Nunito-Bold', fontSize: 26, color: colors.dark, marginBottom: 2 },
-  kpiLabel:     { fontFamily: 'Nunito-Bold', fontSize: 9, color: colors.light, textTransform: 'uppercase' as const, letterSpacing: 0.5 },
-  kpiSub:       { fontFamily: 'Nunito-Regular', fontSize: 9, color: colors.light, marginTop: 2 },
+  kpiLabel:     { ...typography.caption },
+  kpiSub:       { fontFamily: 'Nunito-Regular', fontSize: 10, color: colors.light, marginTop: 2 },
   rankCard:     { padding: spacing.md, marginBottom: spacing.md },
   rankTitle:    { fontFamily: 'Nunito-Bold', fontSize: 11, color: colors.dark, marginBottom: spacing.sm },
   rankRow:      { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, paddingVertical: 6, borderBottomWidth: 0.5, borderColor: colors.borderLight },
   rankNum:      { width: 24, height: 24, borderRadius: 12, backgroundColor: colors.sageLight, alignItems: 'center', justifyContent: 'center' },
-  rankNumTxt:   { fontFamily: 'Nunito-Bold', fontSize: 9, color: colors.sage },
+  rankNumTxt:   { fontFamily: 'Nunito-Bold', fontSize: 10, color: colors.sage },
   rankAv:       { width: 32, height: 32, borderRadius: 16, backgroundColor: colors.sageLighter, alignItems: 'center', justifyContent: 'center' },
   rankAvTxt:    { fontFamily: 'Nunito-Bold', fontSize: 13, color: colors.sage },
   rankName:     { fontFamily: 'Nunito-SemiBold', fontSize: 13, color: colors.dark, flex: 1 },

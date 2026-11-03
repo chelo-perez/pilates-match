@@ -5,7 +5,7 @@ import { View, Text, StyleSheet, ScrollView, TouchableOpacity, TextInput, Modal,
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { supabase, db } from '../../lib/supabase'
 import { instructorAPI } from '../../lib/api'
-import { humanizeError } from '../../lib/errors'
+import { errorText, UserError } from '../instructor/userError'
 import { formatDate } from '../../lib/dates'
 import { SPECIALTY_LABELS, VERIFICATION_STATUS } from '../../constants/labels'
 import { LoadingScreen, ErrorState, Button, colors, spacing, radius, typography } from '../../components/ui'
@@ -108,13 +108,13 @@ export default function VerifyInstructorScreen({ navigation, route }: any) {
   const updateCert = async (certId: string, fields: Record<string, any>) => {
     const { data, error } = await supabase.from('certifications').update(fields).eq('id', certId).select('id')
     if (error) throw error
-    if (!data?.length) throw new Error('No tenés permiso para modificar este certificado.')
+    if (!data?.length) throw new UserError('No tenés permiso para modificar este certificado.')
   }
 
   const updateInstructor = async (fields: Record<string, any>) => {
     const { data, error } = await supabase.from('instructors').update(fields).eq('id', instructorId!).select('id')
     if (error) throw error
-    if (!data?.length) throw new Error('No tenés permiso para modificar este instructor.')
+    if (!data?.length) throw new UserError('No tenés permiso para modificar este instructor.')
   }
 
   const certMutation = useMutation({
@@ -134,13 +134,12 @@ export default function VerifyInstructorScreen({ navigation, route }: any) {
       closeModal()
       showToast(v.status === 'approved' ? 'Certificado aprobado' : v.status === 'rejected' ? 'Certificado rechazado' : 'Certificado vuelto a revisión')
     },
-    onError: (e: any) => showToast(humanizeError(e), 'error'),
+    onError: (e: any) => showToast(errorText(e), 'error'),
   })
 
   const verifyMutation = useMutation({
     mutationFn: async () => {
-      await instructorAPI.verify(instructorId!, true)
-      await updateInstructor({ verification_note: null })
+      await instructorAPI.verify(instructorId!, true, null)
       if (internalNote.trim()) await saveNote(internalNote.trim(), 'verificacion')
     },
     onSuccess: () => {
@@ -148,7 +147,7 @@ export default function VerifyInstructorScreen({ navigation, route }: any) {
       setInternalNote('')
       showToast('Instructor verificado')
     },
-    onError: (e: any) => showToast(humanizeError(e), 'error'),
+    onError: (e: any) => showToast(errorText(e), 'error'),
   })
 
   // Pedir corrección (queda pendiente) o rechazar/revocar (queda rechazado); el instructor ve el motivo
@@ -173,20 +172,20 @@ export default function VerifyInstructorScreen({ navigation, route }: any) {
       setInternalNote('')
       showToast(mode === 'reject' ? 'Instructor marcado como rechazado' : 'Pedido de corrección enviado')
     },
-    onError: (e: any) => showToast(humanizeError(e), 'error'),
+    onError: (e: any) => showToast(errorText(e), 'error'),
   })
 
   const toggleActiveMutation = useMutation({
     mutationFn: (active: boolean) => updateInstructor({ is_active: active }),
     onSuccess: (_d, active) => { invalidateAll(); showToast(active ? 'Instructor reactivado' : 'Instructor pausado') },
-    onError: (e: any) => showToast(humanizeError(e), 'error'),
+    onError: (e: any) => showToast(errorText(e), 'error'),
   })
 
   const viewFile = async (path: string) => {
     // document_url guarda el path del bucket privado; los registros viejos pueden tener una URL completa
     if (/^https?:\/\//.test(path)) { Linking.openURL(path); return }
     const { data, error } = await supabase.storage.from('certifications').createSignedUrl(path, 600)
-    if (error || !data?.signedUrl) { showToast(humanizeError(error ?? new Error('No se pudo abrir el archivo')), 'error'); return }
+    if (error || !data?.signedUrl) { showToast(errorText(error ?? new UserError('No se pudo abrir el archivo')), 'error'); return }
     Linking.openURL(data.signedUrl)
   }
 

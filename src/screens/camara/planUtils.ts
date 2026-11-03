@@ -1,5 +1,6 @@
 // src/screens/camara/planUtils.ts
 // Cambio de plan de un estudio desde la Cámara: una sola lógica para StudiosScreen y StudioDetailScreen
+import { errorText, UserError } from '../instructor/userError'
 import { supabase } from '../../lib/supabase'
 import { toLocalISODate } from '../../lib/dates'
 import { PLANS } from '../../constants/plans'
@@ -52,7 +53,7 @@ export async function applyPlan(studioId: string, plan: PlanKey, note?: string) 
     .eq('id', studioId)
     .select('id')
   if (stError) throw stError
-  if (!data?.length) throw new Error('No tenés permiso para modificar este estudio.')
+  if (!data?.length) throw new UserError('No tenés permiso para modificar este estudio.')
 
   if (note?.trim()) {
     const { error: noteError } = await supabase.from('camara_studio_notes')

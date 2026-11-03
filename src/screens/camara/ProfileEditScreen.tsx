@@ -5,7 +5,8 @@ import * as ImagePicker from 'expo-image-picker'
 import * as FileSystem from 'expo-file-system/legacy'
 import { supabase } from '../../lib/supabase'
 import { useAuthStore } from '../../store'
-import { LoadingScreen, colors, spacing } from '../../components/ui'
+import { LoadingScreen, ErrorState, colors, spacing, radius, typography } from '../../components/ui'
+import { errorText, UserError } from '../instructor/userError'
 import { Feather } from '@expo/vector-icons'
 import BlobCard from '../../components/BlobCard'
 import HeroHeader from '../../components/HeroHeader'
@@ -19,7 +20,7 @@ export default function CamaraProfileEditScreen({ navigation }: any) {
   const { toast, showToast, hideToast } = useToast()
   const [uploading, setUploading] = useState(false)
 
-  const { data: camara, isLoading } = useQuery({
+  const { data: camara, isLoading, isError, refetch } = useQuery({
     queryKey: ['camara-profile', user?.camara_id],
     queryFn: async () => {
       const { data, error } = await supabase
@@ -45,22 +46,24 @@ export default function CamaraProfileEditScreen({ navigation }: any) {
 
   const saveMutation = useMutation({
     mutationFn: async () => {
-      const { error } = await supabase.from('camaras').update({
+      if (!name.trim()) throw new UserError('El nombre de la Cámara no puede quedar vacío.')
+      const { data, error } = await supabase.from('camaras').update({
         name:     name.trim(),
         website:  website.trim() || null,
         phone:    phone.trim() || null,
-      }).eq('id', user?.camara_id)
+      }).eq('id', user!.camara_id).select('id')
       if (error) throw error
+      if (!data?.length) throw new UserError('No tenés permiso para editar esta Cámara.')
     },
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['camara-profile'] }),
-    onError: (e: any) => showToast('Error: ' + e.message, 'error'),
+    onSuccess: () => { qc.invalidateQueries({ queryKey: ['camara-profile'] }); showToast('Perfil guardado') },
+    onError: (e: any) => showToast(errorText(e), 'error'),
   })
 
 
   const pickAndUploadAvatar = async (
     bucketName: string,
     storagePath: string,
-    onSuccess: (url: string) => void
+    onSuccess: (url: string) => Promise<void>
   ) => {
     const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync()
     if (status !== 'granted') { showToast('Necesitamos acceso a tu galería', 'warning'); return }
@@ -92,26 +95,37 @@ export default function CamaraProfileEditScreen({ navigation }: any) {
       if (error) throw error
 
       const url = supabase.storage.from(bucketName).getPublicUrl(storagePath).data.publicUrl + '?t=' + Date.now()
-      onSuccess(url)
-      showToast('Foto actualizada')
+      await onSuccess(url)
+      showToast('Logo actualizado')
     } catch (e: any) {
-      showToast(e.message, 'error')
+      showToast(errorText(e), 'error')
     } finally {
       setUploading(false)
     }
   }
 
   const pickLogo = () => pickAndUploadAvatar(
-    'camara-logos',
-    `${user?.camara_id}/logo.jpg`,
+    'avatars',
+    `${user?.id}/camara-logo.jpg`,
     async (url) => {
-      await supabase.from('camaras').update({ logo_url: url }).eq('id', user?.camara_id)
+      const { data, error } = await supabase.from('camaras').update({ logo_url: url }).eq('id', user!.camara_id).select('id')
+      if (error) throw error
+      if (!data?.length) throw new UserError('No tenés permiso para editar esta Cámara.')
       setLogoUrl(url)
       qc.invalidateQueries({ queryKey: ['camara-profile'] })
     }
   )
 
-  if (isLoading) return <LoadingScreen />
+  if (!user?.camara_id) {
+    return (
+      <View style={{ flex: 1, backgroundColor: colors.cream }}>
+        <HeroHeader title="Perfil de la Cámara" onBack={() => navigation.goBack()} backLabel="Inicio" />
+        <ErrorState message="Tu usuario no está asociado a ninguna Cámara. Pedile a un administrador que lo configure." onRetry={() => navigation.goBack()} />
+      </View>
+    )
+  }
+  if (isLoading) return <LoadingScreen message="Cargando perfil..." />
+  if (isError || !camara) return <ErrorState message="No pudimos cargar el perfil de la Cámara." onRetry={refetch} />
 
   return (
     <View style={{ flex: 1, backgroundColor: colors.cream }}>
@@ -122,11 +136,8 @@ export default function CamaraProfileEditScreen({ navigation }: any) {
         avatarUri={logoUrl}
         avatarFallback={name || 'C'}
         onAvatarPress={pickLogo}
-        rightElement={
-          <TouchableOpacity style={s.logoutPill} onPress={() => navigation.goBack()}>
-            <Feather name="x" size={14} color="rgba(255,255,255,0.7)" />
-          </TouchableOpacity>
-        }
+        onBack={() => navigation.goBack()}
+        backLabel="Inicio"
       />
 
       <ScrollView contentContainerStyle={s.content} showsVerticalScrollIndicator={false}>
@@ -140,7 +151,7 @@ export default function CamaraProfileEditScreen({ navigation }: any) {
               {uploading ? 'Subiendo...' : logoUrl ? 'Cambiar logo' : 'Subir logo'}
             </Text>
           </TouchableOpacity>
-          <Text style={s.hint}>PNG con fondo transparente, mínimo 512×512px</Text>
+          <Text style={s.hint}>Imagen cuadrada, idealmente de 512 × 512 px o más</Text>
         </BlobCard>
 
         {/* Nombre e info */}
@@ -193,12 +204,11 @@ export default function CamaraProfileEditScreen({ navigation }: any) {
 
 const s = StyleSheet.create({
   content:       { padding: spacing.md, paddingBottom: 48 },
-  logoutPill:    { width: 30, height: 30, borderRadius: 15, backgroundColor: 'rgba(255,255,255,0.15)', alignItems: 'center', justifyContent: 'center' },
   card:          { padding: spacing.md, marginBottom: spacing.md },
-  sectionTitle:  { fontFamily: 'Nunito-Bold', fontSize: 9, color: colors.light, letterSpacing: 0.8, marginBottom: spacing.md },
-  label:         { fontFamily: 'Nunito-Bold', fontSize: 9, color: colors.light, letterSpacing: 0.7, marginBottom: 5, marginTop: spacing.sm },
-  input:         { backgroundColor: colors.sageLighter, borderTopLeftRadius: 12, borderTopRightRadius: 0, borderBottomLeftRadius: 0, borderBottomRightRadius: 12, borderWidth: 0.5, borderColor: colors.border, padding: 12, fontFamily: 'Nunito-Regular', fontSize: 14, color: colors.dark },
+  sectionTitle:  { ...typography.caption, marginBottom: spacing.md },
+  label:         { ...typography.caption, marginBottom: 5, marginTop: spacing.sm },
+  input:         { backgroundColor: colors.sageLighter, ...radius.leaf, borderWidth: 0.5, borderColor: colors.border, padding: 12, fontFamily: 'Nunito-Regular', fontSize: 14, color: colors.dark },
   hint:          { fontFamily: 'Nunito-Regular', fontSize: 11, color: colors.light, marginTop: 6 },
-  logoUploadBtn: { flexDirection: 'row', alignItems: 'center', gap: 8, backgroundColor: colors.sageLight, borderTopLeftRadius: 12, borderTopRightRadius: 0, borderBottomLeftRadius: 0, borderBottomRightRadius: 12, padding: 14, borderWidth: 0.5, borderColor: colors.border },
+  logoUploadBtn: { flexDirection: 'row', alignItems: 'center', gap: 8, backgroundColor: colors.sageLight, ...radius.leaf, padding: 14, borderWidth: 0.5, borderColor: colors.border },
   logoUploadTxt: { fontFamily: 'Nunito-Bold', fontSize: 14, color: colors.sage },
 })

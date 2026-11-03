@@ -9,7 +9,7 @@ import {
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { supabase } from '../../lib/supabase'
 import { useMyInstructor } from '../../hooks'
-import { humanizeError } from '../../lib/errors'
+import { errorText, UserError } from './userError'
 import { formatDate } from '../../lib/dates'
 import {
   Card, Button, Input, ErrorState,
@@ -75,7 +75,7 @@ export default function EvaluateStudioScreen({ navigation, route }: Props) {
 
   const createMutation = useMutation({
     mutationFn: async () => {
-      if (!instructor?.id) throw new Error('No encontramos tu perfil de instructor.')
+      if (!instructor?.id) throw new UserError('No encontramos tu perfil de instructor.')
 
       const { error } = await supabase
         .from('studio_evaluations')
@@ -90,7 +90,7 @@ export default function EvaluateStudioScreen({ navigation, route }: Props) {
           ...issues,
         })
       if (error) {
-        if ((error as any).code === '23505') throw new Error('Ya evaluaste esta clase.')
+        if ((error as any).code === '23505') throw new UserError('Ya evaluaste esta clase.')
         throw error
       }
     },
@@ -103,7 +103,7 @@ export default function EvaluateStudioScreen({ navigation, route }: Props) {
         [{ text: 'OK', onPress: () => navigation.goBack() }]
       )
     },
-    onError: (e: any) => showToast(humanizeError(e), 'error'),
+    onError: (e: any) => showToast(errorText(e), 'error'),
   })
 
   const handleSubmit = () => {

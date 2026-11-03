@@ -10,7 +10,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useFocusEffect } from '@react-navigation/native'
 import { supabase } from '../../lib/supabase'
 import { useMyInstructor } from '../../hooks'
-import { humanizeError } from '../../lib/errors'
+import { errorText, UserError } from './userError'
 import { formatDate, isPastDate } from '../../lib/dates'
 import { MATCH_STATUS } from '../../constants/labels'
 import { Badge, EmptyState, ErrorState, LoadingScreen, Button, colors, spacing, radius, typography } from '../../components/ui'
@@ -55,7 +55,7 @@ export default function InstructorMatchesScreen({ navigation }: any) {
         .select(`*, ${STUDIO_FIELDS}`)
         .eq('instructor_id', instructorId!)
         .eq('status', 'pendiente')
-        .or(`expires_at.is.null,expires_at.gt.${new Date().toISOString()}`)
+        .or(`expires_at.is.null,expires_at.gt."${new Date().toISOString()}"`)
         .order('class_date', { ascending: true })
       if (error) throw error
       return data ?? []
@@ -72,7 +72,7 @@ export default function InstructorMatchesScreen({ navigation }: any) {
         .from('matches')
         .select(`*, ${STUDIO_FIELDS}`)
         .eq('instructor_id', instructorId!)
-        .or(`status.neq.pendiente,expires_at.lte.${new Date().toISOString()}`)
+        .or(`status.neq.pendiente,expires_at.lte."${new Date().toISOString()}"`)
         .order('class_date', { ascending: false })
         .limit(50)
       if (error) throw error
@@ -102,7 +102,7 @@ export default function InstructorMatchesScreen({ navigation }: any) {
         .eq('status', 'pendiente')
         .select('id')
       if (error) throw error
-      if (!data?.length) throw new Error('Esta propuesta ya no está disponible (puede haber vencido o sido cancelada).')
+      if (!data?.length) throw new UserError('Esta propuesta ya no está disponible (puede haber vencido o sido cancelada).')
     },
     onSuccess: (_d, vars) => {
       qc.invalidateQueries({ queryKey: ['instructor-matches'] })
@@ -110,7 +110,7 @@ export default function InstructorMatchesScreen({ navigation }: any) {
       showToast(vars.status === 'aceptado' ? 'Propuesta aceptada' : 'Propuesta rechazada')
     },
     onError: (e: any) => {
-      showToast(humanizeError(e), 'error')
+      showToast(errorText(e), 'error')
       qc.invalidateQueries({ queryKey: ['instructor-matches'] })
     },
   })

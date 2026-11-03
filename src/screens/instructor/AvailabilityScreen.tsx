@@ -4,7 +4,7 @@ import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Modal } from 'rea
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { supabase } from '../../lib/supabase'
 import { useMyInstructor } from '../../hooks'
-import { humanizeError } from '../../lib/errors'
+import { errorText, UserError } from './userError'
 import { BARRIOS_CABA } from '../../constants/barrios'
 import { Button, LoadingScreen, ErrorState, colors, spacing, typography, radius } from '../../components/ui'
 import SaveButton from '../../components/SaveButton'
@@ -78,7 +78,7 @@ export default function AvailabilityScreen() {
 
   const saveMutation = useMutation({
     mutationFn: async () => {
-      if (!instructorId || !saved) throw new Error('Tu perfil todavía no cargó. Probá de nuevo en unos segundos.')
+      if (!instructorId || !saved) throw new UserError('Tu perfil todavía no cargó. Probá de nuevo en unos segundos.')
 
       // Horarios: primero insertar los nuevos y después borrar los quitados (nunca se queda sin datos)
       const keep = new Set(slots.filter(s => s.id).map(s => s.id))
@@ -118,7 +118,7 @@ export default function AvailabilityScreen() {
       showToast('Disponibilidad guardada')
     },
     onError: (e: any) => {
-      showToast(humanizeError(e), 'error')
+      showToast(errorText(e), 'error')
       setDirty(false)
       qc.invalidateQueries({ queryKey: ['my-availability'] })
     },

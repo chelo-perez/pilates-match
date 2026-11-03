@@ -5,7 +5,7 @@ import {
 } from 'react-native'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { db } from '../../lib/supabase'
-import { humanizeError } from '../../lib/errors'
+import { errorText, UserError } from '../instructor/userError'
 import { formatDate } from '../../lib/dates'
 import { planLabel, usedThisMonth } from '../../constants/plans'
 import { Badge, Button, EmptyState, ErrorState, LoadingScreen, colors, spacing, radius, typography } from '../../components/ui'
@@ -51,7 +51,7 @@ export default function CamaraStudiosScreen({ navigation }: any) {
       STUDIO_KEYS.forEach(queryKey => qc.invalidateQueries({ queryKey }))
       showToast(vars.isMember ? 'Ahora es socio de la Cámara' : 'Ya no es socio: pasó a Freemium')
     },
-    onError: (e: any) => showToast(humanizeError(e), 'error'),
+    onError: (e: any) => showToast(errorText(e), 'error'),
   })
 
   const handleToggleMember = (studio: any) => {

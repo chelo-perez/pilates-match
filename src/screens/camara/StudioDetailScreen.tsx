@@ -3,7 +3,7 @@ import React, { useState } from 'react'
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Modal, TextInput, Alert } from 'react-native'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { supabase } from '../../lib/supabase'
-import { humanizeError } from '../../lib/errors'
+import { errorText, UserError } from '../instructor/userError'
 import { formatDate } from '../../lib/dates'
 import { PLANS, usedThisMonth } from '../../constants/plans'
 import { LoadingScreen, ErrorState, Button, colors, spacing, radius, typography } from '../../components/ui'
@@ -78,7 +78,7 @@ export default function StudioDetailScreen({ navigation, route }: any) {
       showToast(res?.noteSaved === false ? 'Plan actualizado, pero no pudimos guardar el motivo' : 'Plan actualizado',
         res?.noteSaved === false ? 'warning' : 'success')
     },
-    onError: (e: any) => showToast(humanizeError(e), 'error'),
+    onError: (e: any) => showToast(errorText(e), 'error'),
   })
 
   // "Bloquear" = membresía cancelada: el estudio no puede enviar propuestas
@@ -89,13 +89,13 @@ export default function StudioDetailScreen({ navigation, route }: any) {
         .eq('studio_id', studioId!)
         .select('id')
       if (error) throw error
-      if (!data?.length) throw new Error('El estudio no tiene una membresía para bloquear. Asignale un plan primero.')
+      if (!data?.length) throw new UserError('El estudio no tiene una membresía para bloquear. Asignale un plan primero.')
     },
     onSuccess: (_, block) => {
       invalidateAll()
       showToast(block ? 'Estudio bloqueado: no puede enviar propuestas' : 'Estudio desbloqueado')
     },
-    onError: (e: any) => showToast(humanizeError(e), 'error'),
+    onError: (e: any) => showToast(errorText(e), 'error'),
   })
 
   if (!studioId) return <ErrorState message="No encontramos el estudio." onRetry={() => navigation.goBack()} />

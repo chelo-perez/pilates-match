@@ -7,7 +7,7 @@ import { useToast } from '../../hooks/useToast'
 import { supabase } from '../../lib/supabase'
 import { instructorAPI } from '../../lib/api'
 import { useMyInstructor } from '../../hooks'
-import { humanizeError } from '../../lib/errors'
+import { errorText, UserError } from './userError'
 import { LoadingScreen, ErrorState, colors, spacing, radius, typography } from '../../components/ui'
 import HeroHeader from '../../components/HeroHeader'
 import BlobCard from '../../components/BlobCard'
@@ -113,7 +113,7 @@ export default function InstructorRatesScreen() {
       qc.invalidateQueries({ queryKey: ['my-instructor'] })
       showToast('Tarifas guardadas')
     },
-    onError: (e: any) => showToast(humanizeError(e), 'error'),
+    onError: (e: any) => showToast(errorText(e), 'error'),
   })
 
   if (isLoading || loadingRanges) return <LoadingScreen message="Cargando tus tarifas..." />

@@ -8,7 +8,7 @@ import * as DocumentPicker from 'expo-document-picker'
 import { supabase, storage } from '../../lib/supabase'
 import { useAuthStore } from '../../store'
 import { useMyInstructor } from '../../hooks'
-import { humanizeError } from '../../lib/errors'
+import { errorText, UserError } from './userError'
 import { confirmSignOut } from '../../lib/auth'
 import { BARRIOS_CABA } from '../../constants/barrios'
 import { SPECIALTY_LABELS, VERIFICATION_STATUS } from '../../constants/labels'
@@ -97,7 +97,7 @@ export default function ProfileEditScreen() {
       }
     },
     onSuccess: () => { invalidate(); showToast('Perfil actualizado') },
-    onError: (e: any) => { invalidate(); showToast(humanizeError(e), 'error') },
+    onError: (e: any) => { invalidate(); showToast(errorText(e), 'error') },
   })
 
   const pickAvatar = async () => {
@@ -123,7 +123,7 @@ export default function ProfileEditScreen() {
       invalidate()
       showToast('Foto actualizada')
     } catch (e: any) {
-      showToast(humanizeError(e), 'error')
+      showToast(errorText(e), 'error')
     } finally {
       setUploading(false)
     }
@@ -141,7 +141,7 @@ export default function ProfileEditScreen() {
   // Sube el archivo y guarda el PATH en document_url
   const attachFile = async (certId: string, file: PickedFile) => {
     const bytes = await readBytes(file.uri, file.ext)
-    const path = await storage.uploadCertification(instructor!.id, certId, bytes as any, file.ext, file.mimeType)
+    const path = await storage.uploadCertification(instructor!.id, certId, bytes.buffer as ArrayBuffer, file.ext, file.mimeType)
     const { error } = await supabase.from('certifications').update({ document_url: path }).eq('id', certId)
     if (error) throw error
   }
@@ -176,7 +176,7 @@ export default function ProfileEditScreen() {
       resetCertForm()
       setShowAddCert(false)
     } catch (e: any) {
-      setCertError(humanizeError(e))
+      setCertError(errorText(e))
     } finally {
       setSavingCert(false)
     }
@@ -195,7 +195,7 @@ export default function ProfileEditScreen() {
       invalidate()
       showToast('Archivo adjuntado. Vuelve a revisión.')
     } catch (e: any) {
-      showToast(humanizeError(e), 'error')
+      showToast(errorText(e), 'error')
     } finally {
       setBusyCert(null)
     }
@@ -203,7 +203,7 @@ export default function ProfileEditScreen() {
 
   const viewFile = async (path: string) => {
     const { data, error } = await supabase.storage.from('certifications').createSignedUrl(path, 600)
-    if (error || !data?.signedUrl) { showToast(humanizeError(error ?? new Error('No se pudo abrir el archivo')), 'error'); return }
+    if (error || !data?.signedUrl) { showToast(errorText(error ?? new UserError('No se pudo abrir el archivo')), 'error'); return }
     Linking.openURL(data.signedUrl)
   }
 
@@ -212,7 +212,7 @@ export default function ProfileEditScreen() {
       { text: 'Cancelar', style: 'cancel' },
       { text: 'Eliminar', style: 'destructive', onPress: async () => {
         const { error } = await supabase.from('certifications').delete().eq('id', certId)
-        if (error) { showToast(humanizeError(error), 'error'); return }
+        if (error) { showToast(errorText(error), 'error'); return }
         invalidate()
         showToast('Certificado eliminado')
       }},
@@ -228,7 +228,7 @@ export default function ProfileEditScreen() {
       if (error) throw error
       invalidate()
     } catch (e: any) {
-      showToast(humanizeError(e), 'error')
+      showToast(errorText(e), 'error')
     } finally {
       setTogglingActive(false)
     }
