@@ -4,6 +4,7 @@ import React, { useState } from 'react'
 import { View, Text, StyleSheet, FlatList, TouchableOpacity, TextInput } from 'react-native'
 import { useQuery } from '@tanstack/react-query'
 import { supabase } from '../../lib/supabase'
+import { instructorAPI } from '../../lib/api'
 import { useMyStudio } from '../../hooks'
 import { Avatar, EmptyState, LoadingScreen, colors, spacing } from '../../components/ui'
 import { Feather } from '@expo/vector-icons'
@@ -18,7 +19,6 @@ interface MatchedInstructor {
   id: string
   full_name: string
   neighborhood: string
-  years_experience: number
   avatar_url: string | null
   rate_regular: number | null
   rate_replacement: number | null
@@ -87,7 +87,7 @@ export default function SearchScreen({ navigation, route }: Props) {
       const { data, error } = await supabase
         .from('instructors')
         .select(`
-          id, full_name, neighborhood, years_experience, avatar_url, score,
+          id, full_name, neighborhood, avatar_url,
           rates:instructor_rates(rate_regular, rate_replacement),
           specialties:instructor_specialties(specialty),
           zones:instructor_zones(neighborhood)
@@ -95,7 +95,11 @@ export default function SearchScreen({ navigation, route }: Props) {
         .eq('verification_status', 'verified')
         .eq('is_active', true)
       if (error) throw error
-      return data ?? []
+      // El puntaje no es una columna: se calcula con get_instructor_stats (igual que en el perfil)
+      return Promise.all((data ?? []).map(async (ins: any) => {
+        const stats = await instructorAPI.getStats(ins.id)
+        return { ...ins, score: stats && stats.total_evaluations > 0 ? Number(stats.avg_score) : null }
+      }))
     },
     enabled: !!studio?.id,
   })
@@ -107,7 +111,6 @@ export default function SearchScreen({ navigation, route }: Props) {
     id:               ins.id,
     full_name:        ins.full_name,
     neighborhood:     ins.neighborhood,
-    years_experience: ins.years_experience ?? 0,
     avatar_url:       ins.avatar_url,
     score:            ins.score,
     rate_regular:     ins.rates?.rate_regular ?? null,
@@ -244,12 +247,12 @@ export default function SearchScreen({ navigation, route }: Props) {
                 <View style={{ flex: 1, marginLeft: spacing.sm }}>
                   <Text style={s.name}>{item.full_name}</Text>
                   <Text style={s.meta}>
-                    {item.neighborhood}{item.years_experience > 0 ? ` · ${item.years_experience} años exp.` : ''}
+                    {item.neighborhood}
                   </Text>
                 </View>
                 <View style={{ alignItems: 'flex-end', gap: 4 }}>
                   <MatchBadge level={item.match_level} score={item.match_score} />
-                  {item.score && (
+                  {item.score != null && item.score > 0 && (
                     <View style={s.scoreCircle}>
                       <Text style={s.scoreNum}>{item.score.toFixed(1)}</Text>
                     </View>
