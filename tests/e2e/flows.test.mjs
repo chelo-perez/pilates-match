@@ -140,7 +140,7 @@ test('el instructor carga tarifas, zonas y disponibilidad', async () => {
   await c.from('instructor_zones').delete().eq('instructor_id', id)
   ok(await c.from('instructor_zones').insert([{ instructor_id: id, neighborhood: 'Palermo' }]), 'zonas')
   await c.from('availability').delete().eq('instructor_id', id)
-  ok(await c.from('availability').insert([{ instructor_id: id, day_of_week: 1, start_time: '09:00:00', end_time: '12:00:00', class_type: 'regular', is_active: true }]), 'disponibilidad')
+  ok(await c.from('availability').insert([{ instructor_id: id, day_of_week: 'lunes', start_time: '09:00:00', end_time: '12:00:00', class_type: 'regular', is_active: true }]), 'disponibilidad')
 })
 
 test('el instructor solo ve su propio usuario y su propio perfil', async () => {

@@ -16,7 +16,7 @@
     "db:reset": "supabase db reset",
     "lint": "eslint src --ext .ts,.tsx",
     "typecheck": "tsc --noEmit",
-    "test:e2e": "node --test --test-concurrency=1 tests/e2e/"
+    "test:e2e": "node --test --test-concurrency=1 --test-reporter=spec tests/e2e/*.test.mjs"
   },
   "dependencies": {
     "@expo/vector-icons": "^15.0.3",

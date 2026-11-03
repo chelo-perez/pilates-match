@@ -1,4 +1,3 @@
--- PENDIENTE: no aplicada todavía.
 -- =====================================================================
 -- Limpieza para las pruebas automáticas (tests/e2e)
 --
