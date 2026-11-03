@@ -129,9 +129,11 @@ test('el instructor edita su perfil pero no puede verificarse', async () => {
   const { c, id } = S.instructor
   ok(await c.from('instructors').update({ bio: 'Bio E2E', neighborhood: 'Belgrano', phone: '1144444444' }).eq('id', id), 'editar perfil')
   await c.from('instructors').update({ verification_status: 'verificado' }).eq('id', id)
-  const me = ok(await c.from('instructors').select('bio, verification_status').eq('id', id).single(), 'leer perfil')
+  await c.from('instructors').update({ verification_note: 'me aprobé sola' }).eq('id', id)
+  const me = ok(await c.from('instructors').select('bio, verification_status, verification_note').eq('id', id).single(), 'leer perfil')
   assert.equal(me.bio, 'Bio E2E')
   assert.equal(me.verification_status, 'pendiente')
+  assert.equal(me.verification_note, null, 'el motivo de la Cámara no lo puede escribir el instructor')
 })
 
 test('el instructor carga tarifas, zonas y disponibilidad', async () => {
@@ -178,7 +180,9 @@ test('el estudio envía una propuesta y el límite Freemium frena la segunda', a
   const match = ok(await c.from('matches').insert({
     studio_id: id, instructor_id: S.instructor.id, class_type: 'regular',
     class_date: '2030-01-10', start_time: '09:00', end_time: '10:00', note_studio: 'E2E',
-  }).select().single(), 'crear match')
+    schedule_days: ['lunes', 'miercoles'], schedule_from: '09:00', schedule_to: '12:00',
+  }).select().single(), 'crear match regular con días y horario')
+  assert.deepEqual(match.schedule_days, ['lunes', 'miercoles'])
   S.matchId = match.id
 
   assert.equal(ok(await c.rpc('can_studio_match', { p_studio_id: id }), 'can_studio_match'), false)
@@ -202,7 +206,8 @@ test('el estudio no puede subirse el plan ni resetear el contador', async () => 
 
 test('el instructor ve la propuesta y la acepta (MatchesScreen)', async () => {
   const { c } = S.instructor
-  const pending = ok(await c.from('matches').select('id, status').eq('status', 'pendiente'), 'matches pendientes')
+  const pending = ok(await c.from('matches').select('id, status, schedule_days').eq('status', 'pendiente'), 'matches pendientes')
+  assert.deepEqual(pending.find(m => m.id === S.matchId)?.schedule_days, ['lunes', 'miercoles'], 'el instructor ve los días pedidos')
   assert.ok(pending.some(m => m.id === S.matchId), 'la propuesta tiene que aparecerle al instructor')
 
   ok(await c.from('matches').update({ status: 'aceptado', note_instructor: 'Dale', responded_at: new Date().toISOString() }).eq('id', S.matchId), 'responder')
