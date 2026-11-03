@@ -2,69 +2,80 @@ import React from 'react'
 import { View, Text, ScrollView, TouchableOpacity, StyleSheet, RefreshControl } from 'react-native'
 import { useQuery } from '@tanstack/react-query'
 import { supabase } from '../../lib/supabase'
-import { useAuthStore } from '../../store'
-import { useMyStudio } from '../../hooks'
-import { EmptyState, LoadingScreen, colors, spacing } from '../../components/ui'
+import { confirmSignOut } from '../../lib/auth'
+import { useMyStudio, useStudioStats } from '../../hooks'
+import { Badge, Button, EmptyState, ErrorState, LoadingScreen, colors, spacing, typography } from '../../components/ui'
+import { planLabel } from '../../constants/plans'
+import { MATCH_STATUS } from '../../constants/labels'
 import { Feather } from '@expo/vector-icons'
 import BlobCard from '../../components/BlobCard'
 import HeroHeader from '../../components/HeroHeader'
+import { usePendingEvaluationMatches } from './studioQueries'
 
 export default function StudioHomeScreen({ navigation }: any) {
-  const { reset } = useAuthStore()
-  const { data: studio, isLoading, refetch } = useMyStudio()
+  const { data: studio, isLoading, isError, refetch } = useMyStudio()
+  const { data: stats, refetch: refetchStats } = useStudioStats(studio?.id)
+  const { data: pending = [], refetch: refetchPending } = usePendingEvaluationMatches(studio?.id)
 
-  const { data: stats } = useQuery({
-    queryKey: ['studio-stats', studio?.id],
-    queryFn: async () => {
-      const { data } = await supabase.rpc('get_studio_stats', { p_studio_id: studio?.id })
-      return data?.[0] ?? null
-    },
-    enabled: !!studio?.id,
-  })
-
-  const { data: recentHistory = [] } = useQuery({
+  const { data: recentHistory = [], refetch: refetchHistory, isRefetching } = useQuery({
     queryKey: ['studio-history-recent', studio?.id],
     queryFn: async () => {
-      const { data } = await supabase
+      const { data, error } = await supabase
         .from('matches')
-        .select('*, instructor:instructors(full_name, neighborhood)')
+        .select('*, instructor:instructors(full_name, neighborhood, avatar_url)')
         .eq('studio_id', studio!.id)
         .order('created_at', { ascending: false })
         .limit(3)
+      if (error) throw error
       return data ?? []
     },
     enabled: !!studio?.id,
   })
 
-  const handleSignOut = async () => { await supabase.auth.signOut(); reset() }
+  const onRefresh = () => { refetch(); refetchStats(); refetchPending(); refetchHistory() }
 
   if (isLoading) return <LoadingScreen message="Cargando..." />
+  if (isError) return <ErrorState message="No pudimos cargar tu estudio." onRetry={refetch} />
+  if (!studio) {
+    return (
+      <EmptyState
+        icon="home"
+        title="Todavía no tenés un estudio cargado"
+        message="Cerrá sesión y volvé a entrar para terminar el registro."
+        action="Cerrar sesión"
+        onAction={confirmSignOut}
+      />
+    )
+  }
 
-  const isMember    = studio?.membership?.status === 'activa'
-  const pendingEvals = stats?.pending_evaluations ?? 0
+  const membership: any = Array.isArray(studio.membership) ? studio.membership[0] : studio.membership
+  const isMember     = studio.is_member === true
+  const planName     = planLabel(membership?.plan_type ?? 'freemium')
+  const pendingEvals = pending.length
+  const avgScore     = Number(stats?.avg_score ?? 0)
 
   return (
     <View style={{ flex: 1, backgroundColor: colors.cream }}>
       <ScrollView
-        refreshControl={<RefreshControl refreshing={false} onRefresh={refetch} tintColor="#fff" />}
+        refreshControl={<RefreshControl refreshing={isRefetching} onRefresh={onRefresh} tintColor={colors.sage} colors={[colors.sage]} />}
         showsVerticalScrollIndicator={false}
       >
         <HeroHeader
-          title={studio?.name ?? 'Mi estudio'}
-          subtitle={studio?.neighborhood ?? 'Buenos Aires'}
+          title={studio.name ?? 'Mi estudio'}
+          subtitle={studio.neighborhood ?? 'Buenos Aires'}
           centered
-          avatarUri={studio?.logo_url}
-          avatarFallback={studio?.name ?? 'E'}
+          avatarUri={studio.logo_url}
+          avatarFallback={studio.name ?? 'E'}
           onAvatarPress={() => navigation.navigate('StudioProfileEdit')}
           rightElement={
-            <TouchableOpacity style={s.logoutPill} onPress={handleSignOut}>
-              <Feather name="log-out" size={13} color="rgba(255,255,255,0.65)" />
+            <TouchableOpacity style={s.logoutPill} onPress={confirmSignOut}>
+              <Feather name="log-out" size={13} color={colors.white} />
               <Text style={s.logoutTxt}>Salir</Text>
             </TouchableOpacity>
           }
           bottomElement={isMember ? (
             <View style={s.memberBadge}>
-              <Text style={s.memberBadgeTxt}>★ Socia Cámara</Text>
+              <Text style={s.memberBadgeTxt}>★ Socio de la Cámara</Text>
             </View>
           ) : null}
         />
@@ -73,35 +84,34 @@ export default function StudioHomeScreen({ navigation }: any) {
         <View style={s.kpiGrid}>
           <BlobCard style={s.kpiCard} delay={0}>
             <Text style={[s.kpiNum, { color: colors.sage }]}>
-              {stats?.avg_score > 0 ? stats.avg_score.toFixed(1) : '—'}
+              {avgScore > 0 ? avgScore.toFixed(1) : '—'}
             </Text>
-            <Text style={s.kpiLbl}>Puntaje promedio</Text>
+            <Text style={s.kpiLbl}>Puntaje que diste</Text>
           </BlobCard>
           <BlobCard style={s.kpiCard} delay={2000}>
             <Text style={s.kpiNum}>{stats?.unique_instructors ?? 0}</Text>
-            <Text style={s.kpiLbl}>Instructores</Text>
+            <Text style={s.kpiLbl}>Instructores evaluados</Text>
           </BlobCard>
           <BlobCard style={s.kpiCard} delay={4000}>
             <Text style={s.kpiNum}>{stats?.total_evaluations ?? 0}</Text>
             <Text style={s.kpiLbl}>Evaluaciones</Text>
           </BlobCard>
           <BlobCard style={[s.kpiCard, pendingEvals > 0 && s.kpiWarn]} delay={6000}
-            blobColor={pendingEvals > 0 ? 'rgba(184,150,12,0.16)' : undefined}
-            blobColor2={pendingEvals > 0 ? 'rgba(184,150,12,0.10)' : undefined}>
+            onPress={pendingEvals > 0 ? () => navigation.navigate('PendingEvaluations') : undefined}>
             <Text style={[s.kpiNum, pendingEvals > 0 && { color: colors.warnTx }]}>{pendingEvals}</Text>
             <Text style={s.kpiLbl}>Por evaluar</Text>
           </BlobCard>
         </View>
 
-        {/* Perfil incompleto banner */}
-        {(!studio?.budget_regular || !studio?.equipment?.length) && (
+        {/* Perfil incompleto */}
+        {(!(studio.budget_regular || studio.budget_replacement) || !studio.equipment?.length) && (
           <TouchableOpacity
             style={s.profileBanner}
             onPress={() => navigation.navigate('StudioProfileEdit')}
             activeOpacity={0.85}
           >
             <Feather name="edit-3" size={14} color={colors.warnTx} />
-            <Text style={s.profileBannerTxt}>Completá tu perfil para activar el match automático</Text>
+            <Text style={s.profileBannerTxt}>Cargá tu equipamiento y presupuesto para ver qué instructores te convienen</Text>
             <Feather name="chevron-right" size={14} color={colors.warnTx} />
           </TouchableOpacity>
         )}
@@ -113,23 +123,28 @@ export default function StudioHomeScreen({ navigation }: any) {
           activeOpacity={0.85}
         >
           <Feather name="star" size={14} color={colors.gold} />
-          <Text style={s.membershipBtnTxt}>Plan {isMember ? 'activo' : 'Freemium'} · Ver planes</Text>
+          <Text style={s.membershipBtnTxt}>Plan {planName} · Ver mi plan</Text>
           <Feather name="chevron-right" size={14} color={colors.gold} />
         </TouchableOpacity>
 
         {/* Buscar */}
-        <TouchableOpacity style={s.searchBtn} onPress={() => navigation.navigate('Search')} activeOpacity={0.85}>
-          <Feather name="search" size={18} color="#fff" />
-          <Text style={s.searchBtnTxt}>Buscar instructor</Text>
-        </TouchableOpacity>
+        <View style={s.searchWrap}>
+          <Button
+            label="Buscar instructor"
+            icon={<Feather name="search" size={18} color={colors.white} />}
+            onPress={() => navigation.navigate('Search')}
+            fullWidth
+            size="lg"
+          />
+        </View>
 
-        {/* Alerta evaluaciones pendientes */}
+        {/* Evaluaciones pendientes */}
         {pendingEvals > 0 && (
           <TouchableOpacity style={s.alertCard} onPress={() => navigation.navigate('PendingEvaluations')} activeOpacity={0.85}>
             <View style={s.alertIcon}><Feather name="star" size={16} color={colors.warnTx} /></View>
             <View style={{ flex: 1 }}>
               <Text style={s.alertTitle}>{pendingEvals} evaluación{pendingEvals > 1 ? 'es' : ''} pendiente{pendingEvals > 1 ? 's' : ''}</Text>
-              <Text style={s.alertSub}>Evaluá para seguir enviando propuestas</Text>
+              <Text style={s.alertSub}>Tu evaluación ayuda a otros estudios a elegir</Text>
             </View>
             <Feather name="chevron-right" size={16} color={colors.warnTx} />
           </TouchableOpacity>
@@ -139,50 +154,48 @@ export default function StudioHomeScreen({ navigation }: any) {
         <View style={s.sponsorBanner}>
           <View style={s.sponsorLeft}>
             <Text style={s.sponsorTag}>PUBLICIDAD</Text>
-            <Text style={s.sponsorTitle}>Tu espacio aquí</Text>
+            <Text style={s.sponsorTitle}>Tu espacio acá</Text>
             <Text style={s.sponsorSub}>contacto@trabajomasfacil.com</Text>
           </View>
           <View style={s.sponsorLogo}>
-            <Text style={s.sponsorLogoTxt}>★</Text>
+            <Feather name="star" size={18} color={colors.sage} />
           </View>
         </View>
 
-        {/* Historial reciente */}
+        {/* Propuestas recientes */}
         <BlobCard style={s.section} delay={3000}>
           <View style={s.sectionHeader}>
-            <Text style={s.sectionTitle}>Historial reciente</Text>
+            <Text style={s.sectionTitle}>PROPUESTAS RECIENTES</Text>
             {recentHistory.length > 0 && (
               <TouchableOpacity onPress={() => navigation.navigate('HistoryList')}>
-                <Text style={s.sectionLink}>Ver todo</Text>
+                <Text style={s.sectionLink}>Ver todas</Text>
               </TouchableOpacity>
             )}
           </View>
           {recentHistory.length === 0 ? (
             <EmptyState
-              title="Sin historial aún"
-              subtitle="Cuando envíes una propuesta a un instructor, aparecerá acá."
+              title="Todavía no enviaste propuestas"
+              message="Cuando le envíes una propuesta a un instructor, la vas a ver acá con su estado."
             />
           ) : (
-            recentHistory.map((item: any) => (
-              <View key={item.id} style={s.histRow}>
-                <View style={s.histAv}>
-                  <Text style={s.histAvTxt}>{item.instructor?.full_name?.[0] ?? '?'}</Text>
+            recentHistory.map((item: any) => {
+              const st = MATCH_STATUS[item.status as keyof typeof MATCH_STATUS]
+              return (
+                <View key={item.id} style={s.histRow}>
+                  <View style={s.histAv}>
+                    <Text style={s.histAvTxt}>{item.instructor?.full_name?.[0]?.toUpperCase() ?? '?'}</Text>
+                  </View>
+                  <View style={{ flex: 1 }}>
+                    <Text style={s.histName}>{item.instructor?.full_name ?? 'Instructor'}</Text>
+                    <Text style={s.histMeta}>
+                      {item.instructor?.neighborhood ? `${item.instructor.neighborhood} · ` : ''}
+                      {item.class_type === 'regular' ? 'Regular' : 'Reemplazo'}
+                    </Text>
+                  </View>
+                  <Badge label={st?.label ?? item.status} variant={st?.variant ?? 'neutral'} />
                 </View>
-                <View style={{ flex: 1 }}>
-                  <Text style={s.histName}>{item.instructor?.full_name}</Text>
-                  <Text style={s.histMeta}>{item.instructor?.neighborhood} · {item.class_type === 'regular' ? 'Regular' : 'Reemplazo'}</Text>
-                </View>
-                <View style={[s.statusTag, {
-                  backgroundColor: item.status === 'aceptado' ? colors.okBg : item.status === 'rechazado' ? colors.redBg : colors.warnBg
-                }]}>
-                  <Text style={[s.statusTxt, {
-                    color: item.status === 'aceptado' ? colors.okTx : item.status === 'rechazado' ? colors.redTx : colors.warnTx
-                  }]}>
-                    {item.status === 'aceptado' ? 'Aceptado' : item.status === 'rechazado' ? 'Rechazado' : 'Pendiente'}
-                  </Text>
-                </View>
-              </View>
-            ))
+              )
+            })
           )}
         </BlobCard>
       </ScrollView>
@@ -191,46 +204,42 @@ export default function StudioHomeScreen({ navigation }: any) {
 }
 
 const s = StyleSheet.create({
-  logoutPill:     { flexDirection: 'row', alignItems: 'center', gap: 4, backgroundColor: 'rgba(255,255,255,0.1)', borderRadius: 999, paddingHorizontal: 10, paddingVertical: 6 },
-  logoutTxt:      { fontFamily: 'Nunito-SemiBold', fontSize: 11, color: 'rgba(255,255,255,0.65)' },
-  memberBadge:    { marginTop: 10, alignSelf: 'flex-start', backgroundColor: 'rgba(184,150,12,0.25)', borderWidth: 1, borderColor: 'rgba(184,150,12,0.4)', borderRadius: 999, paddingHorizontal: 10, paddingVertical: 3 },
-  memberBadgeTxt: { fontFamily: 'Nunito-Bold', fontSize: 10, color: '#FFD060' },
+  logoutPill:     { flexDirection: 'row', alignItems: 'center', gap: 4, borderRadius: 999, paddingHorizontal: 10, paddingVertical: 6, borderWidth: 0.5, borderColor: colors.sageMid },
+  logoutTxt:      { fontFamily: 'Nunito-SemiBold', fontSize: 11, color: colors.white },
+  memberBadge:    { marginTop: 10, alignSelf: 'center', backgroundColor: colors.goldLight, borderRadius: 999, paddingHorizontal: 10, paddingVertical: 3 },
+  memberBadgeTxt: { fontFamily: 'Nunito-Bold', fontSize: 10, color: colors.gold },
 
   kpiGrid:        { flexDirection: 'row', flexWrap: 'wrap', paddingHorizontal: spacing.md, paddingTop: spacing.sm, gap: spacing.sm, marginTop: -12, zIndex: 2, marginBottom: spacing.md },
   kpiCard:        { flexBasis: '47%', padding: spacing.md },
   kpiWarn:        { borderLeftWidth: 3, borderLeftColor: colors.warnTx },
   kpiNum:         { fontFamily: 'Nunito-Bold', fontSize: 28, color: colors.dark, marginBottom: 2 },
-  kpiLbl:         { fontFamily: 'Nunito-Bold', fontSize: 9, color: colors.light, textTransform: 'uppercase', letterSpacing: 0.6 },
+  kpiLbl:         { ...typography.caption },
 
-  profileBanner:   { flexDirection: 'row', alignItems: 'center', gap: 8, marginHorizontal: spacing.md, marginBottom: spacing.sm, backgroundColor: colors.warnBg, borderTopLeftRadius: 14, borderTopRightRadius: 0, borderBottomLeftRadius: 0, borderBottomRightRadius: 14, padding: spacing.md, borderWidth: 0.5, borderColor: 'rgba(122,80,0,0.2)' },
+  profileBanner:   { flexDirection: 'row', alignItems: 'center', gap: 8, marginHorizontal: spacing.md, marginBottom: spacing.sm, backgroundColor: colors.warnBg, borderTopLeftRadius: 14, borderTopRightRadius: 0, borderBottomLeftRadius: 0, borderBottomRightRadius: 14, padding: spacing.md, borderWidth: 0.5, borderColor: colors.border },
   profileBannerTxt: { fontFamily: 'Nunito-Bold', fontSize: 12, color: colors.warnTx, flex: 1 },
-  sponsorBanner:    { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginHorizontal: spacing.md, marginBottom: spacing.md, backgroundColor: '#F0F4F0', borderTopLeftRadius: 10, borderTopRightRadius: 0, borderBottomLeftRadius: 0, borderBottomRightRadius: 10, paddingHorizontal: spacing.md, paddingVertical: 10, borderWidth: 0.5, borderColor: colors.border, height: 60 },
+  sponsorBanner:    { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginHorizontal: spacing.md, marginBottom: spacing.md, backgroundColor: colors.sageLighter, borderTopLeftRadius: 14, borderTopRightRadius: 0, borderBottomLeftRadius: 0, borderBottomRightRadius: 14, paddingHorizontal: spacing.md, paddingVertical: 10, borderWidth: 0.5, borderColor: colors.border },
   sponsorLeft:      { flex: 1 },
-  sponsorTag:       { fontFamily: 'Nunito-Bold', fontSize: 7, color: colors.light, letterSpacing: 1, marginBottom: 2 },
+  sponsorTag:       { ...typography.caption, marginBottom: 2 },
   sponsorTitle:     { fontFamily: 'Nunito-Bold', fontSize: 13, color: colors.dark },
-  sponsorSub:       { fontFamily: 'Nunito-Regular', fontSize: 10, color: colors.light },
+  sponsorSub:       { fontFamily: 'Nunito-Regular', fontSize: 11, color: colors.light },
   sponsorLogo:      { width: 40, height: 40, borderRadius: 20, backgroundColor: colors.sageLight, alignItems: 'center', justifyContent: 'center' },
-  sponsorLogoTxt:   { fontSize: 18, color: colors.sage },
-  membershipBtn:    { flexDirection: 'row', alignItems: 'center', gap: 8, marginHorizontal: spacing.md, marginBottom: spacing.sm, backgroundColor: colors.goldLight, borderTopLeftRadius: 10, borderTopRightRadius: 0, borderBottomLeftRadius: 0, borderBottomRightRadius: 10, padding: 11, borderWidth: 0.5, borderColor: 'rgba(184,150,12,0.3)' },
+  membershipBtn:    { flexDirection: 'row', alignItems: 'center', gap: 8, marginHorizontal: spacing.md, marginBottom: spacing.sm, backgroundColor: colors.goldLight, borderTopLeftRadius: 14, borderTopRightRadius: 0, borderBottomLeftRadius: 0, borderBottomRightRadius: 14, padding: 12, borderWidth: 0.5, borderColor: colors.border },
   membershipBtnTxt: { fontFamily: 'Nunito-Bold', fontSize: 12, color: colors.gold, flex: 1 },
-  searchBtn:      { marginHorizontal: spacing.md, marginBottom: spacing.md, backgroundColor: colors.sage, borderTopLeftRadius: 14, borderTopRightRadius: 0, borderBottomLeftRadius: 0, borderBottomRightRadius: 14, padding: 14, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, elevation: 3 },
-  searchBtnTxt:   { fontFamily: 'Nunito-Bold', fontSize: 15, color: '#fff', letterSpacing: 0.2 },
+  searchWrap:       { paddingHorizontal: spacing.md, marginBottom: spacing.md },
 
-  alertCard:      { marginHorizontal: spacing.md, marginBottom: spacing.md, backgroundColor: colors.warnBg, borderTopLeftRadius: 14, borderTopRightRadius: 0, borderBottomLeftRadius: 0, borderBottomRightRadius: 14, padding: spacing.md, flexDirection: 'row', alignItems: 'center', gap: spacing.sm, borderWidth: 0.5, borderColor: 'rgba(122,80,0,0.2)' },
-  alertIcon:      { width: 36, height: 36, borderRadius: 18, backgroundColor: '#FEE8BC', alignItems: 'center', justifyContent: 'center' },
+  alertCard:      { marginHorizontal: spacing.md, marginBottom: spacing.md, backgroundColor: colors.warnBg, borderTopLeftRadius: 14, borderTopRightRadius: 0, borderBottomLeftRadius: 0, borderBottomRightRadius: 14, padding: spacing.md, flexDirection: 'row', alignItems: 'center', gap: spacing.sm, borderWidth: 0.5, borderColor: colors.border },
+  alertIcon:      { width: 36, height: 36, borderRadius: 18, backgroundColor: colors.white, alignItems: 'center', justifyContent: 'center' },
   alertTitle:     { fontFamily: 'Nunito-Bold', fontSize: 13, color: colors.warnTx },
-  alertSub:       { fontFamily: 'Nunito-Regular', fontSize: 11, color: '#9A6A00', marginTop: 1 },
+  alertSub:       { fontFamily: 'Nunito-Regular', fontSize: 11, color: colors.warnTx, marginTop: 1 },
 
   section:        { marginHorizontal: spacing.md, marginBottom: spacing.md, padding: spacing.md },
-  sectionHeader:  { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: spacing.md },
-  sectionTitle:   { fontFamily: 'Nunito-Bold', fontSize: 13, color: colors.dark },
-  sectionLink:    { fontFamily: 'Nunito-Bold', fontSize: 11, color: colors.sage },
+  sectionHeader:  { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: spacing.sm },
+  sectionTitle:   { ...typography.caption },
+  sectionLink:    { fontFamily: 'Nunito-Bold', fontSize: 12, color: colors.sage },
 
   histRow:        { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, paddingVertical: spacing.sm, borderBottomWidth: 0.5, borderColor: colors.borderLight },
   histAv:         { width: 38, height: 38, borderRadius: 19, backgroundColor: colors.sageLight, alignItems: 'center', justifyContent: 'center' },
   histAvTxt:      { fontFamily: 'Nunito-Bold', fontSize: 15, color: colors.sage },
   histName:       { fontFamily: 'Nunito-Bold', fontSize: 13, color: colors.dark },
   histMeta:       { fontFamily: 'Nunito-Regular', fontSize: 11, color: colors.light, marginTop: 1 },
-  statusTag:      { borderTopLeftRadius: 8, borderTopRightRadius: 0, borderBottomLeftRadius: 0, borderBottomRightRadius: 8, paddingHorizontal: 8, paddingVertical: 3 },
-  statusTxt:      { fontFamily: 'Nunito-Bold', fontSize: 9 },
 })

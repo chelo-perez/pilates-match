@@ -1,241 +1,146 @@
 import React from 'react'
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Linking } from 'react-native'
-import { useQuery } from '@tanstack/react-query'
-import { supabase } from '../../lib/supabase'
+import { View, Text, StyleSheet, ScrollView } from 'react-native'
 import { useMyStudio } from '../../hooks'
-import { LoadingScreen, colors, spacing } from '../../components/ui'
+import { Button, ErrorState, LoadingScreen, colors, spacing, typography } from '../../components/ui'
+import { PLANS, usedThisMonth } from '../../constants/plans'
+import { formatDate } from '../../lib/dates'
 import { Feather } from '@expo/vector-icons'
 import BlobCard from '../../components/BlobCard'
 import HeroHeader from '../../components/HeroHeader'
+import { contactCamaraForPlan, limitText, nextResetLabel, useCamaraContact, useStudioMembership } from './studioQueries'
 
-const PLANS = [
-  {
-    key: 'freemium',
-    label: 'Freemium',
-    price: 'Gratis',
-    period: '',
-    color: colors.mid,
-    bg: colors.sageLighter,
-    features: [
-      { text: '1 propuesta por mes', ok: true },
-      { text: 'Ver directorio de instructores', ok: true },
-      { text: 'Sin badge de Cámara', ok: false },
-      { text: 'Sin propuestas destacadas', ok: false },
-    ],
-    mpUrl: null,
-  },
-  {
-    key: 'starter',
-    label: 'Starter',
-    price: '$X.000',
-    period: '/mes',
-    color: colors.sage,
-    bg: colors.sageLight,
-    features: [
-      { text: '5 propuestas por mes', ok: true },
-      { text: 'Acceso a todo el directorio', ok: true },
-      { text: 'Historial de propuestas', ok: true },
-      { text: 'Sin badge de Cámara', ok: false },
-    ],
-    mpUrl: 'https://www.mercadopago.com.ar/subscriptions/starter', // reemplazar
-  },
-  {
-    key: 'socio',
-    label: 'Socio Cámara',
-    price: '$X.000',
-    period: '/mes',
-    color: '#0C447C',
-    bg: '#E6F1FB',
-    badge: '★ Recomendado',
-    features: [
-      { text: '5 propuestas por mes', ok: true },
-      { text: 'Badge "Socio Cámara" visible para instructores', ok: true },
-      { text: 'Descuento en capacitaciones', ok: true },
-      { text: 'Acceso a eventos exclusivos', ok: true },
-    ],
-    mpUrl: 'https://www.mercadopago.com.ar/subscriptions/socio', // reemplazar
-  },
-  {
-    key: 'premium',
-    label: 'Premium',
-    price: '$X.000',
-    period: '/mes',
-    color: colors.gold,
-    bg: colors.goldLight,
-    features: [
-      { text: 'Propuestas ilimitadas', ok: true },
-      { text: 'Tu estudio aparece destacado para instructores', ok: true },
-      { text: 'Búsqueda avanzada por filtros', ok: true },
-      { text: 'Soporte prioritario', ok: true },
-    ],
-    mpUrl: 'https://www.mercadopago.com.ar/subscriptions/premium', // reemplazar
-  },
-]
+// Solo beneficios que la app ofrece hoy
+const EXTRA_FEATURES: Record<string, string[]> = {
+  freemium: ['Directorio de instructores verificados', 'Historial de tus propuestas'],
+  starter:  ['Directorio de instructores verificados', 'Historial de tus propuestas'],
+  socio:    ['Sos socio de la Cámara: lo vas a ver en tu perfil', 'Directorio e historial completos'],
+  premium:  ['Directorio e historial completos'],
+}
 
-function fmtDate(d: string | null) {
-  if (!d) return '—'
-  return new Date(d).toLocaleDateString('es-AR', { day: '2-digit', month: 'long', year: 'numeric' })
+const STATUS_LABEL: Record<string, { label: string; ok: boolean }> = {
+  activa:    { label: 'Activa', ok: true },
+  vencida:   { label: 'Vencida', ok: false },
+  cancelada: { label: 'Cancelada', ok: false },
 }
 
 export default function MembershipScreen({ navigation }: any) {
   const { data: studio, isLoading } = useMyStudio()
+  const { data: membership, isLoading: memLoading, isError, refetch } = useStudioMembership(studio?.id)
+  const { data: contact } = useCamaraContact((studio as any)?.camara_id)
 
-  const { data: membership } = useQuery({
-    queryKey: ['studio-membership', studio?.id],
-    queryFn: async () => {
-      const { data } = await supabase.from('memberships').select('*').eq('studio_id', studio!.id).single()
-      return data
-    },
-    enabled: !!studio?.id,
-  })
+  if (isLoading || memLoading) return <LoadingScreen />
 
-  if (isLoading) return <LoadingScreen />
-
-  const currentPlan = PLANS.find(p => p.key === membership?.plan_type) ?? PLANS[0]
-  const matchUsed  = membership?.matches_used_month ?? 0
-  const matchLimit = membership?.matches_limit
+  const planKey    = membership?.plan_type ?? 'freemium'
+  const currentPlan = PLANS.find(p => p.key === planKey) ?? PLANS[0]
+  const matchLimit: number | null = membership ? (membership.matches_limit ?? null) : currentPlan.limit
+  const matchUsed  = membership ? usedThisMonth(membership) : 0
+  const status     = STATUS_LABEL[membership?.status ?? ''] ?? { label: 'Sin plan', ok: false }
+  const price      = membership?.price_ars ?? null
 
   return (
     <View style={{ flex: 1, backgroundColor: colors.cream }}>
       <HeroHeader
-        title="Membresía"
-        subtitle="Elegí el plan que mejor se adapta a tu estudio"
+        title="Mi plan"
+        subtitle="Cuántas propuestas podés enviar por mes"
         onBack={() => navigation.goBack()}
         backLabel="Inicio"
       />
 
-      <ScrollView contentContainerStyle={s.content} showsVerticalScrollIndicator={false}>
+      {isError ? (
+        <ErrorState message="No pudimos cargar tu plan." onRetry={refetch} />
+      ) : (
+        <ScrollView contentContainerStyle={s.content} showsVerticalScrollIndicator={false}>
 
-        {/* Plan actual */}
-        <BlobCard style={s.currentCard} delay={0}
-          blobColor={`rgba(${currentPlan.key === 'premium' ? '184,150,12' : currentPlan.key === 'socio' ? '12,68,124' : '74,93,78'},0.12)`}
-          blobColor2={`rgba(${currentPlan.key === 'premium' ? '184,150,12' : currentPlan.key === 'socio' ? '12,68,124' : '74,93,78'},0.07)`}
-        >
-          <Text style={s.currentLabel}>TU PLAN ACTUAL</Text>
-          <View style={s.currentRow}>
-            <Text style={[s.currentPlan, { color: currentPlan.color }]}>{currentPlan.label}</Text>
-            <View style={[s.statusTag, { backgroundColor: membership?.status === 'activa' ? colors.okBg : colors.warnBg }]}>
-              <Text style={[s.statusTxt, { color: membership?.status === 'activa' ? colors.okTx : colors.warnTx }]}>
-                {membership?.status === 'activa' ? 'Activo' : 'Sin plan activo'}
-              </Text>
+          <BlobCard style={s.card} delay={0}>
+            <Text style={s.caption}>TU PLAN ACTUAL</Text>
+            <View style={s.currentRow}>
+              <Text style={s.currentPlan}>{currentPlan.label}</Text>
+              <View style={[s.statusTag, { backgroundColor: status.ok ? colors.okBg : colors.warnBg }]}>
+                <Text style={[s.statusTxt, { color: status.ok ? colors.okTx : colors.warnTx }]}>{status.label}</Text>
+              </View>
             </View>
+
+            <View style={s.usageBar}>
+              <View style={[s.usageFill, {
+                width: matchLimit ? `${Math.min(100, (matchUsed / matchLimit) * 100)}%` : '0%',
+              }]} />
+            </View>
+            <Text style={s.usageTxt}>
+              {matchLimit != null
+                ? `${matchUsed} de ${matchLimit} propuesta${matchLimit === 1 ? '' : 's'} usada${matchLimit === 1 ? '' : 's'} este mes`
+                : `${matchUsed} propuesta${matchUsed === 1 ? '' : 's'} enviada${matchUsed === 1 ? '' : 's'} este mes (sin límite)`}
+            </Text>
+            {matchLimit != null && <Text style={s.metaTxt}>El contador vuelve a cero el {nextResetLabel()}.</Text>}
+            {membership?.end_date && <Text style={s.metaTxt}>Vigente hasta el {formatDate(membership.end_date)}</Text>}
+            {price ? <Text style={s.metaTxt}>Abono: ${Number(price).toLocaleString('es-AR')} por mes</Text> : null}
+            {!status.ok && membership && (
+              <Text style={[s.metaTxt, { color: colors.warnTx }]}>
+                Con el plan {status.label.toLowerCase()} no podés enviar propuestas. Pedile a la Cámara que lo reactive.
+              </Text>
+            )}
+          </BlobCard>
+
+          <Text style={[s.caption, { marginBottom: spacing.sm }]}>PLANES</Text>
+
+          {PLANS.map((plan, idx) => {
+            const isCurrent = plan.key === currentPlan.key
+            return (
+              <BlobCard key={plan.key} style={[s.planCard, isCurrent && s.planCardCurrent]} delay={idx * 500}>
+                <View style={s.planHeader}>
+                  <Text style={s.planName}>{plan.label}</Text>
+                  {isCurrent && (
+                    <View style={s.currentBadge}><Text style={s.currentBadgeTxt}>Tu plan</Text></View>
+                  )}
+                </View>
+                {[limitText(plan.limit), ...(EXTRA_FEATURES[plan.key] ?? [])].map((f, fi) => (
+                  <View key={fi} style={s.featureRow}>
+                    <Feather name="check" size={14} color={colors.sage} />
+                    <Text style={s.featureTxt}>{f}</Text>
+                  </View>
+                ))}
+              </BlobCard>
+            )
+          })}
+
+          <View style={s.infoBox}>
+            <Feather name="info" size={14} color={colors.sage} />
+            <Text style={s.infoTxt}>
+              Los planes los gestiona la Cámara: el pago y el cambio de plan se coordinan directamente con ella. Cuando lo actualice, lo vas a ver acá.
+            </Text>
           </View>
-          {membership && (
-            <>
-              <View style={s.usageBar}>
-                <View style={[s.usageFill, {
-                  width: matchLimit ? `${Math.min(100, (matchUsed / matchLimit) * 100)}%` : '20%',
-                  backgroundColor: currentPlan.color,
-                }]} />
-              </View>
-              <Text style={s.usageTxt}>
-                {matchLimit !== null
-                  ? `${matchUsed} de ${matchLimit} propuestas usadas este mes`
-                  : `${matchUsed} propuestas enviadas este mes (ilimitadas)`
-                }
-              </Text>
-              {membership.end_date && (
-                <Text style={s.expiryTxt}>Vence el {fmtDate(membership.end_date)}</Text>
-              )}
-            </>
-          )}
-        </BlobCard>
 
-        {/* Planes disponibles */}
-        <Text style={s.plansTitle}>PLANES DISPONIBLES</Text>
-
-        {PLANS.map((plan, idx) => {
-          const isCurrent = plan.key === currentPlan.key
-          return (
-            <View key={plan.key}>
-            <BlobCard style={[s.planCard, isCurrent && { borderWidth: 2, borderColor: plan.color }]}
-              delay={idx * 500}
-              blobColor={`rgba(${plan.key === 'premium' ? '184,150,12' : '74,93,78'},0.08)`}
-            >
-              {plan.badge && (
-                <View style={[s.recommendedBadge, { backgroundColor: plan.bg }]}>
-                  <Text style={[s.recommendedTxt, { color: plan.color }]}>{plan.badge}</Text>
-                </View>
-              )}
-              {isCurrent && (
-                <View style={[s.currentBadge, { backgroundColor: plan.bg }]}>
-                  <Text style={[s.currentBadgeTxt, { color: plan.color }]}>Plan actual</Text>
-                </View>
-              )}
-
-              <View style={s.planHeader}>
-                <Text style={[s.planName, { color: plan.color }]}>{plan.label}</Text>
-                <View style={{ alignItems: 'flex-end' }}>
-                  <Text style={[s.planPrice, { color: plan.color }]}>{plan.price}</Text>
-                  {plan.period && <Text style={s.planPeriod}>{plan.period}</Text>}
-                </View>
-              </View>
-
-              {plan.features.map((f, fi) => (
-                <View key={fi} style={s.featureRow}>
-                  <Feather
-                    name={f.ok ? 'check' : 'x'}
-                    size={14}
-                    color={f.ok ? plan.color : colors.light}
-                  />
-                  <Text style={[s.featureTxt, !f.ok && { color: colors.light }]}>{f.text}</Text>
-                </View>
-              ))}
-
-              {!isCurrent && plan.mpUrl && (
-                <TouchableOpacity
-                  style={[s.subscribeBtn, { backgroundColor: plan.bg, borderColor: plan.color }]}
-                  onPress={() => Linking.openURL(plan.mpUrl!)}
-                  activeOpacity={0.85}
-                >
-                  <Text style={[s.subscribeTxt, { color: plan.color }]}>Suscribirme con Mercado Pago →</Text>
-                </TouchableOpacity>
-              )}
-
-              {isCurrent && plan.key !== 'freemium' && (
-                <View style={[s.subscribeBtn, { backgroundColor: plan.bg, borderColor: plan.color }]}>
-                  <Text style={[s.subscribeTxt, { color: plan.color }]}>✓ Plan contratado</Text>
-                </View>
-              )}
-            </BlobCard>
-            </View>
-          )
-        })}
-
-        <Text style={s.footer}>
-          Los planes se renuevan automáticamente cada mes. Para cancelar, contactá a la Cámara.
-        </Text>
-
-      </ScrollView>
+          <Button
+            label="Pedile a la Cámara que actualice tu plan"
+            onPress={() => contactCamaraForPlan(contact, studio?.name)}
+            fullWidth
+            size="lg"
+          />
+        </ScrollView>
+      )}
     </View>
   )
 }
 
 const s = StyleSheet.create({
   content:          { padding: spacing.md, paddingBottom: 48 },
-  currentCard:      { padding: spacing.md, marginBottom: spacing.md },
-  currentLabel:     { fontFamily: 'Nunito-Bold', fontSize: 9, color: colors.light, letterSpacing: 0.8, marginBottom: spacing.sm },
+  card:             { padding: spacing.md, marginBottom: spacing.md },
+  caption:          { ...typography.caption, marginBottom: spacing.sm },
   currentRow:       { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: spacing.sm },
-  currentPlan:      { fontFamily: 'Nunito-Bold', fontSize: 22 },
+  currentPlan:      { fontFamily: 'Nunito-Bold', fontSize: 22, color: colors.sage },
   statusTag:        { borderTopLeftRadius: 8, borderTopRightRadius: 0, borderBottomLeftRadius: 0, borderBottomRightRadius: 8, paddingHorizontal: 10, paddingVertical: 4 },
   statusTxt:        { fontFamily: 'Nunito-Bold', fontSize: 11 },
   usageBar:         { height: 6, backgroundColor: colors.sageLighter, borderRadius: 3, overflow: 'hidden', marginBottom: 6 },
-  usageFill:        { height: '100%' as any, borderRadius: 3 },
+  usageFill:        { height: '100%' as any, borderRadius: 3, backgroundColor: colors.sage },
   usageTxt:         { fontFamily: 'Nunito-SemiBold', fontSize: 12, color: colors.mid },
-  expiryTxt:        { fontFamily: 'Nunito-Regular', fontSize: 11, color: colors.light, marginTop: 4 },
-  plansTitle:       { fontFamily: 'Nunito-Bold', fontSize: 9, color: colors.light, letterSpacing: 0.8, marginBottom: spacing.sm },
-  planCard:         { padding: spacing.md, marginBottom: spacing.md },
-  recommendedBadge: { alignSelf: 'flex-start', borderRadius: 6, paddingHorizontal: 8, paddingVertical: 3, marginBottom: spacing.sm },
-  recommendedTxt:   { fontFamily: 'Nunito-Bold', fontSize: 10 },
-  currentBadge:     { alignSelf: 'flex-start', borderRadius: 6, paddingHorizontal: 8, paddingVertical: 3, marginBottom: spacing.sm },
-  currentBadgeTxt:  { fontFamily: 'Nunito-Bold', fontSize: 10 },
-  planHeader:       { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: spacing.md },
-  planName:         { fontFamily: 'Nunito-Bold', fontSize: 18 },
-  planPrice:        { fontFamily: 'Nunito-Bold', fontSize: 20 },
-  planPeriod:       { fontFamily: 'Nunito-Regular', fontSize: 11, color: colors.light },
-  featureRow:       { flexDirection: 'row', alignItems: 'center', gap: 8, paddingVertical: 4 },
+  metaTxt:          { fontFamily: 'Nunito-Regular', fontSize: 11, color: colors.light, marginTop: 4 },
+  planCard:         { padding: spacing.md, marginBottom: spacing.sm },
+  planCardCurrent:  { borderWidth: 1.5, borderColor: colors.sage },
+  planHeader:       { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: spacing.sm },
+  planName:         { fontFamily: 'Nunito-Bold', fontSize: 16, color: colors.dark },
+  currentBadge:     { backgroundColor: colors.sageLight, borderTopLeftRadius: 8, borderTopRightRadius: 0, borderBottomLeftRadius: 0, borderBottomRightRadius: 8, paddingHorizontal: 8, paddingVertical: 3 },
+  currentBadgeTxt:  { fontFamily: 'Nunito-Bold', fontSize: 10, color: colors.sage },
+  featureRow:       { flexDirection: 'row', alignItems: 'center', gap: 8, paddingVertical: 3 },
   featureTxt:       { fontFamily: 'Nunito-Regular', fontSize: 13, color: colors.dark, flex: 1 },
-  subscribeBtn:     { marginTop: spacing.md, borderTopLeftRadius: 12, borderTopRightRadius: 0, borderBottomLeftRadius: 0, borderBottomRightRadius: 12, padding: 13, alignItems: 'center', borderWidth: 1.5 },
-  subscribeTxt:     { fontFamily: 'Nunito-Bold', fontSize: 13 },
-  footer:           { fontFamily: 'Nunito-Regular', fontSize: 11, color: colors.light, textAlign: 'center', lineHeight: 17, marginTop: spacing.sm },
+  infoBox:          { flexDirection: 'row', alignItems: 'flex-start', gap: 8, backgroundColor: colors.sageLighter, borderTopLeftRadius: 10, borderTopRightRadius: 0, borderBottomLeftRadius: 0, borderBottomRightRadius: 10, padding: spacing.md, marginTop: spacing.sm, marginBottom: spacing.md, borderWidth: 0.5, borderColor: colors.border },
+  infoTxt:          { fontFamily: 'Nunito-Regular', fontSize: 12, color: colors.mid, flex: 1, lineHeight: 18 },
 })
