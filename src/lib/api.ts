@@ -1,53 +1,22 @@
 // src/lib/api.ts
-// Capa de servicios - toda la lógica de negocio vive aquí
-// Los screens y hooks solo llaman funciones de este archivo
+// Capa de servicios: consultas a Supabase que comparten varias pantallas.
+// Toda función revisa `error` y lo tira; la pantalla lo muestra con humanizeError().
 
 import { supabase, db } from './supabase'
+import { todayISO } from './dates'
 import type {
-  Instructor, InstructorWithDetails, InstructorSearchResult,
-  InstructorSearchFilters, Studio, StudioWithMembership,
-  Evaluation, EvaluationWithInstructor, Match,
-  CreateEvaluationDTO, CreateMatchDTO,
-  UpdateRatesDTO, UpdateBudgetDTO,
-  Membership, InstructorStats, MatchTariffStatus
+  StudioWithMembership, Studio, Evaluation, EvaluationWithInstructor, Match,
+  CreateEvaluationDTO, CreateMatchDTO, UpdateRatesDTO, UpdateBudgetDTO,
+  Membership, InstructorStats, InstructorWithDetails,
 } from '../types/database'
 
 // ============================================================
 // AUTH
 // ============================================================
 export const authAPI = {
-  signIn: async (email: string, password: string) => {
-    const { data, error } = await supabase.auth.signInWithPassword({ email, password })
-    if (error) throw error
-    return data
-  },
-
-  signUp: async (email: string, password: string, role: string, name: string) => {
-    console.log('signUp - URL usada:', (process.env.EXPO_PUBLIC_SUPABASE_URL ?? '') ?? 'NO URL')
-    console.log('signUp - email:', email, 'role:', role)
-    const { data, error } = await supabase.auth.signUp({
-      email,
-      password,
-      options: { data: { role, full_name: name } }
-    })
-    console.log('signUp - data:', JSON.stringify(data?.user?.id ?? 'null'))
-    console.log('signUp - error:', JSON.stringify(error))
-    if (error) throw error
-    return data
-  },
-
-  signOut: async () => {
-    const { error } = await supabase.auth.signOut()
-    if (error) throw error
-  },
-
-  getSession: async () => {
-    const { data } = await supabase.auth.getSession()
-    return data.session
-  },
-
   getUser: async () => {
-    const { data } = await supabase.auth.getUser()
+    const { data, error } = await supabase.auth.getUser()
+    if (error) throw error
     return data.user
   },
 }
@@ -56,51 +25,44 @@ export const authAPI = {
 // STUDIO
 // ============================================================
 export const studioAPI = {
-  getMyStudio: async (): Promise<StudioWithMembership | null> => {
-    const user = await authAPI.getUser()
-    if (!user) return null
-
-    const { data: studio, error } = await db.studios()
-      .select(`*, membership:memberships(*)`)
-      .eq('user_id', user.id)
-      .single()
-
+  /** El estudio del usuario logueado, con su membresía (null si todavía no lo creó). */
+  getMyStudio: async (userId?: string): Promise<StudioWithMembership | null> => {
+    const uid = userId ?? (await authAPI.getUser())?.id
+    if (!uid) return null
+    const { data, error } = await db.studios()
+      .select('*, membership:memberships(*)')
+      .eq('user_id', uid)
+      .maybeSingle()
     if (error) throw error
-    return studio as StudioWithMembership
+    if (!data) return null
+    // memberships.studio_id es UNIQUE → PostgREST devuelve objeto, pero por las dudas
+    const m = (data as any).membership
+    return { ...(data as any), membership: Array.isArray(m) ? (m[0] ?? null) : (m ?? null) } as StudioWithMembership
   },
 
   updateStudio: async (studioId: string, updates: Partial<Studio>) => {
-    const { data, error } = await db.studios()
-      .update(updates)
-      .eq('id', studioId)
-      .select()
-      .single()
+    // El dueño no puede cambiar is_member / member_since / camara_id
+    const { is_member, member_since, camara_id, id, user_id, created_at, ...safe } = updates as any
+    const { data, error } = await db.studios().update(safe).eq('id', studioId).select().single()
     if (error) throw error
     return data
   },
 
   getMembership: async (studioId: string): Promise<Membership | null> => {
-    const { data, error } = await db.memberships()
-      .select('*')
-      .eq('studio_id', studioId)
-      .eq('status', 'activa')
-      .single()
-    if (error && error.code !== 'PGRST116') throw error
+    const { data, error } = await db.memberships().select('*').eq('studio_id', studioId).maybeSingle()
+    if (error) throw error
     return data
   },
 
   getBudget: async (studioId: string) => {
-    const { data, error } = await db.budgets()
-      .select('*')
-      .eq('studio_id', studioId)
-      .single()
-    if (error && error.code !== 'PGRST116') throw error
+    const { data, error } = await db.budgets().select('*').eq('studio_id', studioId).maybeSingle()
+    if (error) throw error
     return data
   },
 
   upsertBudget: async (studioId: string, budget: UpdateBudgetDTO) => {
     const { data, error } = await db.budgets()
-      .upsert({ studio_id: studioId, ...budget }, { onConflict: 'studio_id' })
+      .upsert({ studio_id: studioId, ...budget, updated_at: new Date().toISOString() }, { onConflict: 'studio_id' })
       .select()
       .single()
     if (error) throw error
@@ -108,34 +70,33 @@ export const studioAPI = {
   },
 
   canMatch: async (studioId: string): Promise<boolean> => {
-    const { data, error } = await supabase.rpc('can_studio_match', {
-      p_studio_id: studioId
-    })
+    const { data, error } = await supabase.rpc('can_studio_match', { p_studio_id: studioId })
     if (error) throw error
-    return data
+    return !!data
   },
 
   getStats: async (studioId: string) => {
-    const [evaluationsRes, instructorsRes, pendingRes] = await Promise.all([
-      db.evaluations().select('average_score', { count: 'exact' }).eq('studio_id', studioId),
-      db.evaluations().select('instructor_id').eq('studio_id', studioId),
-      // Evaluaciones pendientes: clases recientes sin evaluar
+    const [evaluationsRes, pendingRes] = await Promise.all([
+      db.evaluations().select('average_score, instructor_id').eq('studio_id', studioId),
       db.matches()
-        .select('*', { count: 'exact' })
+        .select('id', { count: 'exact', head: true })
         .eq('studio_id', studioId)
         .eq('status', 'aceptado')
-        .lt('class_date', new Date().toISOString().split('T')[0])
+        .lt('class_date', todayISO()),
     ])
+    if (evaluationsRes.error) throw evaluationsRes.error
+    if (pendingRes.error) throw pendingRes.error
 
-    const scores = evaluationsRes.data?.map(e => e.average_score) ?? []
-    const avgScore = scores.length > 0 ? scores.reduce((a, b) => a + b, 0) / scores.length : 0
-    const uniqueInstructors = new Set(instructorsRes.data?.map(e => e.instructor_id) ?? []).size
+    const evals = evaluationsRes.data ?? []
+    const scores = evals.map(e => Number(e.average_score)).filter(n => Number.isFinite(n))
+    const avgScore = scores.length ? scores.reduce((a, b) => a + b, 0) / scores.length : 0
 
     return {
-      total_evaluations: evaluationsRes.count ?? 0,
+      total_evaluations: evals.length,
       avg_score: Math.round(avgScore * 10) / 10,
-      unique_instructors: uniqueInstructors,
-      pending_evaluations: pendingRes.count ?? 0,
+      unique_instructors: new Set(evals.map(e => e.instructor_id)).size,
+      // Clases aceptadas ya dictadas menos las evaluadas (aproximado: evaluations no tiene match_id)
+      pending_evaluations: Math.max(0, (pendingRes.count ?? 0) - evals.length),
     }
   },
 }
@@ -144,72 +105,6 @@ export const studioAPI = {
 // INSTRUCTOR
 // ============================================================
 export const instructorAPI = {
-  search: async (
-    studioId: string,
-    filters: InstructorSearchFilters = {}
-  ): Promise<InstructorSearchResult[]> => {
-    let query = db.instructors()
-      .select(`
-        *,
-        specialties:instructor_specialties(specialty, level),
-        zones:instructor_zones(neighborhood),
-        rates:instructor_rates(rate_regular, rate_replacement),
-        availability(day_of_week, start_time, end_time, class_type, is_active)
-      `)
-      .eq('verification_status', 'verificado')
-
-    if (filters.neighborhood) {
-      query = query.contains('zones', [{ neighborhood: filters.neighborhood }])
-    }
-    if (filters.specialties?.length) {
-      query = query.overlaps('specialties.specialty', filters.specialties)
-    }
-
-    const { data: instructors, error } = await query
-    if (error) throw error
-    if (!instructors?.length) return []
-
-    // Obtener presupuesto del estudio para calcular match de tarifas
-    const budget = await studioAPI.getBudget(studioId)
-
-    // Calcular stats y match de tarifas en paralelo
-    const results = await Promise.all(
-      instructors.map(async (instructor) => {
-        const stats = await instructorAPI.getStats(instructor.id)
-        const rates = instructor.rates as any
-
-        let tariffRegular: MatchTariffStatus = 'sin_match'
-        let tariffReplacement: MatchTariffStatus = 'sin_match'
-
-        if (budget && rates) {
-          tariffRegular = rates.rate_regular <= budget.max_regular ? 'ok' : 'sin_match'
-          tariffReplacement = rates.rate_replacement <= budget.max_replacement ? 'ok' : 'sin_match'
-        }
-
-        return {
-          ...instructor,
-          stats,
-          tariff_status_regular: tariffRegular,
-          tariff_status_replacement: tariffReplacement,
-          distance_km: null, // TODO: calcular con Google Maps si hay lat/lng del estudio
-        } as InstructorSearchResult
-      })
-    )
-
-    // Filtrar por score mínimo si se pide
-    const filtered = filters.min_score
-      ? results.filter(r => (r.stats?.avg_score ?? 0) >= filters.min_score!)
-      : results
-
-    // Ordenar: match completo primero, luego por score
-    return filtered.sort((a, b) => {
-      const aScore = (a.tariff_status_regular === 'ok' ? 1 : 0) + (a.tariff_status_replacement === 'ok' ? 1 : 0)
-      const bScore = (b.tariff_status_regular === 'ok' ? 1 : 0) + (b.tariff_status_replacement === 'ok' ? 1 : 0)
-      if (bScore !== aScore) return bScore - aScore
-      return (b.stats?.avg_score ?? 0) - (a.stats?.avg_score ?? 0)
-    })
-  },
-
   getById: async (instructorId: string): Promise<InstructorWithDetails | null> => {
     const { data, error } = await db.instructors()
       .select(`
@@ -221,35 +116,38 @@ export const instructorAPI = {
         rates:instructor_rates(*)
       `)
       .eq('id', instructorId)
-      .single()
-
+      .maybeSingle()
     if (error) throw error
+    if (!data) return null
     const stats = await instructorAPI.getStats(instructorId)
-    return { ...data, stats } as InstructorWithDetails
+    const rates = Array.isArray((data as any).rates) ? ((data as any).rates[0] ?? null) : (data as any).rates
+    return { ...(data as any), rates, stats } as InstructorWithDetails
   },
 
+  /** Estadísticas de evaluaciones; null si todavía no tiene o si falla (no bloquea la pantalla). */
   getStats: async (instructorId: string): Promise<InstructorStats | null> => {
-    const { data, error } = await supabase.rpc('get_instructor_stats', {
-      p_instructor_id: instructorId
-    })
-    if (error) return null
-    return data?.[0] ?? null
+    const { data, error } = await supabase.rpc('get_instructor_stats', { p_instructor_id: instructorId })
+    if (error) {
+      if (__DEV__) console.warn('[api] get_instructor_stats', error.message)
+      return null
+    }
+    return (Array.isArray(data) ? data[0] : data) ?? null
   },
 
   updateRates: async (instructorId: string, rates: UpdateRatesDTO) => {
     const { data, error } = await db.rates()
-      .upsert({ instructor_id: instructorId, ...rates }, { onConflict: 'instructor_id' })
+      .upsert({ instructor_id: instructorId, ...rates, updated_at: new Date().toISOString() }, { onConflict: 'instructor_id' })
       .select()
       .single()
     if (error) throw error
     return data
   },
 
-  upsertAvailability: async (instructorId: string, slots: Omit<any, 'id' | 'instructor_id' | 'created_at'>[]) => {
-    // Borrar y reemplazar disponibilidad
-    await db.availability().delete().eq('instructor_id', instructorId)
+  /** Reemplaza toda la disponibilidad del instructor. */
+  upsertAvailability: async (instructorId: string, slots: { day_of_week: string; start_time: string; end_time: string; class_type: string; is_active?: boolean }[]) => {
+    const { error: delError } = await db.availability().delete().eq('instructor_id', instructorId)
+    if (delError) throw delError
     if (!slots.length) return []
-
     const { data, error } = await db.availability()
       .insert(slots.map(s => ({ ...s, instructor_id: instructorId })))
       .select()
@@ -257,12 +155,14 @@ export const instructorAPI = {
     return data
   },
 
+  /** Reemplaza todas las zonas (barrios) del instructor. */
   upsertZones: async (instructorId: string, neighborhoods: string[]) => {
-    await db.zones().delete().eq('instructor_id', instructorId)
-    if (!neighborhoods.length) return []
-
+    const { error: delError } = await db.zones().delete().eq('instructor_id', instructorId)
+    if (delError) throw delError
+    const unique = Array.from(new Set(neighborhoods))
+    if (!unique.length) return []
     const { data, error } = await db.zones()
-      .insert(neighborhoods.map(n => ({ instructor_id: instructorId, neighborhood: n })))
+      .insert(unique.map(n => ({ instructor_id: instructorId, neighborhood: n })))
       .select()
     if (error) throw error
     return data
@@ -271,21 +171,24 @@ export const instructorAPI = {
   // Para la Cámara
   getPending: async () => {
     const { data, error } = await db.instructors()
-      .select(`*, certifications(*)`)
+      .select('*, certifications(*)')
       .eq('verification_status', 'pendiente')
       .order('created_at', { ascending: true })
     if (error) throw error
-    return data
+    return data ?? []
   },
 
-  verify: async (instructorId: string, approved: boolean) => {
+  /** La Cámara aprueba o rechaza. `note` queda en verification_note (el instructor la ve). */
+  verify: async (instructorId: string, approved: boolean, note?: string | null) => {
     const user = await authAPI.getUser()
+    const updates: Record<string, any> = {
+      verification_status: approved ? 'verificado' : 'rechazado',
+      verified_at: approved ? new Date().toISOString() : null,
+      verified_by: approved ? user?.id ?? null : null,
+    }
+    if (note !== undefined) updates.verification_note = note
     const { data, error } = await db.instructors()
-      .update({
-        verification_status: approved ? 'verificado' : 'rechazado',
-        verified_at: approved ? new Date().toISOString() : null,
-        verified_by: approved ? user?.id : null,
-      })
+      .update(updates)
       .eq('id', instructorId)
       .select()
       .single()
@@ -293,21 +196,18 @@ export const instructorAPI = {
     return data
   },
 
+  /** El instructor reclama un perfil que la Cámara cargó; la base valida el DNI. */
   claimProfile: async (instructorId: string, dni: string) => {
-    // El instructor reclama su perfil ya existente en el directorio
-    const user = await authAPI.getUser()
-    if (!user) throw new Error('Not authenticated')
-
-    // La base valida que el perfil no tenga dueño y que el usuario no tenga otro
-    // La base valida el DNI, que el perfil no tenga dueño y lo deja pendiente de revisión
-    const { data, error } = await supabase.rpc('claim_instructor_profile', { p_instructor_id: instructorId, p_dni: dni })
+    const { data, error } = await supabase.rpc('claim_instructor_profile', {
+      p_instructor_id: instructorId, p_dni: dni,
+    })
     if (error) throw error
     return data
   },
 }
 
 // ============================================================
-// EVALUACIONES
+// EVALUACIONES (estudio → instructor)
 // ============================================================
 export const evaluationAPI = {
   create: async (studioId: string, dto: CreateEvaluationDTO): Promise<Evaluation> => {
@@ -321,98 +221,84 @@ export const evaluationAPI = {
 
   getByInstructor: async (instructorId: string, studioId?: string): Promise<EvaluationWithInstructor[]> => {
     let query = db.evaluations()
-      .select(`*, studio:studios(id, name, neighborhood)`)
+      .select('*, studio:studios(id, name, neighborhood)')
       .eq('instructor_id', instructorId)
       .order('class_date', { ascending: false })
-
     if (studioId) query = query.eq('studio_id', studioId)
-
     const { data, error } = await query
     if (error) throw error
-    return data as any
+    return (data ?? []) as any
   },
 
+  /** Clases aceptadas ya dictadas (fecha local) que el estudio todavía no evaluó. */
   getPendingForStudio: async (studioId: string) => {
-    // Matches aceptados con fecha pasada que no tienen evaluacion
-    const { data: completedMatches, error } = await db.matches()
-      .select(`*, instructor:instructors(id, full_name, avatar_url)`)
+    const { data: completed, error } = await db.matches()
+      .select('*, instructor:instructors(id, full_name, avatar_url)')
       .eq('studio_id', studioId)
       .eq('status', 'aceptado')
-      .lt('class_date', new Date().toISOString().split('T')[0])
+      .lt('class_date', todayISO())
       .order('class_date', { ascending: false })
-      .limit(20)
-
+      .limit(50)
     if (error) throw error
 
-    // Filtrar los que ya tienen evaluación
-    const evaluated = await db.evaluations()
+    const { data: evaluated, error: evalError } = await db.evaluations()
       .select('instructor_id, class_date')
       .eq('studio_id', studioId)
+    if (evalError) throw evalError
 
-    const evaluatedSet = new Set(
-      evaluated.data?.map(e => `${e.instructor_id}_${e.class_date}`) ?? []
-    )
-
-    return completedMatches?.filter(m =>
-      !evaluatedSet.has(`${m.instructor_id}_${m.class_date}`)
-    ) ?? []
+    const done = new Set((evaluated ?? []).map(e => `${e.instructor_id}_${e.class_date}`))
+    return (completed ?? []).filter(m => !done.has(`${m.instructor_id}_${m.class_date}`))
   },
 
   getStudioHistory: async (studioId: string, limit = 20) => {
     const { data, error } = await db.evaluations()
-      .select(`*, instructor:instructors(id, full_name, avatar_url)`)
+      .select('*, instructor:instructors(id, full_name, avatar_url)')
       .eq('studio_id', studioId)
       .order('created_at', { ascending: false })
       .limit(limit)
     if (error) throw error
-    return data as any
+    return (data ?? []) as any[]
   },
 }
 
 // ============================================================
-// MATCHES
+// MATCHES (propuestas)
 // ============================================================
 export const matchAPI = {
+  /**
+   * Crea la propuesta. El límite del plan lo controla un trigger: si se pasa,
+   * el insert falla con 'MATCH_LIMIT_REACHED' (se re-tira como Error con ese mensaje).
+   */
   create: async (studioId: string, dto: CreateMatchDTO): Promise<Match> => {
-    // Verificar que el estudio puede hacer match
-    const canMatch = await studioAPI.canMatch(studioId)
-    if (!canMatch) throw new Error('MATCH_LIMIT_REACHED')
-
-    const { data, error } = await db.matches()
-      .insert({ studio_id: studioId, ...dto })
-      .select()
-      .single()
-    // El límite y el contador del mes los controla la base al insertar
-    if (error) throw error
-
+    const row = {
+      studio_id: studioId,
+      instructor_id: dto.instructor_id,
+      class_type: dto.class_type,
+      class_date: dto.class_date,
+      start_time: dto.start_time,
+      end_time: dto.end_time,
+      note_studio: dto.note_studio ?? null,
+      schedule_days: dto.class_type === 'regular' ? (dto.schedule_days ?? null) : null,
+      schedule_from: dto.class_type === 'regular' ? (dto.schedule_from ?? null) : null,
+      schedule_to: dto.class_type === 'regular' ? (dto.schedule_to ?? null) : null,
+    }
+    const { data, error } = await db.matches().insert(row).select().single()
+    if (error) {
+      if ((error.message ?? '').includes('MATCH_LIMIT_REACHED')) throw new Error('MATCH_LIMIT_REACHED')
+      throw error
+    }
     return data
   },
 
   getByStudio: async (studioId: string, status?: string) => {
     let query = db.matches()
-      .select(`*, instructor:instructors(id, full_name, avatar_url, neighborhood)`)
+      .select('*, instructor:instructors(id, full_name, avatar_url, neighborhood, phone, email)')
       .eq('studio_id', studioId)
       .order('created_at', { ascending: false })
-
     if (status) query = query.eq('status', status)
-
     const { data, error } = await query
     if (error) throw error
-    return data
-  },
-
-  updateStatus: async (matchId: string, status: string, note?: string) => {
-    const { data, error } = await db.matches()
-      .update({
-        status,
-        note_instructor: note,
-        responded_at: new Date().toISOString(),
-      })
-      .eq('id', matchId)
-      .select()
-      .single()
-    if (error) throw error
-    return data
+    return data ?? []
   },
 }
 
@@ -420,70 +306,16 @@ export const matchAPI = {
 // CÁMARA
 // ============================================================
 export const camaraAPI = {
-  getDashboardStats: async () => {
-    const [studiosRes, instructorsRes, pendingRes, membersRes] = await Promise.all([
-      db.studios().select('*', { count: 'exact', head: true }),
-      db.instructors().select('*', { count: 'exact', head: true }).eq('verification_status', 'verificado'),
-      db.instructors().select('*', { count: 'exact', head: true }).eq('verification_status', 'pendiente'),
-      db.studios().select('*', { count: 'exact', head: true }).eq('is_member', true),
-    ])
-
-    return {
-      total_studios: studiosRes.count ?? 0,
-      verified_instructors: instructorsRes.count ?? 0,
-      pending_verifications: pendingRes.count ?? 0,
-      member_studios: membersRes.count ?? 0,
-      non_member_studios: (studiosRes.count ?? 0) - (membersRes.count ?? 0),
-    }
-  },
-
-  getAllStudios: async () => {
-    const { data, error } = await db.studios()
-      .select(`*, membership:memberships(status, end_date, matches_used_month)`)
-      .order('created_at', { ascending: false })
-    if (error) throw error
-    return data
-  },
-
-  updateRateRanges: async (classType: string, min: number, max: number) => {
+  updateRateRanges: async (classType: 'regular' | 'reemplazo', min: number, max: number) => {
     const user = await authAPI.getUser()
     const { data, error } = await db.rateRanges()
       .upsert(
-        { class_type: classType, min_ars: min, max_ars: max, updated_by: user?.id },
-        { onConflict: 'class_type' }
+        { class_type: classType, min_ars: min, max_ars: max, updated_by: user?.id ?? null, updated_at: new Date().toISOString() },
+        { onConflict: 'class_type' },
       )
       .select()
       .single()
     if (error) throw error
     return data
   },
-
-  addInstructor: async (instructorData: Omit<Instructor, 'id' | 'created_at' | 'updated_at'>) => {
-    const { data, error } = await db.instructors()
-      .insert(instructorData)
-      .select()
-      .single()
-    if (error) throw error
-    return data
-  },
 }
-
-// ============================================================
-// NOTIFICACIONES (Expo Push)
-// ============================================================
-export const notificationAPI = {
-  registerToken: async (userId: string, token: string) => {
-    await supabase.from('push_tokens').upsert({ user_id: userId, token }, { onConflict: 'user_id' })
-  },
-
-  sendMatchNotification: async (matchId: string) => {
-    // Llamar Edge Function que envía la push notification
-    await supabase.functions.invoke('send-match-notification', { body: { match_id: matchId } })
-  },
-}
-
-
-// ============================================================
-// INSTRUCTOR — matches recibidos (agregado en refactor)
-// ============================================================
-// (ver matchAPI.updateStatus que ya existe — se reutiliza desde MatchesScreen)

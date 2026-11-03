@@ -1,62 +1,66 @@
 // src/screens/instructor/ProfileEditScreen.tsx
 import React, { useState, useEffect } from 'react'
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Modal, FlatList, ActivityIndicator, Alert } from 'react-native'
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Modal, FlatList, ActivityIndicator, Alert, Linking } from 'react-native'
+import { useMutation, useQueryClient } from '@tanstack/react-query'
 import * as ImagePicker from 'expo-image-picker'
 import * as FileSystem from 'expo-file-system/legacy'
 import * as DocumentPicker from 'expo-document-picker'
-import { supabase } from '../../lib/supabase'
-import { storage } from '../../lib/supabase'
+import { supabase, storage } from '../../lib/supabase'
 import { useAuthStore } from '../../store'
-import { Avatar, Button, Input, colors, spacing, radius } from '../../components/ui'
+import { useMyInstructor } from '../../hooks'
+import { humanizeError } from '../../lib/errors'
+import { confirmSignOut } from '../../lib/auth'
+import { BARRIOS_CABA } from '../../constants/barrios'
+import { SPECIALTY_LABELS, VERIFICATION_STATUS } from '../../constants/labels'
+import { Button, Input, LoadingScreen, ErrorState, colors, spacing, radius, typography } from '../../components/ui'
+import HeroHeader from '../../components/HeroHeader'
 import Toast from '../../components/Toast'
 import { useToast } from '../../hooks/useToast'
 import { Feather } from '@expo/vector-icons'
 import SaveButton from '../../components/SaveButton'
 
-const SPECIALTIES = [
-  { key: 'mat', label: 'Mat' }, { key: 'reformer', label: 'Reformer' },
-  { key: 'cadillac', label: 'Cadillac' }, { key: 'chair', label: 'Chair' },
-  { key: 'TRX', label: 'TRX' }, { key: 'prenatal', label: 'Pre/post parto' },
-  { key: 'terapeutico', label: 'Terapéutico' }, { key: 'adultos_mayores', label: 'Adultos mayores' },
-]
+const SPECIALTIES = Object.entries(SPECIALTY_LABELS as Record<string, string>).map(([key, label]) => ({ key, label }))
 
-const NEIGHBORHOODS = [
-  'Agronomía','Almagro','Balvanera','Barracas','Belgrano','Boedo','Caballito',
-  'Chacarita','Colegiales','Flores','Floresta','La Boca','Liniers','Mataderos',
-  'Monte Castro','Montserrat','Nueva Pompeya','Núñez','Palermo','Parque Chacabuco',
-  'Parque Patricios','Paternal','Puerto Madero','Recoleta','Retiro','San Cristóbal',
-  'San Nicolás','San Telmo','Versalles','Villa Crespo','Villa del Parque','Villa Devoto',
-  'Villa Lugano','Villa Luro','Villa Ortúzar','Villa Pueyrredón','Villa Real','Villa Urquiza',
-]
+const CERT_STATUS: Record<string, { label: string; bg: string; tx: string }> = {
+  approved: { label: '✓ Aprobado',   bg: colors.okBg,   tx: colors.okTx },
+  rejected: { label: '✗ Rechazado',  bg: colors.redBg,  tx: colors.redTx },
+  pending:  { label: 'En revisión',  bg: colors.warnBg, tx: colors.warnTx },
+}
 
-export default function ProfileEditScreen({ navigation }: any) {
+type PickedFile = { uri: string; name: string; mimeType: string; ext: string }
+
+// Lee un archivo local como bytes (funciona con content:// en Android)
+async function readBytes(uri: string, ext: string): Promise<Uint8Array> {
+  const cacheUri = FileSystem.cacheDirectory + 'upload_' + Date.now() + '.' + ext
+  await FileSystem.copyAsync({ from: uri, to: cacheUri })
+  const base64 = await FileSystem.readAsStringAsync(cacheUri, { encoding: FileSystem.EncodingType.Base64 })
+  const binary = atob(base64)
+  const bytes = new Uint8Array(binary.length)
+  for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i)
+  return bytes
+}
+
+export default function ProfileEditScreen() {
   const user = useAuthStore(s => s.user)
-  const { reset } = useAuthStore()
   const { toast, showToast, hideToast } = useToast()
   const qc = useQueryClient()
+  const { data: instructor, isLoading, isError, refetch } = useMyInstructor()
+
   const [bio, setBio] = useState('')
   const [neighborhood, setNeighborhood] = useState('')
   const [phone, setPhone] = useState('')
   const [selectedSpecialties, setSelectedSpecialties] = useState<string[]>([])
   const [uploading, setUploading] = useState(false)
-  const [uploadingCert, setUploadingCert] = useState(false)
+  const [busyCert, setBusyCert] = useState<string | null>(null)
+  const [savingCert, setSavingCert] = useState(false)
+  const [togglingActive, setTogglingActive] = useState(false)
   const [showNeighborhoodModal, setShowNeighborhoodModal] = useState(false)
   const [certName, setCertName] = useState('')
   const [certInstitution, setCertInstitution] = useState('')
   const [certYear, setCertYear] = useState('')
+  const [certFile, setCertFile] = useState<PickedFile | null>(null)
+  const [certError, setCertError] = useState('')
   const [showAddCert, setShowAddCert] = useState(false)
-
-  const { data: instructor } = useQuery({
-    queryKey: ['my-instructor-profile'],
-    queryFn: async () => {
-      const { data } = await supabase.from('instructors')
-        .select(`*, specialties:instructor_specialties(*), certifications(*)`)
-        .eq('user_id', user?.id).single()
-      return data
-    },
-    enabled: !!user?.id,
-  })
 
   useEffect(() => {
     if (instructor) {
@@ -67,31 +71,39 @@ export default function ProfileEditScreen({ navigation }: any) {
     }
   }, [instructor])
 
+  const invalidate = () => qc.invalidateQueries({ queryKey: ['my-instructor'] })
+
   const saveMutation = useMutation({
     mutationFn: async () => {
-      await supabase.from('instructors').update({ bio, neighborhood, phone }).eq('id', instructor!.id)
-      await supabase.from('instructor_specialties').delete().eq('instructor_id', instructor!.id)
-      if (selectedSpecialties.length > 0) {
-        await supabase.from('instructor_specialties').insert(
-          selectedSpecialties.map(s => ({ instructor_id: instructor!.id, specialty: s }))
-        )
+      const id = instructor!.id
+      const { error } = await supabase.from('instructors')
+        .update({ bio: bio.trim() || null, neighborhood: neighborhood || null, phone: phone.trim() || null })
+        .eq('id', id)
+      if (error) throw error
+
+      // Especialidades: agregar las nuevas y borrar solo las quitadas
+      const current: string[] = (instructor!.specialties ?? []).map((s: any) => s.specialty)
+      const toAdd = selectedSpecialties.filter(k => !current.includes(k))
+      const toRemove = current.filter(k => !selectedSpecialties.includes(k))
+      if (toAdd.length) {
+        const { error: insErr } = await supabase.from('instructor_specialties')
+          .insert(toAdd.map(specialty => ({ instructor_id: id, specialty })))
+        if (insErr) throw insErr
+      }
+      if (toRemove.length) {
+        const { error: delErr } = await supabase.from('instructor_specialties')
+          .delete().eq('instructor_id', id).in('specialty', toRemove)
+        if (delErr) throw delErr
       }
     },
-    onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ['my-instructor-profile'] })
-      showToast('Perfil actualizado correctamente')
-    },
+    onSuccess: () => { invalidate(); showToast('Perfil actualizado') },
+    onError: (e: any) => { invalidate(); showToast(humanizeError(e), 'error') },
   })
 
-
-  const pickAndUploadAvatar = async (
-    bucketName: string,
-    storagePath: string,
-    onSuccess: (url: string) => void
-  ) => {
+  const pickAvatar = async () => {
+    if (!user?.id || !instructor) return
     const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync()
     if (status !== 'granted') { showToast('Necesitamos acceso a tu galería', 'warning'); return }
-
     const result = await ImagePicker.launchImageLibraryAsync({
       mediaTypes: ImagePicker.MediaTypeOptions.Images,
       allowsEditing: true, aspect: [1, 1], quality: 0.7,
@@ -100,112 +112,171 @@ export default function ProfileEditScreen({ navigation }: any) {
 
     try {
       setUploading(true)
-      const sourceUri = result.assets[0].uri
-      // Copy to cache to resolve content:// URIs on Android
-      const cacheUri = FileSystem.cacheDirectory + 'upload_' + Date.now() + '.jpg'
-      await FileSystem.copyAsync({ from: sourceUri, to: cacheUri })
-      // Read base64 from cached file:// URI
-      const base64 = await FileSystem.readAsStringAsync(cacheUri, {
-        encoding: FileSystem.EncodingType.Base64,
-      })
-      // Decode base64 to bytes without external library
-      const binary = atob(base64)
-      const bytes = new Uint8Array(binary.length)
-      for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i)
-
-      const { error } = await supabase.storage
-        .from(bucketName)
-        .upload(storagePath, bytes, { upsert: true, contentType: 'image/jpeg' })
+      const bytes = await readBytes(result.assets[0].uri, 'jpg')
+      const path = `${user.id}/avatar.jpg`
+      const { error } = await supabase.storage.from('avatars')
+        .upload(path, bytes, { upsert: true, contentType: 'image/jpeg' })
       if (error) throw error
-
-      const url = supabase.storage.from(bucketName).getPublicUrl(storagePath).data.publicUrl + '?t=' + Date.now()
-      onSuccess(url)
+      const url = supabase.storage.from('avatars').getPublicUrl(path).data.publicUrl + '?t=' + Date.now()
+      const { error: upErr } = await supabase.from('instructors').update({ avatar_url: url }).eq('id', instructor.id)
+      if (upErr) throw upErr
+      invalidate()
       showToast('Foto actualizada')
     } catch (e: any) {
-      showToast(e.message, 'error')
+      showToast(humanizeError(e), 'error')
     } finally {
       setUploading(false)
     }
   }
 
-  const pickAvatar = () => pickAndUploadAvatar(
-    'avatars',
-    `${user!.id}/avatar.jpg`,
-    async (url) => {
-      await supabase.from('instructors').update({ avatar_url: url }).eq('id', instructor!.id)
-      qc.invalidateQueries({ queryKey: ['my-instructor-profile'] })
-    }
-  )
+  const pickFile = async (): Promise<PickedFile | null> => {
+    const res = await DocumentPicker.getDocumentAsync({ type: ['application/pdf', 'image/*'], copyToCacheDirectory: true })
+    if (res.canceled || !res.assets?.[0]) return null
+    const a = res.assets[0]
+    const mimeType = a.mimeType ?? (a.name?.toLowerCase().endsWith('.pdf') ? 'application/pdf' : 'image/jpeg')
+    const ext = mimeType === 'application/pdf' ? 'pdf' : mimeType === 'image/png' ? 'png' : 'jpg'
+    return { uri: a.uri, name: a.name ?? 'archivo', mimeType, ext }
+  }
+
+  // Sube el archivo y guarda el PATH en document_url
+  const attachFile = async (certId: string, file: PickedFile) => {
+    const bytes = await readBytes(file.uri, file.ext)
+    const path = await storage.uploadCertification(instructor!.id, certId, bytes as any, file.ext, file.mimeType)
+    const { error } = await supabase.from('certifications').update({ document_url: path }).eq('id', certId)
+    if (error) throw error
+  }
+
+  const resetCertForm = () => {
+    setCertName(''); setCertInstitution(''); setCertYear(''); setCertFile(null); setCertError('')
+  }
 
   const addCertification = async () => {
-    if (!certName.trim()) { Alert.alert('Ingresá el nombre del certificado'); return }
+    const year = certYear.trim() ? parseInt(certYear, 10) : null
+    if (!certName.trim()) { setCertError('Ingresá el nombre del certificado.'); return }
+    if (!certInstitution.trim()) { setCertError('Ingresá la institución que lo emitió.'); return }
+    if (year !== null && (isNaN(year) || year < 1950 || year > new Date().getFullYear())) {
+      setCertError('Revisá el año.'); return
+    }
+    if (!certFile) { setCertError('Adjuntá el certificado en PDF o foto: la Cámara lo necesita para verificarte.'); return }
+    setCertError('')
     try {
-      setUploadingCert(true)
-      const { data: certData, error: certError } = await supabase.from('certifications').insert({
+      setSavingCert(true)
+      const { data: cert, error } = await supabase.from('certifications').insert({
         instructor_id: instructor!.id, name: certName.trim(),
-        institution: certInstitution.trim() || null,
-        year: certYear ? parseInt(certYear) : null, verified: false,
-      }).select().single()
-      if (certError) throw certError
-      const docResult = await DocumentPicker.getDocumentAsync({ type: ['application/pdf', 'image/*'], copyToCacheDirectory: true })
-      if (!docResult.canceled && docResult.assets?.[0] && certData) {
-        try {
-          const asset = docResult.assets[0]
-          const blob = await (await fetch(asset.uri)).blob()
-          const fileUrl = await storage.uploadCertification(instructor!.id, certData.id, blob)
-          if (fileUrl) await supabase.from('certifications').update({ file_url: fileUrl }).eq('id', certData.id)
-        } catch (e) { console.log('Error archivo:', e) }
+        institution: certInstitution.trim(), year, review_status: 'pending',
+      }).select('id').single()
+      if (error) throw error
+      try {
+        await attachFile(cert.id, certFile)
+        showToast('Certificado enviado a revisión')
+      } catch (e) {
+        showToast('El certificado se guardó pero no pudimos subir el archivo. Tocá "Adjuntar archivo" para reintentar.', 'warning')
       }
-      qc.invalidateQueries({ queryKey: ['my-instructor-profile'] })
-      setCertName(''); setCertInstitution(''); setCertYear(''); setShowAddCert(false)
-      showToast('Certificado agregado correctamente')
-    } catch (e: any) { Alert.alert('Error', e.message)
-    } finally { setUploadingCert(false) }
+      invalidate()
+      resetCertForm()
+      setShowAddCert(false)
+    } catch (e: any) {
+      setCertError(humanizeError(e))
+    } finally {
+      setSavingCert(false)
+    }
+  }
+
+  const reattach = async (certId: string) => {
+    const file = await pickFile()
+    if (!file) return
+    try {
+      setBusyCert(certId)
+      await attachFile(certId, file)
+      // Si estaba rechazado, vuelve a revisión con el archivo nuevo
+      const { error } = await supabase.from('certifications')
+        .update({ review_status: 'pending', review_note: null }).eq('id', certId)
+      if (error) throw error
+      invalidate()
+      showToast('Archivo adjuntado. Vuelve a revisión.')
+    } catch (e: any) {
+      showToast(humanizeError(e), 'error')
+    } finally {
+      setBusyCert(null)
+    }
+  }
+
+  const viewFile = async (path: string) => {
+    const { data, error } = await supabase.storage.from('certifications').createSignedUrl(path, 600)
+    if (error || !data?.signedUrl) { showToast(humanizeError(error ?? new Error('No se pudo abrir el archivo')), 'error'); return }
+    Linking.openURL(data.signedUrl)
   }
 
   const deleteCert = (certId: string) => {
-    Alert.alert('Eliminar certificado', '¿Seguro?', [
+    Alert.alert('Eliminar certificado', 'Se va a quitar de tu perfil y de la revisión de la Cámara.', [
       { text: 'Cancelar', style: 'cancel' },
       { text: 'Eliminar', style: 'destructive', onPress: async () => {
-        await supabase.from('certifications').delete().eq('id', certId)
-        qc.invalidateQueries({ queryKey: ['my-instructor-profile'] })
+        const { error } = await supabase.from('certifications').delete().eq('id', certId)
+        if (error) { showToast(humanizeError(error), 'error'); return }
+        invalidate()
+        showToast('Certificado eliminado')
       }},
     ])
+  }
+
+  const toggleActive = async () => {
+    if (!instructor) return
+    try {
+      setTogglingActive(true)
+      const { error } = await supabase.from('instructors')
+        .update({ is_active: instructor.is_active === false }).eq('id', instructor.id)
+      if (error) throw error
+      invalidate()
+    } catch (e: any) {
+      showToast(humanizeError(e), 'error')
+    } finally {
+      setTogglingActive(false)
+    }
   }
 
   const toggleSpecialty = (key: string) =>
     setSelectedSpecialties(prev => prev.includes(key) ? prev.filter(s => s !== key) : [...prev, key])
 
-  const handleSignOut = async () => {
-    await supabase.auth.signOut()
-    reset()
-  }
+  if (isLoading) return <LoadingScreen message="Cargando tu perfil..." />
+  if (isError || !instructor) return <ErrorState message="No pudimos cargar tu perfil." onRetry={refetch} />
 
-  const isVerified = instructor?.verification_status === 'verificado' || instructor?.verification_status === 'verified'
+  const status     = instructor.verification_status ?? 'pendiente'
+  const statusInfo = VERIFICATION_STATUS[status] ?? VERIFICATION_STATUS.pendiente
+  const isActive   = instructor.is_active !== false
+  const certs: any[] = instructor.certifications ?? []
 
   return (
     <View style={{ flex: 1, backgroundColor: colors.cream }}>
       <ScrollView contentContainerStyle={{ paddingBottom: 120 }}>
-        <View style={s.hero}>
-          <TouchableOpacity onPress={pickAvatar} disabled={uploading} style={s.avatarWrap}>
-            <Avatar name={instructor?.full_name ?? 'I'} size={72} imageUrl={instructor?.avatar_url} />
-            <View style={s.avatarEdit}>
-              {uploading ? <ActivityIndicator size="small" color={colors.white} /> : <Feather name="camera" size={12} color={colors.white} />}
+        <HeroHeader
+          title={instructor.full_name ?? 'Mi perfil'}
+          subtitle={uploading ? 'Subiendo foto...' : 'Tocá la foto para cambiarla'}
+          centered
+          avatarUri={instructor.avatar_url}
+          avatarFallback={instructor.full_name ?? 'I'}
+          onAvatarPress={uploading ? undefined : pickAvatar}
+          rightElement={
+            <TouchableOpacity style={s.logoutPill} onPress={() => confirmSignOut()}>
+              <Feather name="log-out" size={13} color={colors.white} />
+              <Text style={s.logoutPillTxt}>Salir</Text>
+            </TouchableOpacity>
+          }
+          bottomElement={
+            <View style={s.veriBadge}>
+              {uploading ? <ActivityIndicator size="small" color={colors.white} /> : null}
+              <Text style={s.veriText}>{statusInfo.label}</Text>
             </View>
-          </TouchableOpacity>
-          <View style={{ flex: 1, marginLeft: spacing.md }}>
-            <Text style={s.heroName}>{instructor?.full_name}</Text>
-            <View style={[s.veriBadge, { backgroundColor: isVerified ? 'rgba(255,255,255,0.2)' : 'rgba(239,159,39,0.25)' }]}>
-              <Text style={[s.veriText, { color: isVerified ? colors.white : '#FFD080' }]}>
-                {isVerified ? '✓ Verificado · CAPIAF' : '⏳ Pendiente de verificación'}
-              </Text>
-            </View>
+          }
+        />
+
+        {instructor.verification_note && status !== 'verificado' ? (
+          <View style={[s.noteBanner, status === 'rechazado' ? { backgroundColor: colors.redBg } : null]}>
+            <Feather name="alert-circle" size={14} color={status === 'rechazado' ? colors.redTx : colors.warnTx} />
+            <Text style={[s.noteBannerTxt, { color: status === 'rechazado' ? colors.redTx : colors.warnTx }]}>
+              Mensaje de la Cámara: {instructor.verification_note}
+            </Text>
           </View>
-          <TouchableOpacity style={s.logoutPill} onPress={handleSignOut}>
-            <Feather name="log-out" size={13} color="rgba(255,255,255,0.65)" />
-            <Text style={s.logoutPillTxt}>Salir</Text>
-          </TouchableOpacity>
-        </View>
+        ) : null}
 
         <View style={s.section}>
           <Text style={s.sectionLabel}>INFORMACIÓN PERSONAL</Text>
@@ -215,7 +286,7 @@ export default function ProfileEditScreen({ navigation }: any) {
               <Text style={s.fieldLabel}>BARRIO BASE</Text>
               <TouchableOpacity style={s.selector} onPress={() => setShowNeighborhoodModal(true)}>
                 <Text style={[s.selectorText, !neighborhood && { color: colors.light }]} numberOfLines={1}>
-                  {neighborhood || 'Seleccioná'}
+                  {neighborhood || 'Elegí tu barrio'}
                 </Text>
                 <Feather name="chevron-down" size={14} color={colors.light} />
               </TouchableOpacity>
@@ -241,76 +312,83 @@ export default function ProfileEditScreen({ navigation }: any) {
 
         <View style={s.section}>
           <View style={s.sectionHeader}>
-            <Text style={s.sectionLabel}>CERTIFICACIONES</Text>
-            <TouchableOpacity style={s.addBtn} onPress={() => setShowAddCert(true)}>
-              <Feather name="plus" size={14} color={colors.sage} />
-              <Text style={s.addBtnText}>Agregar</Text>
-            </TouchableOpacity>
+            <Text style={[s.sectionLabel, { marginBottom: 0 }]}>CERTIFICACIONES</Text>
+            <Button label="Agregar" size="sm" variant="secondary" onPress={() => { resetCertForm(); setShowAddCert(true) }}
+              icon={<Feather name="plus" size={14} color={colors.sage} />} />
           </View>
-          <Text style={s.note}>Subí tus certificados en PDF o foto. La Cámara los verifica para validar tu perfil.</Text>
-          {(instructor?.certifications ?? []).length === 0 ? (
+          <Text style={s.note}>Subí tus certificados en PDF o foto. La Cámara los revisa para verificar tu perfil.</Text>
+          {certs.length === 0 ? (
             <View style={s.emptyBox}>
               <Feather name="award" size={28} color={colors.border} />
-              <Text style={s.emptyText}>Sin certificaciones cargadas</Text>
+              <Text style={s.emptyText}>Todavía no cargaste certificaciones</Text>
             </View>
-          ) : (instructor?.certifications ?? []).map((cert: any) => (
-            <View key={cert.id} style={s.certRow}>
-              <View style={s.certIcon}><Feather name="award" size={18} color={colors.sage} /></View>
-              <View style={{ flex: 1 }}>
-                <Text style={s.certName}>{cert.name}</Text>
-                {cert.institution && <Text style={s.certMeta}>{cert.institution}{cert.year ? ` · ${cert.year}` : ''}</Text>}
-                <View style={{ flexDirection: 'row', gap: 6, marginTop: 4 }}>
-                  <View style={[s.miniTag, { backgroundColor: cert.verified ? colors.sageLight : colors.warnBg }]}>
-                    <Text style={[s.miniTagText, { color: cert.verified ? colors.sage : colors.warnTx }]}>
-                      {cert.verified ? '✓ Verificado' : 'En revisión'}
-                    </Text>
-                  </View>
-                  {cert.file_url && (
-                    <View style={[s.miniTag, { backgroundColor: colors.blueBg }]}>
-                      <Text style={[s.miniTagText, { color: colors.blueTx }]}>Archivo adjunto</Text>
+          ) : certs.map((cert: any) => {
+            const st = CERT_STATUS[cert.review_status ?? 'pending'] ?? CERT_STATUS.pending
+            return (
+              <View key={cert.id} style={s.certRow}>
+                <View style={s.certIcon}><Feather name="award" size={18} color={colors.sage} /></View>
+                <View style={{ flex: 1 }}>
+                  <Text style={s.certName}>{cert.name}</Text>
+                  <Text style={s.certMeta}>{[cert.institution, cert.year].filter(Boolean).join(' · ')}</Text>
+                  <View style={{ flexDirection: 'row', gap: 6, marginTop: 4, flexWrap: 'wrap' }}>
+                    <View style={[s.miniTag, { backgroundColor: st.bg }]}>
+                      <Text style={[s.miniTagText, { color: st.tx }]}>{st.label}</Text>
                     </View>
+                    {cert.document_url ? (
+                      <TouchableOpacity style={[s.miniTag, { backgroundColor: colors.blueBg }]} onPress={() => viewFile(cert.document_url)}>
+                        <Text style={[s.miniTagText, { color: colors.blueTx }]}>Ver archivo</Text>
+                      </TouchableOpacity>
+                    ) : (
+                      <View style={[s.miniTag, { backgroundColor: colors.warnBg }]}>
+                        <Text style={[s.miniTagText, { color: colors.warnTx }]}>Sin archivo</Text>
+                      </View>
+                    )}
+                  </View>
+                  {cert.review_status === 'rejected' && cert.review_note ? (
+                    <Text style={s.certReject}>Motivo: {cert.review_note}</Text>
+                  ) : null}
+                  {(!cert.document_url || cert.review_status === 'rejected') && (
+                    <TouchableOpacity onPress={() => reattach(cert.id)} disabled={busyCert === cert.id}>
+                      <Text style={s.certLink}>{busyCert === cert.id ? 'Subiendo...' : cert.document_url ? 'Subir un archivo nuevo' : 'Adjuntar archivo'}</Text>
+                    </TouchableOpacity>
                   )}
                 </View>
+                <TouchableOpacity onPress={() => deleteCert(cert.id)} style={{ padding: 4 }}>
+                  <Feather name="trash-2" size={16} color={colors.redTx} />
+                </TouchableOpacity>
               </View>
-              <TouchableOpacity onPress={() => deleteCert(cert.id)} style={{ padding: 4 }}>
-                <Feather name="trash-2" size={16} color={colors.redTx} />
-              </TouchableOpacity>
-            </View>
-          ))}
+            )
+          })}
         </View>
 
-        <View style={{ paddingHorizontal: spacing.md }}>
-          {/* Toggle activo/inactivo */}
-          {instructor && (
-            <TouchableOpacity
-              style={[s.activeToggle, { backgroundColor: instructor.is_active !== false ? colors.sageLight : colors.warnBg }]}
-              onPress={async () => {
-                await supabase.from('instructors').update({ is_active: !(instructor.is_active !== false) }).eq('id', instructor.id)
-                qc.invalidateQueries({ queryKey: ['my-instructor-profile'] })
-              }}
-              activeOpacity={0.85}
-            >
-              <View style={[s.activeDot, { backgroundColor: instructor.is_active !== false ? colors.sage : colors.warnTx }]} />
-              <Text style={[s.activeTxt, { color: instructor.is_active !== false ? colors.sage : colors.warnTx }]}>
-                {instructor.is_active !== false ? 'Estoy activo — tocá para pausar' : 'Estoy inactivo — tocá para activarme'}
-              </Text>
-            </TouchableOpacity>
-          )}
+        <View style={{ paddingHorizontal: spacing.md, marginTop: spacing.md }}>
+          <TouchableOpacity
+            style={[s.activeToggle, { backgroundColor: isActive ? colors.sageLight : colors.warnBg }]}
+            onPress={toggleActive}
+            disabled={togglingActive}
+            activeOpacity={0.85}
+          >
+            <View style={[s.activeDot, { backgroundColor: isActive ? colors.sage : colors.warnTx }]} />
+            <Text style={[s.activeTxt, { color: isActive ? colors.sage : colors.warnTx }]}>
+              {isActive ? 'Estoy recibiendo propuestas — tocá para pausar' : 'Pausado: no aparecés en búsquedas — tocá para activarte'}
+            </Text>
+            {togglingActive ? <ActivityIndicator size="small" color={colors.sage} /> : null}
+          </TouchableOpacity>
 
           <SaveButton label="Guardar perfil" onPress={() => saveMutation.mutate()} isPending={saveMutation.isPending} isSuccess={saveMutation.isSuccess} />
         </View>
       </ScrollView>
 
-      <Modal visible={showNeighborhoodModal} animationType="slide" transparent>
+      <Modal visible={showNeighborhoodModal} animationType="slide" transparent onRequestClose={() => setShowNeighborhoodModal(false)}>
         <View style={s.modalOverlay}>
           <View style={[s.modalBox, { maxHeight: '80%' }]}>
             <View style={s.modalHeader}>
-              <Text style={s.modalTitle}>Seleccioná tu barrio</Text>
+              <Text style={s.modalTitle}>Elegí tu barrio</Text>
               <TouchableOpacity onPress={() => setShowNeighborhoodModal(false)}>
                 <Feather name="x" size={22} color={colors.mid} />
               </TouchableOpacity>
             </View>
-            <FlatList data={NEIGHBORHOODS} keyExtractor={i => i} renderItem={({ item }) => (
+            <FlatList data={BARRIOS_CABA} keyExtractor={i => i} renderItem={({ item }) => (
               <TouchableOpacity
                 style={[s.neighborhoodItem, neighborhood === item && s.neighborhoodItemActive]}
                 onPress={() => { setNeighborhood(item); setShowNeighborhoodModal(false) }}>
@@ -322,7 +400,7 @@ export default function ProfileEditScreen({ navigation }: any) {
         </View>
       </Modal>
 
-      <Modal visible={showAddCert} animationType="slide" transparent>
+      <Modal visible={showAddCert} animationType="slide" transparent onRequestClose={() => setShowAddCert(false)}>
         <View style={s.modalOverlay}>
           <View style={s.modalBox}>
             <View style={s.modalHeader}>
@@ -331,14 +409,17 @@ export default function ProfileEditScreen({ navigation }: any) {
                 <Feather name="x" size={22} color={colors.mid} />
               </TouchableOpacity>
             </View>
-            <Input label="NOMBRE" placeholder="Ej: Instructora de Mat Pilates" value={certName} onChangeText={setCertName} />
-            <Input label="INSTITUCIÓN" placeholder="Ej: Stott Pilates..." value={certInstitution} onChangeText={setCertInstitution} />
-            <Input label="AÑO" placeholder="2023" value={certYear} onChangeText={setCertYear} keyboardType="numeric" />
-            <View style={s.fileNote}>
-              <Feather name="file-text" size={14} color={colors.mid} />
-              <Text style={s.fileNoteText}>Al tocar "Agregar" podrás adjuntar el certificado en PDF o foto.</Text>
-            </View>
-            <Button label="Agregar y adjuntar archivo" onPress={addCertification} isLoading={uploadingCert} fullWidth />
+            <Input label="NOMBRE" placeholder="Ej: Instructorado de Mat Pilates" value={certName} onChangeText={setCertName} />
+            <Input label="INSTITUCIÓN" placeholder="Ej: Stott Pilates" value={certInstitution} onChangeText={setCertInstitution} />
+            <Input label="AÑO (OPCIONAL)" placeholder="2023" value={certYear} onChangeText={setCertYear} keyboardType="numeric" />
+            <TouchableOpacity style={s.fileNote} onPress={async () => { const f = await pickFile(); if (f) { setCertFile(f); setCertError('') } }}>
+              <Feather name={certFile ? 'check-circle' : 'paperclip'} size={14} color={certFile ? colors.okTx : colors.mid} />
+              <Text style={s.fileNoteText} numberOfLines={1}>
+                {certFile ? certFile.name : 'Elegir archivo (PDF o foto)'}
+              </Text>
+            </TouchableOpacity>
+            {certError ? <Text style={s.certError}>{certError}</Text> : null}
+            <Button label="Enviar a revisión" onPress={addCertification} isLoading={savingCert} fullWidth />
           </View>
         </View>
       </Modal>
@@ -348,42 +429,41 @@ export default function ProfileEditScreen({ navigation }: any) {
 }
 
 const s = StyleSheet.create({
-  activeToggle:        { flexDirection: 'row', alignItems: 'center', gap: 10, borderTopLeftRadius: 14, borderTopRightRadius: 0, borderBottomLeftRadius: 0, borderBottomRightRadius: 14, padding: 14, marginBottom: 12, borderWidth: 1, borderColor: colors.border },
-  activeDot:           { width: 10, height: 10, borderRadius: 5 },
-  activeTxt:           { fontFamily: 'Nunito-Bold', fontSize: 13, flex: 1 },
-  rowFields:          { flexDirection: 'row', gap: spacing.sm, marginBottom: spacing.sm },
-  logoutPill:         { flexDirection: 'row', alignItems: 'center', gap: 4, backgroundColor: 'rgba(255,255,255,0.1)', borderRadius: 999, paddingHorizontal: 10, paddingVertical: 6 },
-  logoutPillTxt:      { fontFamily: 'Nunito-SemiBold', fontSize: 11, color: 'rgba(255,255,255,0.65)' },
-  hero:               { backgroundColor: '#3D5440', paddingTop: 52, paddingBottom: 44, paddingHorizontal: spacing.md, flexDirection: 'row', alignItems: 'center', position: 'relative', overflow: 'hidden' },
-  heroName:           { fontFamily: 'Nunito-Bold', fontSize: 20, color: colors.white, marginBottom: 6 },
-  avatarWrap:         { position: 'relative' },
-  avatarEdit:         { position: 'absolute', bottom: 0, right: 0, width: 24, height: 24, borderTopLeftRadius: 12, borderTopRightRadius: 0, borderBottomLeftRadius: 0, borderBottomRightRadius: 12, backgroundColor: colors.sage, borderWidth: 2, borderColor: colors.white, alignItems: 'center', justifyContent: 'center' },
-  veriBadge:          { alignSelf: 'flex-start', paddingHorizontal: 10, paddingVertical: 4, borderRadius: 999 },
-  veriText:           { fontFamily: 'Nunito-SemiBold', fontSize: 11 },
+  activeToggle:       { flexDirection: 'row', alignItems: 'center', gap: 10, ...radius.leaf, padding: 14, marginBottom: 12, borderWidth: 0.5, borderColor: colors.border },
+  activeDot:          { width: 10, height: 10, borderRadius: 5 },
+  activeTxt:          { fontFamily: 'Nunito-Bold', fontSize: 13, flex: 1 },
+  rowFields:          { flexDirection: 'row', gap: spacing.sm },
+  logoutPill:         { flexDirection: 'row', alignItems: 'center', gap: 4, backgroundColor: 'rgba(255,255,255,0.15)', borderRadius: radius.full, paddingHorizontal: 10, paddingVertical: 6 },
+  logoutPillTxt:      { fontFamily: 'Nunito-SemiBold', fontSize: 11, color: colors.white },
+  veriBadge:          { flexDirection: 'row', alignItems: 'center', gap: 6, alignSelf: 'center', marginTop: 10, paddingHorizontal: 12, paddingVertical: 4, borderRadius: radius.full, backgroundColor: 'rgba(255,255,255,0.2)' },
+  veriText:           { fontFamily: 'Nunito-SemiBold', fontSize: 11, color: colors.white },
+  noteBanner:         { flexDirection: 'row', gap: 8, alignItems: 'flex-start', margin: spacing.md, marginBottom: 0, padding: spacing.md, ...radius.leaf, backgroundColor: colors.warnBg },
+  noteBannerTxt:      { fontFamily: 'Nunito-SemiBold', fontSize: 12, flex: 1, lineHeight: 17 },
   section:            { backgroundColor: colors.white, marginTop: 8, padding: spacing.md, borderTopWidth: 0.5, borderBottomWidth: 0.5, borderColor: colors.borderLight },
-  sectionHeader:      { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 },
-  sectionLabel:       { fontFamily: 'Nunito-Bold', fontSize: 10, color: colors.light, letterSpacing: 0.8, marginBottom: spacing.md },
-  fieldLabel:         { fontFamily: 'Nunito-Bold', fontSize: 10, color: colors.light, letterSpacing: 0.7, marginBottom: spacing.xs },
-  selector:           { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', height: 48, borderWidth: 0.5, borderColor: colors.border, borderTopLeftRadius: 14, borderTopRightRadius: 0, borderBottomLeftRadius: 0, borderBottomRightRadius: 14, paddingHorizontal: spacing.md, backgroundColor: colors.cream, marginBottom: spacing.md },
-  selectorText:       { fontFamily: 'Nunito-Regular', fontSize: 14, color: colors.dark },
+  sectionHeader:      { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: spacing.sm },
+  sectionLabel:       { ...typography.caption, marginBottom: spacing.md },
+  fieldLabel:         { ...typography.caption, marginBottom: spacing.xs },
+  selector:           { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', height: 48, borderWidth: 0.5, borderColor: colors.border, ...radius.leaf, paddingHorizontal: spacing.md, backgroundColor: colors.cream, marginBottom: spacing.md },
+  selectorText:       { fontFamily: 'Nunito-Regular', fontSize: 14, color: colors.dark, flex: 1 },
   chipsGrid:          { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.xs },
-  chip:               { paddingVertical: 7, paddingHorizontal: 14, borderRadius: 999, backgroundColor: colors.cream, borderWidth: 0.5, borderColor: colors.border },
+  chip:               { paddingVertical: 7, paddingHorizontal: 14, borderRadius: radius.full, backgroundColor: colors.cream, borderWidth: 0.5, borderColor: colors.border },
   chipActive:         { backgroundColor: colors.sage, borderColor: colors.sage },
   chipText:           { fontFamily: 'Nunito-Regular', fontSize: 12, color: colors.mid },
   chipTextActive:     { color: colors.white, fontFamily: 'Nunito-SemiBold' },
-  addBtn:             { flexDirection: 'row', alignItems: 'center', gap: 4, backgroundColor: colors.sageLight, paddingHorizontal: spacing.sm, paddingVertical: 5, borderTopLeftRadius: 8, borderTopRightRadius: 0, borderBottomLeftRadius: 0, borderBottomRightRadius: 8 },
-  addBtnText:         { fontFamily: 'Nunito-SemiBold', fontSize: 12, color: colors.sage },
   note:               { fontFamily: 'Nunito-Regular', fontSize: 12, color: colors.mid, marginBottom: spacing.md, lineHeight: 18 },
   certRow:            { flexDirection: 'row', alignItems: 'flex-start', gap: spacing.sm, paddingVertical: spacing.sm, borderTopWidth: 0.5, borderColor: colors.borderLight },
-  certIcon:           { width: 36, height: 36, borderRadius: 8, backgroundColor: colors.sageLight, alignItems: 'center', justifyContent: 'center' },
+  certIcon:           { width: 36, height: 36, ...radius.leaf, backgroundColor: colors.sageLight, alignItems: 'center', justifyContent: 'center' },
   certName:           { fontFamily: 'Nunito-SemiBold', fontSize: 13, color: colors.dark },
   certMeta:           { fontFamily: 'Nunito-Regular', fontSize: 11, color: colors.mid, marginTop: 2 },
-  miniTag:            { paddingHorizontal: 7, paddingVertical: 2, borderRadius: 5 },
-  miniTagText:        { fontFamily: 'Nunito-SemiBold', fontSize: 9 },
+  certReject:         { fontFamily: 'Nunito-Regular', fontSize: 11, color: colors.redTx, marginTop: 4, fontStyle: 'italic' },
+  certLink:           { fontFamily: 'Nunito-Bold', fontSize: 12, color: colors.sage, marginTop: 6 },
+  certError:          { fontFamily: 'Nunito-SemiBold', fontSize: 12, color: colors.redTx, marginBottom: spacing.sm },
+  miniTag:            { paddingHorizontal: 7, paddingVertical: 2, borderRadius: radius.sm },
+  miniTagText:        { fontFamily: 'Nunito-SemiBold', fontSize: 10 },
   emptyBox:           { alignItems: 'center', paddingVertical: spacing.lg, gap: spacing.sm },
   emptyText:          { fontFamily: 'Nunito-Regular', fontSize: 13, color: colors.light },
-  fileNote:           { flexDirection: 'row', gap: spacing.xs, alignItems: 'flex-start', backgroundColor: colors.cream, borderTopLeftRadius: 8, borderTopRightRadius: 0, borderBottomLeftRadius: 0, borderBottomRightRadius: 8, padding: spacing.sm, marginBottom: spacing.md },
-  fileNoteText:       { fontFamily: 'Nunito-Regular', fontSize: 12, color: colors.mid, flex: 1, lineHeight: 18 },
+  fileNote:           { flexDirection: 'row', gap: spacing.xs, alignItems: 'center', backgroundColor: colors.cream, ...radius.leaf, padding: spacing.md, marginBottom: spacing.md, borderWidth: 0.5, borderColor: colors.border, borderStyle: 'dashed' },
+  fileNoteText:       { fontFamily: 'Nunito-SemiBold', fontSize: 13, color: colors.mid, flex: 1 },
   modalOverlay:       { flex: 1, backgroundColor: 'rgba(0,0,0,0.4)', justifyContent: 'flex-end' },
   modalBox:           { backgroundColor: colors.white, borderTopLeftRadius: 20, borderTopRightRadius: 20, padding: spacing.lg, paddingBottom: 40 },
   modalHeader:        { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: spacing.lg },

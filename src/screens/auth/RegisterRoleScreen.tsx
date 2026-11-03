@@ -1,26 +1,24 @@
 // src/screens/auth/RegisterRoleScreen.tsx
 import React from 'react'
 import { View, Text, StyleSheet, TouchableOpacity, ScrollView } from 'react-native'
-import { colors, spacing, radius, typography, shadows, Card } from '../../components/ui'
+import { Feather } from '@expo/vector-icons'
+import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import type { NativeStackScreenProps } from '@react-navigation/native-stack'
+import { colors, spacing, radius, typography } from '../../components/ui'
 
 const ROLES = [
   {
     key: 'estudio',
-    icon: '🏢',
-    title: 'Soy dueño de un estudio',
-    desc: 'Evalúo instructores y busco reemplazos',
-    bg: colors.sageLight,
-    border: colors.sageMid,
+    icon: 'home' as const,
+    title: 'Tengo un estudio',
+    desc: 'Busco instructores verificados para clases regulares y reemplazos',
     next: 'RegisterStudio',
   },
   {
     key: 'instructor',
-    icon: '🧘',
+    icon: 'activity' as const,
     title: 'Soy instructor/a',
-    desc: 'Ofrezco clases y reemplazos en estudios',
-    bg: colors.sageLighter,
-    border: colors.sage,
+    desc: 'Doy clases de Pilates y busco estudios donde trabajar',
     next: 'RegisterInstructor',
   },
 ]
@@ -28,29 +26,36 @@ const ROLES = [
 type Props = NativeStackScreenProps<any, 'RegisterRole'>
 
 export default function RegisterRoleScreen({ navigation }: Props) {
+  const insets = useSafeAreaInsets()
   return (
-    <ScrollView contentContainerStyle={styles.container}>
-      <TouchableOpacity style={styles.backBtn} onPress={() => navigation.goBack()}>
-        <Text style={styles.backText}>← Volver</Text>
+    <ScrollView
+      style={{ backgroundColor: colors.cream }}
+      contentContainerStyle={[styles.container, { paddingTop: insets.top + spacing.md, paddingBottom: insets.bottom + spacing.xl }]}
+    >
+      <TouchableOpacity style={styles.backBtn} onPress={() => navigation.goBack()} hitSlop={12}>
+        <Feather name="chevron-left" size={16} color={colors.mid} />
+        <Text style={styles.backText}>Volver</Text>
       </TouchableOpacity>
 
-      <Text style={styles.title}>¿Cómo vas a usar{'\n'}PilatesMatch?</Text>
-      <Text style={styles.sub}>Elegí tu rol para personalizar la experiencia</Text>
+      <Text style={styles.title}>¿Cómo vas a usar{'\n'}Trabajo Más Fácil?</Text>
+      <Text style={styles.sub}>Elegí una opción para crear tu cuenta</Text>
 
       <View style={styles.roles}>
         {ROLES.map(role => (
           <TouchableOpacity
             key={role.key}
-            style={[styles.roleCard, { backgroundColor: role.bg, borderColor: role.border }]}
+            style={styles.roleCard}
             onPress={() => navigation.navigate(role.next, { role: role.key })}
             activeOpacity={0.85}
           >
-            <Text style={styles.roleIcon}>{role.icon}</Text>
+            <View style={styles.roleIcon}>
+              <Feather name={role.icon} size={26} color={colors.sage} />
+            </View>
             <View style={{ flex: 1 }}>
               <Text style={styles.roleTitle}>{role.title}</Text>
               <Text style={styles.roleDesc}>{role.desc}</Text>
             </View>
-            <Text style={{ color: colors.mid, fontSize: 18 }}>›</Text>
+            <Feather name="chevron-right" size={20} color={colors.sage} />
           </TouchableOpacity>
         ))}
       </View>
@@ -65,19 +70,21 @@ export default function RegisterRoleScreen({ navigation }: Props) {
 }
 
 const styles = StyleSheet.create({
-  container: { flexGrow: 1, backgroundColor: colors.cream, padding: spacing.xl },
-  backBtn: { marginBottom: spacing.xl },
-  backText: { ...typography.body, color: colors.mid },
-  title: { fontFamily: 'Nunito-Bold', fontSize: 26, color: colors.dark, marginBottom: spacing.sm },
-  sub: { ...typography.body, color: colors.mid, marginBottom: spacing.xl },
-  roles: { gap: spacing.md },
-  roleCard: {
+  container: { flexGrow: 1, paddingHorizontal: spacing.lg },
+  backBtn:   { flexDirection: 'row', alignItems: 'center', gap: 4, marginBottom: spacing.xl, alignSelf: 'flex-start' },
+  backText:  { fontFamily: 'Nunito-SemiBold', fontSize: 14, color: colors.mid },
+  title:     { fontFamily: 'Nunito-Bold', fontSize: 26, color: colors.dark, marginBottom: spacing.sm },
+  sub:       { ...typography.body, marginBottom: spacing.xl },
+  roles:     { gap: spacing.md },
+  roleCard:  {
     flexDirection: 'row', alignItems: 'center', gap: spacing.md,
-    padding: spacing.lg, borderTopLeftRadius: 14, borderTopRightRadius: 0, borderBottomLeftRadius: 0, borderBottomRightRadius: 14, borderWidth: 1,
+    padding: spacing.md, backgroundColor: colors.white, ...radius.leafLg,
+    borderWidth: 1, borderColor: colors.mint,
+    shadowColor: colors.black, shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.06, shadowRadius: 6, elevation: 2,
   },
-  roleIcon: { fontSize: 28 },
-  roleTitle: { fontFamily: 'Nunito-SemiBold', fontSize: 15, color: colors.dark },
-  roleDesc: { ...typography.small, color: colors.mid, marginTop: 2 },
+  roleIcon:  { width: 56, height: 56, borderRadius: 28, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.sageLight },
+  roleTitle: { fontFamily: 'Nunito-Bold', fontSize: 16, color: colors.sage, marginBottom: 4 },
+  roleDesc:  { fontFamily: 'Nunito-Regular', fontSize: 13, color: colors.mid, lineHeight: 18 },
   loginLink: { alignItems: 'center', marginTop: spacing.xl },
-  loginText: { ...typography.body, color: colors.mid },
+  loginText: { ...typography.body },
 })

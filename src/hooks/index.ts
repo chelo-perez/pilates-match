@@ -1,28 +1,29 @@
 // src/hooks/index.ts
-// Hooks de datos reutilizables con React Query
+// Hooks de datos reutilizables con React Query.
+// Las claves incluyen el userId cuando los datos dependen de quién está logueado.
 
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useAuthStore, useStudioStore } from '../store'
-import {
-  studioAPI, instructorAPI, evaluationAPI, matchAPI, camaraAPI
-} from '../lib/api'
-import type { CreateEvaluationDTO, CreateMatchDTO, InstructorSearchFilters } from '../types/database'
+import { supabase } from '../lib/supabase'
+import { studioAPI, instructorAPI, evaluationAPI, matchAPI } from '../lib/api'
+import type { CreateEvaluationDTO, CreateMatchDTO } from '../types/database'
 
-// ── Auth hooks ──────────────────────────────────────────────
-export const useUser = () => useAuthStore((s) => s.user)
-export const useIsLoading = () => useAuthStore((s) => s.isLoading)
+const useUserId = () => useAuthStore((s) => s.user?.id)
 
-// ── Studio hooks ────────────────────────────────────────────
+// ── Studio ──────────────────────────────────────────────────
+/** Estudio del usuario logueado con su membresía. `data` es null si todavía no existe. */
 export const useMyStudio = () => {
+  const userId = useUserId()
   const setStudio = useStudioStore((s) => s.setStudio)
   return useQuery({
-    queryKey: ['my-studio'],
+    queryKey: ['my-studio', userId],
     queryFn: async () => {
-      const studio = await studioAPI.getMyStudio()
+      const studio = await studioAPI.getMyStudio(userId)
       setStudio(studio)
       return studio
     },
-    staleTime: 5 * 60 * 1000, // 5 min
+    enabled: !!userId,
+    staleTime: 60 * 1000,
   })
 }
 
@@ -36,7 +37,7 @@ export const useStudioStats = (studioId: string | undefined) => {
       return stats
     },
     enabled: !!studioId,
-    staleTime: 2 * 60 * 1000,
+    staleTime: 60 * 1000,
   })
 }
 
@@ -47,15 +48,29 @@ export const useCanMatch = (studioId: string | undefined) =>
     enabled: !!studioId,
   })
 
-// ── Instructor hooks ────────────────────────────────────────
-export const useInstructorSearch = (studioId: string | undefined, filters: InstructorSearchFilters) =>
-  useQuery({
-    queryKey: ['instructor-search', studioId, filters],
-    queryFn: () => instructorAPI.search(studioId!, filters),
-    enabled: !!studioId,
-    staleTime: 30 * 1000, // 30s — búsquedas son más volátiles
+// ── Instructor ──────────────────────────────────────────────
+/** Perfil de instructor del usuario logueado. `data` es null si todavía no existe. */
+export const useMyInstructor = () => {
+  const userId = useUserId()
+  return useQuery({
+    queryKey: ['my-instructor', userId],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('instructors')
+        .select('*, certifications(*), specialties:instructor_specialties(*), rates:instructor_rates(*), zones:instructor_zones(*)')
+        .eq('user_id', userId!)
+        .maybeSingle()
+      if (error) throw error
+      if (!data) return null
+      const rates = Array.isArray((data as any).rates) ? ((data as any).rates[0] ?? null) : (data as any).rates
+      return { ...(data as any), rates }
+    },
+    enabled: !!userId,
+    staleTime: 60 * 1000,
   })
+}
 
+/** Perfil de un instructor (con certificados, zonas, tarifas y stats). */
 export const useInstructor = (instructorId: string | undefined) =>
   useQuery({
     queryKey: ['instructor', instructorId],
@@ -64,6 +79,7 @@ export const useInstructor = (instructorId: string | undefined) =>
     staleTime: 5 * 60 * 1000,
   })
 
+/** Instructores pendientes de verificación (Cámara). */
 export const usePendingInstructors = () =>
   useQuery({
     queryKey: ['pending-instructors'],
@@ -71,15 +87,7 @@ export const usePendingInstructors = () =>
     staleTime: 60 * 1000,
   })
 
-// ── Evaluation hooks ────────────────────────────────────────
-export const usePendingEvaluations = (studioId: string | undefined) =>
-  useQuery({
-    queryKey: ['pending-evaluations', studioId],
-    queryFn: () => evaluationAPI.getPendingForStudio(studioId!),
-    enabled: !!studioId,
-    staleTime: 60 * 1000,
-  })
-
+// ── Evaluaciones ────────────────────────────────────────────
 export const useEvaluationHistory = (studioId: string | undefined) =>
   useQuery({
     queryKey: ['evaluation-history', studioId],
@@ -87,20 +95,14 @@ export const useEvaluationHistory = (studioId: string | undefined) =>
     enabled: !!studioId,
   })
 
-export const useInstructorEvaluations = (instructorId: string | undefined, studioId?: string) =>
-  useQuery({
-    queryKey: ['instructor-evaluations', instructorId, studioId],
-    queryFn: () => evaluationAPI.getByInstructor(instructorId!, studioId),
-    enabled: !!instructorId,
-  })
-
 export const useCreateEvaluation = () => {
   const qc = useQueryClient()
   const studio = useStudioStore((s) => s.studio)
-
   return useMutation({
-    mutationFn: (dto: CreateEvaluationDTO) =>
-      evaluationAPI.create(studio!.id, dto),
+    mutationFn: (dto: CreateEvaluationDTO) => {
+      if (!studio?.id) throw new Error('No encontramos tu estudio')
+      return evaluationAPI.create(studio.id, dto)
+    },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['pending-evaluations'] })
       qc.invalidateQueries({ queryKey: ['evaluation-history'] })
@@ -110,106 +112,23 @@ export const useCreateEvaluation = () => {
   })
 }
 
-// ── Match hooks ─────────────────────────────────────────────
+// ── Matches ─────────────────────────────────────────────────
 export const useCreateMatch = () => {
   const qc = useQueryClient()
   const studio = useStudioStore((s) => s.studio)
-
   return useMutation({
-    mutationFn: (dto: CreateMatchDTO) =>
-      matchAPI.create(studio!.id, dto),
-    onSuccess: () => {
+    mutationFn: (dto: CreateMatchDTO) => {
+      if (!studio?.id) throw new Error('No encontramos tu estudio')
+      return matchAPI.create(studio.id, dto)
+    },
+    onSettled: () => {
+      // También al fallar por límite: el contador pudo haber cambiado
       qc.invalidateQueries({ queryKey: ['can-match'] })
       qc.invalidateQueries({ queryKey: ['my-studio'] })
+      qc.invalidateQueries({ queryKey: ['studio-history-recent'] })
+      qc.invalidateQueries({ queryKey: ['studio-matches'] })
+      qc.invalidateQueries({ queryKey: ['studio-membership'] })
+      qc.invalidateQueries({ queryKey: ['studio-stats'] })
     },
   })
 }
-
-export const useVerifyInstructor = () => {
-  const qc = useQueryClient()
-  return useMutation({
-    mutationFn: ({ id, approved }: { id: string; approved: boolean }) =>
-      instructorAPI.verify(id, approved),
-    onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ['pending-instructors'] })
-      qc.invalidateQueries({ queryKey: ['instructor'] })
-    },
-  })
-}
-
-// ── Cámara hooks ────────────────────────────────────────────
-export const useCamaraDashboard = () =>
-  useQuery({
-    queryKey: ['camara-dashboard'],
-    queryFn: camaraAPI.getDashboardStats,
-    staleTime: 2 * 60 * 1000,
-  })
-
-export const useCamaraStudios = () =>
-  useQuery({
-    queryKey: ['camara-studios'],
-    queryFn: camaraAPI.getAllStudios,
-    staleTime: 2 * 60 * 1000,
-  })
-
-// ── Instructor matches hook ──────────────────────────────────
-export const useInstructorMatches = (instructorId: string | undefined, status?: string) =>
-  useQuery({
-    queryKey: ['instructor-matches', instructorId, status],
-    queryFn: async () => {
-      let query = (await import('../lib/supabase')).supabase
-        .from('matches')
-        .select('*, studio:studios(id, name, neighborhood, address, phone)')
-        .eq('instructor_id', instructorId!)
-        .order('class_date', { ascending: false })
-
-      if (status) query = query.eq('status', status)
-
-      const { data, error } = await query
-      if (error) throw error
-      return data ?? []
-    },
-    enabled: !!instructorId,
-    refetchInterval: 30_000,
-  })
-
-// ── Can studio send proposals ─────────────────────────────────
-export const useCanPropose = (studioId: string | undefined) =>
-  useQuery({
-    queryKey: ['can-propose', studioId],
-    queryFn: async () => {
-      const { data } = await (await import('../lib/supabase')).supabase
-        .rpc('can_studio_send_proposal', { p_studio_id: studioId! })
-      return data ?? true
-    },
-    enabled: !!studioId,
-    refetchInterval: 60_000,
-  })
-
-// ── Studio evaluations (by instructor) ────────────────────────
-export const useInstructorStudioEvals = (instructorId: string | undefined) =>
-  useQuery({
-    queryKey: ['instructor-studio-evals', instructorId],
-    queryFn: async () => {
-      const { data, error } = await (await import('../lib/supabase')).supabase
-        .from('studio_evaluations')
-        .select('*, studio:studios(id, name, neighborhood)')
-        .eq('instructor_id', instructorId!)
-        .order('created_at', { ascending: false })
-        .limit(10)
-      if (error) throw error
-      return data ?? []
-    },
-    enabled: !!instructorId,
-  })
-
-// ── Camara reports ────────────────────────────────────────────
-export const useCamaraReports = (period: 'month' | 'quarter' | 'year' = 'month') =>
-  useQuery({
-    queryKey: ['camara-reports', period],
-    queryFn: async () => {
-      const { camaraAPI } = await import('../lib/api')
-      return camaraAPI.getDashboardStats()
-    },
-    staleTime: 5 * 60_000,
-  })

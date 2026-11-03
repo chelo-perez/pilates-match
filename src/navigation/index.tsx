@@ -1,13 +1,22 @@
 // src/navigation/index.tsx — con íconos Lottie animados
-import React from 'react'
+//
+// Qué stack se muestra depende SOLO del store de auth (src/lib/auth.ts):
+//   sin sesión (o registro en curso) → Login / registro
+//   sesión sin perfil leído           → error con reintento
+//   sesión sin estudio/instructor     → SelectRole (onboarding)
+//   rol                               → tabs del rol
+// Las pantallas no hacen navigation.replace() entre stacks: cambian el store.
+import React, { useEffect } from 'react'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
-import { View, Text, TouchableOpacity, ActivityIndicator, Alert } from 'react-native'
-import { NavigationContainer } from '@react-navigation/native'
+import { View } from 'react-native'
+import { NavigationContainer, createNavigationContainerRef } from '@react-navigation/native'
 import { createNativeStackNavigator } from '@react-navigation/native-stack'
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs'
 import { useAuthStore } from '../store'
-import { supabase } from '../lib/supabase'
+import { syncAuthUser, signOutNow } from '../lib/auth'
+import { listenForNotifications } from '../lib/notifications'
 import LottieTab from '../components/LottieTab'
+import { ErrorState, LoadingScreen, Button, colors, spacing } from '../components/ui'
 
 // Lottie assets
 const ICONS = {
@@ -29,6 +38,7 @@ import SelectRoleScreen from '../screens/auth/SelectRoleScreen'
 import RegisterRoleScreen from '../screens/auth/RegisterRoleScreen'
 import RegisterInstructorScreen from '../screens/auth/RegisterInstructorScreen'
 import RegisterStudioScreen from '../screens/auth/RegisterStudioScreen'
+import ResetPasswordScreen from '../screens/auth/ResetPasswordScreen'
 
 // Instructor
 import InstructorDashboardScreen from '../screens/instructor/DashboardScreen'
@@ -63,23 +73,15 @@ import CamaraReportsScreen from '../screens/camara/ReportsScreen'
 const Stack = createNativeStackNavigator()
 const Tab = createBottomTabNavigator<any>()
 const noHeader = { headerShown: false }
-const SAGE = '#4A5D4E'
-const LIGHT = '#9A9A9A'
 
-function Loading() {
-  return (
-    <View style={{ flex: 1, backgroundColor: '#F9F9F6', alignItems: 'center', justifyContent: 'center' }}>
-      <ActivityIndicator color={SAGE} size="large" />
-    </View>
-  )
-}
+export const navigationRef = createNavigationContainerRef<any>()
 
 function useTabStyle() {
   const insets = useSafeAreaInsets()
   return {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: colors.white,
     borderTopWidth: 0.5,
-    borderTopColor: '#E2E2DE',
+    borderTopColor: colors.border,
     paddingBottom: insets.bottom || 8,
     paddingTop: 8,
     height: 64 + (insets.bottom || 0),
@@ -95,20 +97,10 @@ function lottieIcon(source: any) {
 const tabScreenOptions = (tabStyle: any) => ({
   headerShown: false,
   tabBarStyle: tabStyle,
-  tabBarActiveTintColor: SAGE,
-  tabBarInactiveTintColor: LIGHT,
-  tabBarLabelStyle: { fontFamily: 'Nunito-SemiBold', fontSize: 10, marginTop: 2 },
+  tabBarActiveTintColor: colors.sage,
+  tabBarInactiveTintColor: colors.light,
+  tabBarLabelStyle: { fontFamily: 'Nunito-SemiBold', fontSize: 11, marginTop: 2 },
 })
-
-function signOut(reset: () => void) {
-  Alert.alert('Cerrar sesión', '¿Seguro que querés salir?', [
-    { text: 'Cancelar', style: 'cancel' },
-    { text: 'Salir', style: 'destructive', onPress: async () => {
-      await supabase.auth.signOut()
-      reset()
-    }},
-  ])
-}
 
 // ── INSTRUCTOR TABS ──────────────────────────────────────────
 function InstructorTabs() {
@@ -134,7 +126,7 @@ function StudioTabs() {
   const tabStyle = useTabStyle()
   return (
     <Tab.Navigator screenOptions={tabScreenOptions(tabStyle)}>
-      <Tab.Screen name="EstudioHome" component={StudioHomeScreen}
+      <Tab.Screen name="EstudioInicio" component={StudioHomeScreen}
         options={{ tabBarLabel: 'Inicio', tabBarIcon: lottieIcon(ICONS.home) }} />
       <Tab.Screen name="Search" component={SearchScreen}
         options={{ tabBarLabel: 'Buscar', tabBarIcon: lottieIcon(ICONS.search) }} />
@@ -151,7 +143,7 @@ function CamaraTabs() {
   const tabStyle = useTabStyle()
   return (
     <Tab.Navigator screenOptions={tabScreenOptions(tabStyle)}>
-      <Tab.Screen name="CamaraTabs" component={CamaraDashboardScreen}
+      <Tab.Screen name="CamaraInicio" component={CamaraDashboardScreen}
         options={{ tabBarLabel: 'Inicio', tabBarIcon: lottieIcon(ICONS.home) }} />
       <Tab.Screen name="Directorio" component={CamaraDirectoryScreen}
         options={{ tabBarLabel: 'Directorio', tabBarIcon: lottieIcon(ICONS.users) }} />
@@ -165,66 +157,103 @@ function CamaraTabs() {
   )
 }
 
-// ── ADMIN ──────────────────────────────────────────────────────
-function AdminHome() {
-  const { reset } = useAuthStore()
+// ── Sesión sin perfil (sin red al abrir) ──────────────────────
+function ProfileErrorScreen() {
+  const session = useAuthStore((s) => s.session)
+  const [retrying, setRetrying] = React.useState(false)
+  const retry = async () => {
+    if (!session?.user?.id) return
+    setRetrying(true)
+    await syncAuthUser(session.user.id)
+    setRetrying(false)
+  }
   return (
-    <View style={{ flex: 1, backgroundColor: '#F9F9F6', alignItems: 'center', justifyContent: 'center', gap: 16 }}>
-      <Text style={{ fontFamily: 'Nunito-Bold', fontSize: 22, color: SAGE }}>Panel Admin</Text>
-      <TouchableOpacity
-        onPress={() => signOut(reset)}
-        style={{ backgroundColor: SAGE, borderRadius: 10, padding: 12, paddingHorizontal: 24 }}
-      >
-        <Text style={{ fontFamily: 'Nunito-Bold', color: '#fff' }}>Cerrar sesión</Text>
-      </TouchableOpacity>
+    <View style={{ flex: 1, backgroundColor: colors.cream, paddingBottom: spacing.xl }}>
+      {retrying ? <LoadingScreen message="Reintentando..." /> : (
+        <ErrorState message="No pudimos cargar tu cuenta." onRetry={retry} />
+      )}
+      <Button label="Cerrar sesión" variant="ghost" onPress={() => signOutNow()} style={{ alignSelf: 'center' }} />
     </View>
   )
 }
 
+// ── Notificaciones: tocar una propuesta abre "Propuestas" ─────
+function useNotificationRouting(role: string | undefined) {
+  useEffect(() => {
+    if (!role) return
+    return listenForNotifications(
+      () => {},
+      (response) => {
+        const data: any = response.notification.request.content.data ?? {}
+        if (!navigationRef.isReady()) return
+        if (role === 'instructor' && data.match_id) {
+          navigationRef.navigate('InstructorTabs', { screen: 'InstructorPropuestas' })
+        }
+      },
+    )
+  }, [role])
+}
+
 // ── ROOT NAVIGATOR ─────────────────────────────────────────────
 export default function RootNavigator() {
-  const { user, isLoading } = useAuthStore()
-  if (isLoading) return <Loading />
+  const { user, session, isLoading, needsOnboarding, registering, profileError, passwordRecovery } = useAuthStore()
+  useNotificationRouting(user?.role)
 
-  return (
-    <NavigationContainer>
-      <Stack.Navigator screenOptions={noHeader}>
-        {!user ? (
-          <>
-            <Stack.Screen name="Login" component={LoginScreen} />
-        <Stack.Screen name="SelectRole" component={SelectRoleScreen} options={{ headerShown: false }} />
-            <Stack.Screen name="RegisterRole" component={RegisterRoleScreen} />
-            <Stack.Screen name="RegisterInstructor" component={RegisterInstructorScreen} />
-            <Stack.Screen name="RegisterStudio" component={RegisterStudioScreen} />
-          </>
-        ) : user.role === 'instructor' ? (
-          <>
-            <Stack.Screen name="InstructorTabs" component={InstructorTabs} />
-            <Stack.Screen name="EvaluateStudio" component={EvaluateStudioScreen} />
-          </>
-        ) : user.role === 'estudio' ? (
-          <>
-            <Stack.Screen name="EstudioHome" component={StudioTabs} />
-            <Stack.Screen name="InstructorProfile" component={InstructorProfileScreen} />
-            <Stack.Screen name="RequestMatch" component={RequestMatchScreen} />
-            <Stack.Screen name="EvaluateInstructor" component={EvaluateInstructorScreen} />
-            <Stack.Screen name="MembershipPaywall" component={MembershipPaywallScreen} />
-          </>
-        ) : user.role === 'camara_admin' ? (
-          <>
-            <Stack.Screen name="CamaraTabs" component={CamaraTabs} />
-            <Stack.Screen name="VerifyInstructor" component={VerifyInstructorScreen} />
+  if (isLoading) return <LoadingScreen />
+
+  const isAdmin = user?.role === 'camara_admin' || user?.role === 'super_admin'
+
+  let screens: React.ReactNode
+  if (!session || registering) {
+    screens = (
+      <>
+        <Stack.Screen name="Login" component={LoginScreen} />
+        <Stack.Screen name="RegisterRole" component={RegisterRoleScreen} />
+        <Stack.Screen name="RegisterInstructor" component={RegisterInstructorScreen} />
+        <Stack.Screen name="RegisterStudio" component={RegisterStudioScreen} />
+      </>
+    )
+  } else if (passwordRecovery) {
+    screens = <Stack.Screen name="ResetPassword" component={ResetPasswordScreen} />
+  } else if (!user && profileError) {
+    screens = <Stack.Screen name="ProfileError" component={ProfileErrorScreen} />
+  } else if (!user || (needsOnboarding && !isAdmin)) {
+    screens = <Stack.Screen name="SelectRole" component={SelectRoleScreen} />
+  } else if (user.role === 'instructor') {
+    screens = (
+      <>
+        <Stack.Screen name="InstructorTabs" component={InstructorTabs} />
+        <Stack.Screen name="EvaluateStudio" component={EvaluateStudioScreen} />
+      </>
+    )
+  } else if (user.role === 'estudio') {
+    screens = (
+      <>
+        <Stack.Screen name="EstudioHome" component={StudioTabs} />
+        <Stack.Screen name="InstructorProfile" component={InstructorProfileScreen} />
+        <Stack.Screen name="RequestMatch" component={RequestMatchScreen} />
+        <Stack.Screen name="EvaluateInstructor" component={EvaluateInstructorScreen} />
+        <Stack.Screen name="MembershipPaywall" component={MembershipPaywallScreen} />
+        <Stack.Screen name="Membership" component={MembershipScreen} />
+        <Stack.Screen name="StudioProfileEdit" component={StudioProfileEditScreen} />
+      </>
+    )
+  } else {
+    // camara_admin y super_admin (is_admin en la base) usan el panel de la Cámara
+    screens = (
+      <>
+        <Stack.Screen name="CamaraTabs" component={CamaraTabs} />
+        <Stack.Screen name="VerifyInstructor" component={VerifyInstructorScreen} />
         <Stack.Screen name="StudioDetail" component={StudioDetailScreen} />
         <Stack.Screen name="CamaraProfileEdit" component={CamaraProfileEditScreen} />
-          </>
-        ) : user.role === 'super_admin' ? (
-          <Stack.Screen name="AdminTabs" component={AdminHome} />
-        ) : (
-          <>
-            <Stack.Screen name="Login" component={LoginScreen} />
-            <Stack.Screen name="SelectRole" component={SelectRoleScreen} options={{ headerShown: false }} />
-          </>
-        )}
+      </>
+    )
+  }
+
+  return (
+    <NavigationContainer ref={navigationRef}>
+      <Stack.Navigator screenOptions={noHeader}>
+        {screens}
       </Stack.Navigator>
     </NavigationContainer>
   )

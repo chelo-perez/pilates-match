@@ -1,12 +1,12 @@
 // src/screens/instructor/AvailabilityScreen.tsx
 import React, { useState, useEffect } from 'react'
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert, Modal, FlatList } from 'react-native'
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Modal } from 'react-native'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { supabase } from '../../lib/supabase'
-import { instructorAPI } from '../../lib/api'
-import { useAuthStore } from '../../store'
-import { Button, Badge, colors, spacing, typography, radius } from '../../components/ui'
-import BlobCard from '../../components/BlobCard'
+import { useMyInstructor } from '../../hooks'
+import { humanizeError } from '../../lib/errors'
+import { BARRIOS_CABA } from '../../constants/barrios'
+import { Button, LoadingScreen, ErrorState, colors, spacing, typography, radius } from '../../components/ui'
 import SaveButton from '../../components/SaveButton'
 import HeroHeader from '../../components/HeroHeader'
 import Toast from '../../components/Toast'
@@ -16,7 +16,7 @@ import ZonasCABA from '../../components/ZonasCABA'
 
 type DayOfWeek = 'lunes' | 'martes' | 'miercoles' | 'jueves' | 'viernes' | 'sabado' | 'domingo'
 type ClassType = 'regular' | 'reemplazo'
-interface Slot { day: DayOfWeek; start: string; end: string; type: ClassType }
+interface Slot { id?: string; day: DayOfWeek; start: string; end: string; type: ClassType }
 
 const DAYS: DayOfWeek[] = ['lunes', 'martes', 'miercoles', 'jueves', 'viernes', 'sabado', 'domingo']
 const DAYS_LABEL: Record<DayOfWeek, string> = {
@@ -31,82 +31,113 @@ const TIME_OPTIONS = [
   '06:00','07:00','08:00','09:00','10:00','11:00','12:00',
   '13:00','14:00','15:00','16:00','17:00','18:00','19:00','20:00','21:00','22:00'
 ]
-const NEIGHBORHOODS = [
-  'Agronomía','Almagro','Balvanera','Barracas','Belgrano',
-  'Boedo','Caballito','Chacarita','Colegiales','Flores',
-  'Floresta','La Boca','Liniers','Mataderos','Monte Castro',
-  'Montserrat','Nueva Pompeya','Núñez','Palermo','Parque Chacabuco',
-  'Parque Patricios','Paternal','Puerto Madero','Recoleta','Retiro',
-  'San Cristóbal','San Nicolás','San Telmo','Versalles','Villa Crespo',
-  'Villa del Parque','Villa Devoto','Villa Lugano','Villa Luro','Villa Ortúzar',
-  'Villa Pueyrredón','Villa Real','Villa Urquiza',
-]
+const slotKey = (s: Slot) => `${s.day}|${s.start}|${s.end}|${s.type}`
 
 export default function AvailabilityScreen() {
-  const user = useAuthStore(s => s.user)
   const { toast, showToast, hideToast } = useToast()
   const qc = useQueryClient()
   const [slots, setSlots] = useState<Slot[]>([])
   const [selectedZones, setSelectedZones] = useState<string[]>([])
+  const [dirty, setDirty] = useState(false)
   const [showAddModal, setShowAddModal] = useState(false)
   const [addingDay, setAddingDay] = useState<DayOfWeek>('lunes')
   const [newStart, setNewStart] = useState('09:00')
   const [newEnd, setNewEnd] = useState('10:00')
   const [newType, setNewType] = useState<ClassType>('reemplazo')
+  const [addError, setAddError] = useState('')
   const [activeTab, setActiveTab] = useState<'horarios' | 'zonas'>('horarios')
 
-  const { data: instructor } = useQuery({
-    queryKey: ['my-instructor-availability'],
+  const { data: instructor, isLoading: loadingInstructor, isError: errorInstructor, refetch: refetchInstructor } = useMyInstructor()
+  const instructorId = instructor?.id
+
+  const { data: saved, isLoading: loadingSaved, isError: errorSaved, refetch: refetchSaved } = useQuery({
+    queryKey: ['my-availability', instructorId],
     queryFn: async () => {
-      const { data } = await supabase.from('instructors')
-        .select(`id, full_name, availability(*), zones:instructor_zones(*)`)
-        .eq('user_id', user?.id).single()
-      return data
+      const [av, zn] = await Promise.all([
+        supabase.from('availability').select('*').eq('instructor_id', instructorId!),
+        supabase.from('instructor_zones').select('*').eq('instructor_id', instructorId!),
+      ])
+      if (av.error) throw av.error
+      if (zn.error) throw zn.error
+      return { availability: av.data ?? [], zones: zn.data ?? [] }
     },
-    enabled: !!user?.id,
+    enabled: !!instructorId,
     staleTime: 0,
   })
 
+  // Cargar lo guardado solo si el usuario no está editando
   useEffect(() => {
-    if (instructor) {
-      setSlots((instructor.availability ?? []).filter((a: any) => a.is_active).map((a: any) => ({
-        day: a.day_of_week, start: a.start_time.slice(0, 5),
+    if (saved && !dirty) {
+      setSlots(saved.availability.filter((a: any) => a.is_active !== false).map((a: any) => ({
+        id: a.id, day: a.day_of_week, start: a.start_time.slice(0, 5),
         end: a.end_time.slice(0, 5), type: a.class_type,
       })))
-      setSelectedZones((instructor.zones ?? []).map((z: any) => z.neighborhood))
+      setSelectedZones(saved.zones.map((z: any) => z.neighborhood))
     }
-  }, [instructor])
+  }, [saved])
 
   const saveMutation = useMutation({
     mutationFn: async () => {
-      await Promise.all([
-        instructorAPI.upsertAvailability(instructor!.id, slots.map(s => ({
-          day_of_week: s.day, start_time: s.start + ':00',
+      if (!instructorId || !saved) throw new Error('Tu perfil todavía no cargó. Probá de nuevo en unos segundos.')
+
+      // Horarios: primero insertar los nuevos y después borrar los quitados (nunca se queda sin datos)
+      const keep = new Set(slots.filter(s => s.id).map(s => s.id))
+      const toInsert = slots.filter(s => !s.id)
+      const toDelete = saved.availability.filter((a: any) => !keep.has(a.id)).map((a: any) => a.id)
+      if (toInsert.length) {
+        const { error } = await supabase.from('availability').insert(toInsert.map(s => ({
+          instructor_id: instructorId, day_of_week: s.day, start_time: s.start + ':00',
           end_time: s.end + ':00', class_type: s.type, is_active: true,
-        }))),
-        instructorAPI.upsertZones(instructor!.id, selectedZones),
-      ])
+        })))
+        if (error) throw error
+      }
+      if (toDelete.length) {
+        const { error } = await supabase.from('availability').delete().in('id', toDelete)
+        if (error) throw error
+      }
+
+      // Zonas: agregar las nuevas y borrar solo las quitadas
+      const current = new Set(saved.zones.map((z: any) => z.neighborhood))
+      const wanted  = new Set(selectedZones)
+      const addZones = selectedZones.filter(z => !current.has(z))
+      const delZones = saved.zones.filter((z: any) => !wanted.has(z.neighborhood)).map((z: any) => z.id)
+      if (addZones.length) {
+        const { error } = await supabase.from('instructor_zones')
+          .insert(addZones.map(n => ({ instructor_id: instructorId, neighborhood: n })))
+        if (error) throw error
+      }
+      if (delZones.length) {
+        const { error } = await supabase.from('instructor_zones').delete().in('id', delZones)
+        if (error) throw error
+      }
     },
     onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ['my-instructor-availability'] })
-      showToast('Disponibilidad guardada correctamente')
+      setDirty(false)
+      qc.invalidateQueries({ queryKey: ['my-availability'] })
+      qc.invalidateQueries({ queryKey: ['my-instructor'] })
+      showToast('Disponibilidad guardada')
     },
-    onError: (e: any) => showToast('Error al guardar: ' + e.message, 'error'),
+    onError: (e: any) => {
+      showToast(humanizeError(e), 'error')
+      setDirty(false)
+      qc.invalidateQueries({ queryKey: ['my-availability'] })
+    },
   })
 
   const addSlot = () => {
-    if (newEnd <= newStart) {
-      Alert.alert('Horario inválido', 'El horario de fin debe ser posterior al inicio.')
-      return
-    }
-    setSlots(prev => [...prev, { day: addingDay, start: newStart, end: newEnd, type: newType }])
+    if (newEnd <= newStart) { setAddError('El horario de fin tiene que ser posterior al de inicio.'); return }
+    const overlap = slots.some(s => s.day === addingDay && s.start < newEnd && newStart < s.end)
+    if (overlap) { setAddError(`Ya tenés un horario que se superpone el ${DAYS_LABEL[addingDay].toLowerCase()}.`); return }
+    setSlots(prev => [...prev, { day: addingDay, start: newStart, end: newEnd, type: newType }]
+      .sort((a, b) => a.start.localeCompare(b.start)))
+    setDirty(true)
     setShowAddModal(false)
   }
 
-  const removeSlot = (idx: number) => setSlots(prev => prev.filter((_, i) => i !== idx))
-  const ALL_NEIGHBORHOODS = ['Agronomía','Almagro','Balvanera','Barracas','Belgrano','Boedo','Caballito','Chacarita','Colegiales','Flores','Floresta','La Boca','Liniers','Mataderos','Monte Castro','Montserrat','Nueva Pompeya','Núñez','Palermo','Parque Chacabuco','Parque Patricios','Paternal','Puerto Madero','Recoleta','Retiro','San Cristóbal','San Nicolás','San Telmo','Versalles','Villa Crespo','Villa del Parque','Villa Devoto','Villa Lugano','Villa Luro','Villa Ortúzar','Villa Pueyrredón','Villa Real','Villa Urquiza']
+  const removeSlot = (slot: Slot) => { setSlots(prev => prev.filter(s => s !== slot)); setDirty(true) }
   const toggleZone = (z: string) => {
-    if (z === '__all__') { setSelectedZones(ALL_NEIGHBORHOODS); return }
+    setDirty(true)
+    if (z === '__all__') { setSelectedZones(BARRIOS_CABA); return }
     if (z === '__clear__') { setSelectedZones([]); return }
     setSelectedZones(prev => prev.includes(z) ? prev.filter(x => x !== z) : [...prev, z])
   }
@@ -116,10 +147,16 @@ export default function AvailabilityScreen() {
     setNewStart('09:00')
     setNewEnd('10:00')
     setNewType('reemplazo')
+    setAddError('')
     setShowAddModal(true)
   }
 
   const slotsForDay = (day: DayOfWeek) => slots.filter(s => s.day === day)
+
+  if (loadingInstructor || (instructorId && loadingSaved)) return <LoadingScreen message="Cargando tu disponibilidad..." />
+  if (errorInstructor || errorSaved || !instructor) {
+    return <ErrorState message="No pudimos cargar tu disponibilidad." onRetry={() => { refetchInstructor(); refetchSaved() }} />
+  }
 
   return (
     <View style={{ flex: 1, backgroundColor: colors.cream }}>
@@ -166,17 +203,16 @@ export default function AvailabilityScreen() {
                   {daySlots.length === 0 ? (
                     <Text style={s.noSlots}>Sin horarios cargados</Text>
                   ) : (
-                    daySlots.map((slot, i) => {
-                      const globalIdx = slots.indexOf(slot)
+                    daySlots.map((slot) => {
                       return (
-                        <View key={i} style={s.slotRow}>
+                        <View key={slot.id ?? slotKey(slot)} style={s.slotRow}>
                           <View style={[s.slotType, { backgroundColor: slot.type === 'regular' ? colors.sageLight : colors.goldLight }]}>
                             <Text style={[s.slotTypeText, { color: slot.type === 'regular' ? colors.sage : colors.gold }]}>
                               {slot.type === 'regular' ? 'Regular' : 'Reemplazo'}
                             </Text>
                           </View>
                           <Text style={s.slotTime}>{slot.start} – {slot.end}</Text>
-                          <TouchableOpacity onPress={() => removeSlot(globalIdx)} style={s.removeBtn}>
+                          <TouchableOpacity onPress={() => removeSlot(slot)} style={s.removeBtn}>
                             <Feather name="x" size={16} color={colors.redTx} />
                           </TouchableOpacity>
                         </View>
@@ -195,7 +231,8 @@ export default function AvailabilityScreen() {
           </>
         )}
 
-        <SaveButton label="Guardar disponibilidad" onPress={() => saveMutation.mutate()} isPending={saveMutation.isPending} isSuccess={saveMutation.isSuccess} />
+        {dirty && <Text style={s.dirtyHint}>Tenés cambios sin guardar</Text>}
+        <SaveButton label="Guardar disponibilidad" onPress={() => saveMutation.mutate()} isPending={saveMutation.isPending} isSuccess={saveMutation.isSuccess && !dirty} />
       </ScrollView>
 
       {/* Modal agregar horario */}
@@ -216,7 +253,7 @@ export default function AvailabilityScreen() {
                 <TouchableOpacity
                   key={d}
                   style={[s.dayChip, addingDay === d && s.dayChipActive]}
-                  onPress={() => setAddingDay(d)}
+                  onPress={() => { setAddingDay(d); setAddError('') }}
                 >
                   <Text style={[s.dayChipText, addingDay === d && s.dayChipTextActive]}>{DAYS_SHORT[d]}</Text>
                 </TouchableOpacity>
@@ -243,7 +280,7 @@ export default function AvailabilityScreen() {
             <Text style={s.fieldLabel}>DESDE</Text>
             <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginBottom: spacing.md }}>
               {TIME_OPTIONS.map(t => (
-                <TouchableOpacity key={t} style={[s.timeChip, newStart === t && s.timeChipActive]} onPress={() => setNewStart(t)}>
+                <TouchableOpacity key={t} style={[s.timeChip, newStart === t && s.timeChipActive]} onPress={() => { setNewStart(t); setAddError(''); if (newEnd <= t) setNewEnd(TIME_OPTIONS[TIME_OPTIONS.indexOf(t) + 1] ?? t) }}>
                   <Text style={[s.timeChipText, newStart === t && s.timeChipTextActive]}>{t}</Text>
                 </TouchableOpacity>
               ))}
@@ -253,12 +290,13 @@ export default function AvailabilityScreen() {
             <Text style={s.fieldLabel}>HASTA</Text>
             <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginBottom: spacing.lg }}>
               {TIME_OPTIONS.filter(t => t > newStart).map(t => (
-                <TouchableOpacity key={t} style={[s.timeChip, newEnd === t && s.timeChipActive]} onPress={() => setNewEnd(t)}>
+                <TouchableOpacity key={t} style={[s.timeChip, newEnd === t && s.timeChipActive]} onPress={() => { setNewEnd(t); setAddError('') }}>
                   <Text style={[s.timeChipText, newEnd === t && s.timeChipTextActive]}>{t}</Text>
                 </TouchableOpacity>
               ))}
             </ScrollView>
 
+            {addError ? <Text style={s.addError}>{addError}</Text> : null}
             <Button label="Agregar horario" onPress={addSlot} fullWidth />
           </View>
         </View>
@@ -275,7 +313,9 @@ const s = StyleSheet.create({
   tabActive:       { borderBottomWidth: 2, borderColor: colors.sage },
   tabText:         { fontFamily: 'Nunito-SemiBold', fontSize: 13, color: colors.light },
   tabTextActive:   { color: colors.sage },
-  daySection:      { marginBottom: spacing.md, backgroundColor: colors.white, borderTopLeftRadius: 14, borderTopRightRadius: 0, borderBottomLeftRadius: 0, borderBottomRightRadius: 14, padding: spacing.md, borderWidth: 0.5, borderColor: colors.borderLight },
+  dirtyHint:       { fontFamily: 'Nunito-SemiBold', fontSize: 12, color: colors.warnTx, textAlign: 'center', marginBottom: spacing.sm },
+  addError:        { fontFamily: 'Nunito-SemiBold', fontSize: 12, color: colors.redTx, marginBottom: spacing.sm },
+  daySection:      { marginBottom: spacing.md, backgroundColor: colors.white, ...radius.leaf, padding: spacing.md, borderWidth: 0.5, borderColor: colors.borderLight },
   dayHeader:       { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: spacing.sm },
   dayName:         { fontFamily: 'Nunito-Bold', fontSize: 14, color: colors.dark },
   addBtn:          { flexDirection: 'row', alignItems: 'center', gap: 4, backgroundColor: colors.sageLight, paddingHorizontal: spacing.sm, paddingVertical: 5, borderTopLeftRadius: 8, borderTopRightRadius: 0, borderBottomLeftRadius: 0, borderBottomRightRadius: 8 },
@@ -297,7 +337,7 @@ const s = StyleSheet.create({
   modalBox:        { backgroundColor: colors.white, borderTopLeftRadius: 20, borderTopRightRadius: 20, padding: spacing.lg, paddingBottom: 40 },
   modalHeader:     { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: spacing.lg },
   modalTitle:      { fontFamily: 'Nunito-Bold', fontSize: 18, color: colors.dark },
-  fieldLabel:      { fontFamily: 'Nunito-Bold', fontSize: 10, color: colors.light, letterSpacing: 0.7, marginBottom: spacing.xs },
+  fieldLabel:      { ...typography.caption, marginBottom: spacing.xs },
   dayChip:         { paddingVertical: 8, paddingHorizontal: 14, borderRadius: 999, backgroundColor: colors.cream, marginRight: spacing.xs, borderWidth: 0.5, borderColor: colors.border },
   dayChipActive:   { backgroundColor: colors.sage, borderColor: colors.sage },
   dayChipText:     { fontFamily: 'Nunito-SemiBold', fontSize: 12, color: colors.mid },

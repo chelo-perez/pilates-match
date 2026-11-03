@@ -1,132 +1,128 @@
+// src/screens/camara/StudioDetailScreen.tsx
 import React, { useState } from 'react'
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Modal, TextInput } from 'react-native'
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Modal, TextInput, Alert } from 'react-native'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { supabase } from '../../lib/supabase'
-import { LoadingScreen, colors, spacing } from '../../components/ui'
+import { humanizeError } from '../../lib/errors'
+import { formatDate } from '../../lib/dates'
+import { PLANS, usedThisMonth } from '../../constants/plans'
+import { LoadingScreen, ErrorState, Button, colors, spacing, radius, typography } from '../../components/ui'
 import { Feather } from '@expo/vector-icons'
 import BlobCard from '../../components/BlobCard'
 import HeroHeader from '../../components/HeroHeader'
 import Toast from '../../components/Toast'
 import { useToast } from '../../hooks/useToast'
+import { applyPlan, membershipOf, planDurationLabel, PlanKey, STUDIO_KEYS } from './planUtils'
 
-const PLANS = [
-  { key: 'freemium',    label: 'Freemium',     desc: '1 propuesta/mes',              color: colors.mid,   bg: colors.sageLighter },
-  { key: 'starter',     label: 'Starter',      desc: '5 propuestas/mes',             color: colors.sage,  bg: colors.sageLight },
-  { key: 'socio',       label: 'Socio Cámara', desc: '5 propuestas + badge + desc.', color: '#0C447C',    bg: '#E6F1FB' },
-  { key: 'premium',     label: 'Premium',      desc: 'Ilimitadas + destacado',       color: colors.gold,  bg: colors.goldLight },
-]
+// Estilo visual por plan (la definición de límites vive en constants/plans)
+const PLAN_STYLE: Record<string, { desc: string; color: string; bg: string }> = {
+  freemium: { desc: '1 propuesta por mes',        color: colors.mid,    bg: colors.sageLighter },
+  starter:  { desc: '5 propuestas por mes',       color: colors.sage,   bg: colors.sageLight },
+  socio:    { desc: '5 propuestas por mes + socio de la Cámara', color: colors.blueTx, bg: colors.blueBg },
+  premium:  { desc: 'Propuestas ilimitadas',      color: colors.gold,   bg: colors.goldLight },
+}
 
-function fmtDate(d: string | null) {
-  if (!d) return '—'
-  return new Date(d).toLocaleDateString('es-AR', { day: '2-digit', month: 'long', year: 'numeric' })
+const longDate = (d?: string | null) => (d ? formatDate(d, { day: '2-digit', month: 'long', year: 'numeric' }) : '—')
+
+function Row({ icon, label, value, valueColor }: { icon: string; label: string; value?: string | null; valueColor?: string }) {
+  return (
+    <View style={s.row}>
+      <Feather name={icon as any} size={13} color={colors.sageMid} style={{ width: 18 }} />
+      <Text style={s.rowLabel}>{label}</Text>
+      <Text style={[s.rowValue, valueColor ? { color: valueColor } : null]}>{value || '—'}</Text>
+    </View>
+  )
 }
 
 export default function StudioDetailScreen({ navigation, route }: any) {
-  const { studioId } = route.params
+  const studioId: string | undefined = route?.params?.studioId
   const qc = useQueryClient()
   const { toast, showToast, hideToast } = useToast()
   const [showPlanModal, setShowPlanModal] = useState(false)
-  const [selectedPlan, setSelectedPlan] = useState('')
+  const [selectedPlan, setSelectedPlan] = useState<PlanKey>('freemium')
   const [planNote, setPlanNote] = useState('')
 
-  const { data: studio, isLoading } = useQuery({
+  const { data: studio, isLoading, isError, refetch } = useQuery({
     queryKey: ['studio-detail', studioId],
     queryFn: async () => {
       const { data, error } = await supabase
         .from('studios')
         .select('*, user:users(email), membership:memberships(*)')
-        .eq('id', studioId).single()
+        .eq('id', studioId!).single()
       if (error) throw error
       return data
     },
+    enabled: !!studioId,
   })
+
+  const { data: notes = [] } = useQuery({
+    queryKey: ['studio-detail', studioId, 'notes'],
+    queryFn: async () => {
+      const { data, error } = await supabase.from('camara_studio_notes')
+        .select('id, note, created_at').eq('studio_id', studioId!)
+        .order('created_at', { ascending: false }).limit(5)
+      if (error) throw error
+      return data ?? []
+    },
+    enabled: !!studioId,
+  })
+
+  const invalidateAll = () => STUDIO_KEYS.forEach(queryKey => qc.invalidateQueries({ queryKey }))
 
   const changePlanMutation = useMutation({
-    mutationFn: async ({ plan, note }: { plan: string; note: string }) => {
-      const planData = PLANS.find(p => p.key === plan)
-      const matchLimit = plan === 'freemium' ? 1 : plan === 'starter' ? 5 : plan === 'socio' ? 5 : null
-
-      const end = new Date()
-      end.setMonth(end.getMonth() + 1)
-
-      // Check if membership exists
-      const { data: existing } = await supabase
-        .from('memberships').select('id').eq('studio_id', studioId).maybeSingle()
-
-      if (existing?.id) {
-        const { error: upErr } = await supabase.from('memberships').update({
-          status: 'activa',
-          plan_type: plan,
-          start_date: new Date().toISOString().split('T')[0],
-          end_date: end.toISOString().split('T')[0],
-          matches_limit: matchLimit,
-          matches_used_month: 0,
-        }).eq('id', existing.id)
-        if (upErr) throw upErr
-      } else {
-        const { error: insErr } = await supabase.from('memberships').insert({
-          studio_id: studioId,
-          status: 'activa',
-          plan_type: plan,
-          start_date: new Date().toISOString().split('T')[0],
-          end_date: end.toISOString().split('T')[0],
-          matches_limit: matchLimit,
-          matches_used_month: 0,
-        })
-        if (insErr) throw insErr
-      }
-
-      await supabase.from('studios').update({
-        is_member: plan !== 'freemium',
-        member_since: plan !== 'freemium' ? new Date().toISOString().split('T')[0] : null,
-      }).eq('id', studioId)
-
-      if (note.trim()) {
-        await supabase.from('camara_studio_notes').insert({
-          studio_id: studioId,
-          note: `Cambio de plan a ${planData?.label}: ${note}`,
-          created_at: new Date().toISOString(),
-        })
-      }
-    },
-    onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ['studio-detail', studioId] })
+    mutationFn: ({ plan, note }: { plan: PlanKey; note: string }) => applyPlan(studioId!, plan, note),
+    onSuccess: (res) => {
+      invalidateAll()
       setShowPlanModal(false)
       setPlanNote('')
-      showToast('Plan actualizado correctamente')
+      showToast(res?.noteSaved === false ? 'Plan actualizado, pero no pudimos guardar el motivo' : 'Plan actualizado',
+        res?.noteSaved === false ? 'warning' : 'success')
     },
-    onError: (e: any) => showToast('Error: ' + e.message, 'error'),
+    onError: (e: any) => showToast(humanizeError(e), 'error'),
   })
 
+  // "Bloquear" = membresía cancelada: el estudio no puede enviar propuestas
   const blockMutation = useMutation({
     mutationFn: async (block: boolean) => {
-      await supabase.from('memberships')
-        .update({ status: block ? 'bloqueada' : 'activa' })
-        .eq('studio_id', studioId)
+      const { data, error } = await supabase.from('memberships')
+        .update({ status: block ? 'cancelada' : 'activa' })
+        .eq('studio_id', studioId!)
+        .select('id')
+      if (error) throw error
+      if (!data?.length) throw new Error('El estudio no tiene una membresía para bloquear. Asignale un plan primero.')
     },
     onSuccess: (_, block) => {
-      qc.invalidateQueries({ queryKey: ['studio-detail', studioId] })
-      showToast(block ? 'Estudio bloqueado' : 'Estudio desbloqueado')
+      invalidateAll()
+      showToast(block ? 'Estudio bloqueado: no puede enviar propuestas' : 'Estudio desbloqueado')
     },
-    onError: (e: any) => showToast('Error: ' + e.message, 'error'),
+    onError: (e: any) => showToast(humanizeError(e), 'error'),
   })
 
-  if (isLoading || !studio) return <LoadingScreen />
+  if (!studioId) return <ErrorState message="No encontramos el estudio." onRetry={() => navigation.goBack()} />
+  if (isLoading) return <LoadingScreen message="Cargando estudio..." />
+  if (isError || !studio) return <ErrorState message="No pudimos cargar el estudio." onRetry={refetch} />
 
-  const membership = Array.isArray(studio.membership) ? studio.membership[0] : studio.membership
-  const plan = PLANS.find(p => p.key === membership?.plan_type) ?? PLANS[0]
-  const isBlocked = membership?.status === 'bloqueada'
-  const isActive  = membership?.status === 'activa'
-  const matchUsed = membership?.matches_used_month ?? 0
-  const matchLimit = membership?.matches_limit
+  const membership = membershipOf(studio)
+  const planKey    = (membership?.plan_type ?? 'freemium') as PlanKey
+  const planDef: any = PLANS.find((p: any) => p.key === planKey) ?? PLANS[0]
+  const planStyle  = PLAN_STYLE[planKey] ?? PLAN_STYLE.freemium
+  const isBlocked  = membership?.status === 'cancelada'
+  const isExpired  = membership?.status === 'vencida'
+  const matchUsed  = membership ? usedThisMonth(membership) : 0
+  const matchLimit = membership?.matches_limit ?? null
 
-  const Row = ({ icon, label, value, valueColor }: any) => (
-    <View style={s.row}>
-      <Feather name={icon} size={13} color={colors.sageMid} style={{ width: 18 }} />
-      <Text style={s.rowLabel}>{label}</Text>
-      <Text style={[s.rowValue, valueColor && { color: valueColor }]}>{value || '—'}</Text>
-    </View>
-  )
+  const confirmBlock = () => {
+    Alert.alert(
+      isBlocked ? 'Desbloquear estudio' : 'Bloquear estudio',
+      isBlocked
+        ? `"${studio.name}" vuelve a poder enviar propuestas según su plan.`
+        : `"${studio.name}" no va a poder enviar propuestas nuevas hasta que lo desbloquees. Puede seguir entrando a la app.`,
+      [
+        { text: 'Cancelar', style: 'cancel' },
+        { text: isBlocked ? 'Desbloquear' : 'Bloquear', style: isBlocked ? 'default' : 'destructive', onPress: () => blockMutation.mutate(!isBlocked) },
+      ]
+    )
+  }
 
   return (
     <View style={{ flex: 1, backgroundColor: colors.cream }}>
@@ -136,25 +132,24 @@ export default function StudioDetailScreen({ navigation, route }: any) {
         onBack={() => navigation.goBack()}
         backLabel="Estudios"
         rightElement={
-          <View style={[s.badge, { backgroundColor: plan.bg }]}>
-            <Text style={[s.badgeTxt, { color: plan.color }]}>{plan.label}</Text>
+          <View style={[s.badge, { backgroundColor: planStyle.bg }]}>
+            <Text style={[s.badgeTxt, { color: planStyle.color }]}>{planDef.label}</Text>
           </View>
         }
       />
 
       <ScrollView contentContainerStyle={s.content} showsVerticalScrollIndicator={false}>
 
-        {/* Info básica */}
         <BlobCard style={s.card} delay={0}>
           <Text style={s.sectionTitle}>INFORMACIÓN DEL ESTUDIO</Text>
-          <Row icon="mail"       label="Email"       value={studio.user?.email} />
-          <Row icon="phone"      label="Teléfono"    value={studio.phone} />
-          <Row icon="map-pin"    label="Barrio"      value={studio.neighborhood} />
-          <Row icon="hash"       label="CUIT"        value={studio.cuit} />
-          <Row icon="calendar"   label="Registrado"  value={fmtDate(studio.created_at)} />
+          <Row icon="mail"     label="Email"      value={studio.user?.email} />
+          <Row icon="phone"    label="Teléfono"   value={studio.phone} />
+          <Row icon="map-pin"  label="Dirección"  value={[studio.address, studio.neighborhood].filter(Boolean).join(', ')} />
+          <Row icon="hash"     label="CUIT"       value={studio.cuit} />
+          <Row icon="calendar" label="Registrado" value={longDate(studio.created_at)} />
+          {studio.is_member ? <Row icon="award" label="Socio desde" value={longDate(studio.member_since)} valueColor={colors.okTx} /> : null}
         </BlobCard>
 
-        {/* Responsable */}
         <BlobCard style={s.card} delay={600}>
           <Text style={s.sectionTitle}>RESPONSABLE</Text>
           <Row icon="user"  label="Nombre"   value={studio.owner_name} />
@@ -162,40 +157,42 @@ export default function StudioDetailScreen({ navigation, route }: any) {
           <Row icon="mail"  label="Email"    value={studio.owner_email} />
         </BlobCard>
 
-        {/* Membresía actual */}
         <BlobCard style={s.card} delay={1200}
-          blobColor={`rgba(${plan.key === 'premium' ? '184,150,12' : '74,93,78'},0.10)`}
-          blobColor2={`rgba(${plan.key === 'premium' ? '184,150,12' : '74,93,78'},0.06)`}
+          blobColor={`rgba(${planKey === 'premium' ? '184,150,12' : '74,93,78'},0.10)`}
+          blobColor2={`rgba(${planKey === 'premium' ? '184,150,12' : '74,93,78'},0.06)`}
         >
-          <Text style={s.sectionTitle}>MEMBRESÍA ACTIVA</Text>
-
-          {/* Plan badge */}
-          <View style={[s.planBadge, { backgroundColor: plan.bg }]}>
-            <Text style={[s.planBadgeLabel, { color: plan.color }]}>{plan.label}</Text>
-            <Text style={[s.planBadgeDesc, { color: plan.color }]}>{plan.desc}</Text>
+          <Text style={s.sectionTitle}>PLAN</Text>
+          <View style={[s.planBadge, { backgroundColor: planStyle.bg }]}>
+            <Text style={[s.planBadgeLabel, { color: planStyle.color }]}>{planDef.label}</Text>
+            <Text style={[s.planBadgeDesc, { color: planStyle.color }]}>{planStyle.desc}</Text>
           </View>
 
           {membership ? (
             <>
-              <Row icon="check-circle" label="Estado"      value={isBlocked ? 'Bloqueada' : isActive ? 'Activa' : 'Sin membresía'} valueColor={isBlocked ? colors.redTx : isActive ? colors.okTx : colors.light} />
-              <Row icon="calendar"     label="Inicio"      value={fmtDate(membership.start_date)} />
-              <Row icon="clock"        label="Vencimiento" value={fmtDate(membership.end_date)} />
-              <Row icon="activity"     label="Propuestas"  value={matchLimit !== null ? `${matchUsed} / ${matchLimit} este mes` : `${matchUsed} este mes (ilimitadas)`} />
+              <Row icon="check-circle" label="Estado"
+                value={isBlocked ? 'Bloqueado' : isExpired ? 'Vencida' : 'Activa'}
+                valueColor={isBlocked || isExpired ? colors.redTx : colors.okTx} />
+              <Row icon="calendar" label="Inicio" value={longDate(membership.start_date)} />
+              {planKey !== 'freemium' ? <Row icon="clock" label="Vencimiento" value={longDate(membership.end_date)} /> : null}
+              <Row icon="activity" label="Propuestas"
+                value={matchLimit !== null ? `${matchUsed} de ${matchLimit} este mes` : `${matchUsed} este mes (ilimitadas)`} />
             </>
           ) : (
             <View style={s.noMember}>
               <Feather name="info" size={15} color={colors.light} />
-              <Text style={s.noMemberTxt}>Sin membresía registrada. El estudio está en Freemium.</Text>
+              <Text style={s.noMemberTxt}>Todavía no tiene un plan asignado. Asignale uno para que pueda enviar propuestas.</Text>
             </View>
           )}
         </BlobCard>
 
-        {/* Presupuesto */}
-        <BlobCard style={s.card} delay={1800}
-          blobColor="rgba(184,150,12,0.10)" blobColor2="rgba(184,150,12,0.06)">
+        <BlobCard style={s.card} delay={1800} blobColor="rgba(184,150,12,0.10)" blobColor2="rgba(184,150,12,0.06)">
           <Text style={s.sectionTitle}>PRESUPUESTO POR HORA</Text>
-          <Row icon="dollar-sign" label="Regular"   value={studio.budget_regular ? '$' + studio.budget_regular.toLocaleString('es-AR') + '/h' : 'Sin configurar'} valueColor={studio.budget_regular ? colors.sage : colors.light} />
-          <Row icon="dollar-sign" label="Reemplazo" value={studio.budget_replacement ? '$' + studio.budget_replacement.toLocaleString('es-AR') + '/h' : 'Sin configurar'} valueColor={studio.budget_replacement ? colors.gold : colors.light} />
+          <Row icon="dollar-sign" label="Regular"
+            value={studio.budget_regular ? '$' + studio.budget_regular.toLocaleString('es-AR') : 'Sin configurar'}
+            valueColor={studio.budget_regular ? colors.sage : colors.light} />
+          <Row icon="dollar-sign" label="Reemplazo"
+            value={studio.budget_replacement ? '$' + studio.budget_replacement.toLocaleString('es-AR') : 'Sin configurar'}
+            valueColor={studio.budget_replacement ? colors.gold : colors.light} />
           {studio.equipment?.length > 0 && (
             <View style={[s.row, { alignItems: 'flex-start', paddingTop: 8 }]}>
               <Feather name="tool" size={13} color={colors.sageMid} style={{ width: 18, marginTop: 2 }} />
@@ -209,91 +206,102 @@ export default function StudioDetailScreen({ navigation, route }: any) {
           )}
         </BlobCard>
 
-        {/* Acciones administrativas */}
-        <Text style={s.actionsTitle}>ACCIONES ADMINISTRATIVAS</Text>
+        {notes.length > 0 ? (
+          <BlobCard style={s.card} delay={2400}>
+            <Text style={s.sectionTitle}>HISTORIAL DE CAMBIOS</Text>
+            {notes.map((n: any) => (
+              <Text key={n.id} style={s.noteItem}>• {formatDate(n.created_at)} — {n.note}</Text>
+            ))}
+          </BlobCard>
+        ) : null}
 
-        {/* Cambiar plan */}
-        <TouchableOpacity style={s.actionBtn} onPress={() => { setSelectedPlan(membership?.plan_type ?? 'freemium'); setShowPlanModal(true) }} activeOpacity={0.85}>
+        <Text style={s.actionsTitle}>ACCIONES</Text>
+
+        <TouchableOpacity style={s.actionBtn} activeOpacity={0.85}
+          onPress={() => { setSelectedPlan(planKey); setPlanNote(''); setShowPlanModal(true) }}>
           <View style={s.actionIcon}><Feather name="refresh-cw" size={16} color={colors.sage} /></View>
           <View style={{ flex: 1 }}>
             <Text style={s.actionLabel}>Cambiar plan</Text>
-            <Text style={s.actionDesc}>Upgrade, downgrade o asignar plan manual</Text>
+            <Text style={s.actionDesc}>Asignar Freemium, Starter, Socio o Premium</Text>
           </View>
           <Feather name="chevron-right" size={16} color={colors.border} />
         </TouchableOpacity>
 
-        {/* Bloquear/desbloquear */}
-        <TouchableOpacity
-          style={[s.actionBtn, isBlocked && { backgroundColor: '#FCEBEB', borderColor: '#F09595' }]}
-          onPress={() => blockMutation.mutate(!isBlocked)}
-          disabled={blockMutation.isPending}
-          activeOpacity={0.85}
-        >
-          <View style={[s.actionIcon, { backgroundColor: isBlocked ? colors.redBg : colors.sageLighter }]}>
-            <Feather name={isBlocked ? 'unlock' : 'lock'} size={16} color={isBlocked ? colors.redTx : colors.sage} />
-          </View>
-          <View style={{ flex: 1 }}>
-            <Text style={[s.actionLabel, isBlocked && { color: colors.redTx }]}>
-              {isBlocked ? 'Desbloquear estudio' : 'Bloquear acceso'}
-            </Text>
-            <Text style={s.actionDesc}>
-              {isBlocked ? 'Restablecer el acceso a la plataforma' : 'Suspender temporalmente el acceso'}
-            </Text>
-          </View>
-          <Feather name="chevron-right" size={16} color={colors.border} />
-        </TouchableOpacity>
-
+        {membership ? (
+          <TouchableOpacity
+            style={[s.actionBtn, isBlocked && { backgroundColor: colors.redBg, borderColor: colors.redBg }]}
+            onPress={confirmBlock}
+            disabled={blockMutation.isPending}
+            activeOpacity={0.85}
+          >
+            <View style={[s.actionIcon, { backgroundColor: isBlocked ? colors.white : colors.sageLighter }]}>
+              <Feather name={isBlocked ? 'unlock' : 'lock'} size={16} color={isBlocked ? colors.redTx : colors.sage} />
+            </View>
+            <View style={{ flex: 1 }}>
+              <Text style={[s.actionLabel, isBlocked && { color: colors.redTx }]}>
+                {isBlocked ? 'Desbloquear estudio' : 'Bloquear propuestas'}
+              </Text>
+              <Text style={s.actionDesc}>
+                {isBlocked ? 'Vuelve a poder enviar propuestas' : 'El estudio no podrá enviar propuestas nuevas'}
+              </Text>
+            </View>
+            <Feather name="chevron-right" size={16} color={colors.border} />
+          </TouchableOpacity>
+        ) : null}
       </ScrollView>
 
-      {/* Modal cambiar plan */}
-      <Modal visible={showPlanModal} transparent animationType="slide">
+      <Modal visible={showPlanModal} transparent animationType="slide" onRequestClose={() => setShowPlanModal(false)}>
         <View style={s.overlay}>
           <View style={s.modalBox}>
-            <Text style={s.modalTitle}>Cambiar plan</Text>
-            <Text style={s.modalSub}>Seleccioná el nuevo plan para {studio.name}</Text>
+            <ScrollView keyboardShouldPersistTaps="handled">
+              <Text style={s.modalTitle}>Cambiar plan</Text>
+              <Text style={s.modalSub}>Elegí el nuevo plan para {studio.name}. El contador de propuestas del mes vuelve a cero.</Text>
 
-            {PLANS.map(p => (
-              <TouchableOpacity
-                key={p.key}
-                style={[s.planOption, { borderColor: selectedPlan === p.key ? p.color : colors.border, backgroundColor: selectedPlan === p.key ? p.bg : colors.white }]}
-                onPress={() => setSelectedPlan(p.key)}
-                activeOpacity={0.8}
-              >
-                <View style={[s.planRadio, selectedPlan === p.key && { borderColor: p.color }]}>
-                  {selectedPlan === p.key && <View style={[s.planRadioDot, { backgroundColor: p.color }]} />}
-                </View>
-                <View style={{ flex: 1 }}>
-                  <Text style={[s.planOptionLabel, { color: p.color }]}>{p.label}</Text>
-                  <Text style={s.planOptionDesc}>{p.desc}</Text>
-                </View>
-                {membership?.plan_type === p.key && (
-                  <View style={[s.currentTag, { backgroundColor: p.bg }]}>
-                    <Text style={[s.currentTagTxt, { color: p.color }]}>Actual</Text>
-                  </View>
-                )}
-              </TouchableOpacity>
-            ))}
+              {PLANS.map((p: any) => {
+                const st = PLAN_STYLE[p.key] ?? PLAN_STYLE.freemium
+                const active = selectedPlan === p.key
+                return (
+                  <TouchableOpacity
+                    key={p.key}
+                    style={[s.planOption, { borderColor: active ? st.color : colors.border, backgroundColor: active ? st.bg : colors.white }]}
+                    onPress={() => setSelectedPlan(p.key)}
+                    activeOpacity={0.8}
+                  >
+                    <View style={[s.planRadio, active && { borderColor: st.color }]}>
+                      {active && <View style={[s.planRadioDot, { backgroundColor: st.color }]} />}
+                    </View>
+                    <View style={{ flex: 1 }}>
+                      <Text style={[s.planOptionLabel, { color: st.color }]}>{p.label}</Text>
+                      <Text style={s.planOptionDesc}>{st.desc} · {planDurationLabel(p.key)}</Text>
+                    </View>
+                    {membership?.plan_type === p.key && (
+                      <View style={[s.currentTag, { backgroundColor: st.bg }]}>
+                        <Text style={[s.currentTagTxt, { color: st.color }]}>Actual</Text>
+                      </View>
+                    )}
+                  </TouchableOpacity>
+                )
+              })}
 
-            <Text style={[s.inputLabel, { marginTop: spacing.md }]}>MOTIVO DEL CAMBIO</Text>
-            <TextInput
-              style={s.noteInput}
-              value={planNote}
-              onChangeText={setPlanNote}
-              placeholder="Ej: Upgrade por pago en efectivo registrado el 01/07"
-              placeholderTextColor={colors.light}
-              multiline
-            />
+              <Text style={[s.inputLabel, { marginTop: spacing.md }]}>MOTIVO DEL CAMBIO (OPCIONAL)</Text>
+              <TextInput
+                style={s.noteInput}
+                value={planNote}
+                onChangeText={setPlanNote}
+                placeholder="Ej: Pago en efectivo registrado el 01/07"
+                placeholderTextColor={colors.light}
+                multiline
+              />
 
-            <TouchableOpacity
-              style={[s.confirmBtn, !selectedPlan && { opacity: 0.5 }]}
-              onPress={() => changePlanMutation.mutate({ plan: selectedPlan, note: planNote })}
-              disabled={!selectedPlan || changePlanMutation.isPending}
-            >
-              <Text style={s.confirmTxt}>{changePlanMutation.isPending ? 'Guardando...' : 'Confirmar cambio'}</Text>
-            </TouchableOpacity>
-            <TouchableOpacity style={s.cancelBtn} onPress={() => setShowPlanModal(false)}>
-              <Text style={s.cancelTxt}>Cancelar</Text>
-            </TouchableOpacity>
+              <Button
+                label="Confirmar cambio"
+                onPress={() => changePlanMutation.mutate({ plan: selectedPlan, note: planNote })}
+                isLoading={changePlanMutation.isPending}
+                disabled={membership?.plan_type === selectedPlan && membership?.status === 'activa'}
+                fullWidth
+              />
+              <Button label="Cancelar" variant="ghost" onPress={() => setShowPlanModal(false)} fullWidth style={{ marginTop: spacing.xs }} />
+            </ScrollView>
           </View>
         </View>
       </Modal>
@@ -305,40 +313,37 @@ export default function StudioDetailScreen({ navigation, route }: any) {
 
 const s = StyleSheet.create({
   content:         { padding: spacing.md, paddingBottom: 48 },
-  badge:           { borderTopLeftRadius: 10, borderTopRightRadius: 0, borderBottomLeftRadius: 0, borderBottomRightRadius: 10, paddingHorizontal: 10, paddingVertical: 4 },
+  badge:           { ...radius.leaf, paddingHorizontal: 10, paddingVertical: 4 },
   badgeTxt:        { fontFamily: 'Nunito-Bold', fontSize: 10 },
   card:            { padding: spacing.md, marginBottom: spacing.sm },
-  sectionTitle:    { fontFamily: 'Nunito-Bold', fontSize: 9, color: colors.light, letterSpacing: 0.8, marginBottom: spacing.md },
+  sectionTitle:    { ...typography.caption, marginBottom: spacing.md },
   row:             { flexDirection: 'row', alignItems: 'center', paddingVertical: 7, borderBottomWidth: 0.5, borderColor: colors.borderLight },
   rowLabel:        { fontFamily: 'Nunito-SemiBold', fontSize: 12, color: colors.mid, width: 90 },
   rowValue:        { fontFamily: 'Nunito-SemiBold', fontSize: 12, color: colors.dark, flex: 1 },
-  planBadge:       { borderTopLeftRadius: 12, borderTopRightRadius: 0, borderBottomLeftRadius: 0, borderBottomRightRadius: 12, padding: spacing.md, marginBottom: spacing.md },
+  planBadge:       { ...radius.leaf, padding: spacing.md, marginBottom: spacing.md },
   planBadgeLabel:  { fontFamily: 'Nunito-Bold', fontSize: 16 },
-  planBadgeDesc:   { fontFamily: 'Nunito-Regular', fontSize: 12, marginTop: 2, opacity: 0.8 },
+  planBadgeDesc:   { fontFamily: 'Nunito-Regular', fontSize: 12, marginTop: 2 },
   noMember:        { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, paddingVertical: spacing.sm },
-  noMemberTxt:     { fontFamily: 'Nunito-Regular', fontSize: 13, color: colors.light, flex: 1 },
-  chip:            { backgroundColor: colors.sageLight, borderTopLeftRadius: 6, borderTopRightRadius: 0, borderBottomLeftRadius: 0, borderBottomRightRadius: 6, paddingHorizontal: 7, paddingVertical: 2 },
+  noMemberTxt:     { fontFamily: 'Nunito-Regular', fontSize: 13, color: colors.mid, flex: 1 },
+  chip:            { backgroundColor: colors.sageLight, ...radius.leaf, paddingHorizontal: 7, paddingVertical: 2 },
   chipTxt:         { fontFamily: 'Nunito-SemiBold', fontSize: 10, color: colors.sage },
-  actionsTitle:    { fontFamily: 'Nunito-Bold', fontSize: 9, color: colors.light, letterSpacing: 0.8, marginBottom: spacing.sm, marginTop: spacing.sm },
-  actionBtn:       { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, backgroundColor: colors.white, borderTopLeftRadius: 14, borderTopRightRadius: 0, borderBottomLeftRadius: 0, borderBottomRightRadius: 14, padding: spacing.md, marginBottom: spacing.sm, borderWidth: 0.5, borderColor: colors.borderLight, elevation: 1 },
-  actionIcon:      { width: 36, height: 36, borderRadius: 18, backgroundColor: colors.sageLight, alignItems: 'center', justifyContent: 'center', flexShrink: 0 },
+  noteItem:        { fontFamily: 'Nunito-Regular', fontSize: 12, color: colors.mid, marginBottom: 4 },
+  actionsTitle:    { ...typography.caption, marginBottom: spacing.sm, marginTop: spacing.sm },
+  actionBtn:       { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, backgroundColor: colors.white, ...radius.leaf, padding: spacing.md, marginBottom: spacing.sm, borderWidth: 0.5, borderColor: colors.borderLight, elevation: 1 },
+  actionIcon:      { width: 36, height: 36, borderRadius: 18, backgroundColor: colors.sageLight, alignItems: 'center', justifyContent: 'center' },
   actionLabel:     { fontFamily: 'Nunito-Bold', fontSize: 14, color: colors.dark },
   actionDesc:      { fontFamily: 'Nunito-Regular', fontSize: 11, color: colors.light, marginTop: 2 },
   overlay:         { flex: 1, backgroundColor: 'rgba(0,0,0,0.45)', justifyContent: 'flex-end' },
-  modalBox:        { backgroundColor: colors.white, borderTopLeftRadius: 24, borderTopRightRadius: 24, padding: spacing.xl, paddingBottom: 40 },
+  modalBox:        { backgroundColor: colors.white, borderTopLeftRadius: 24, borderTopRightRadius: 24, padding: spacing.xl, paddingBottom: 40, maxHeight: '90%' },
   modalTitle:      { fontFamily: 'Nunito-Bold', fontSize: 20, color: colors.dark, marginBottom: spacing.xs },
   modalSub:        { fontFamily: 'Nunito-Regular', fontSize: 13, color: colors.mid, marginBottom: spacing.md },
-  planOption:      { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, padding: spacing.md, borderRadius: 12, borderWidth: 1.5, marginBottom: spacing.sm },
-  planRadio:       { width: 20, height: 20, borderRadius: 10, borderWidth: 1.5, borderColor: colors.border, alignItems: 'center', justifyContent: 'center', flexShrink: 0 },
+  planOption:      { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, padding: spacing.md, ...radius.leaf, borderWidth: 1.5, marginBottom: spacing.sm },
+  planRadio:       { width: 20, height: 20, borderRadius: 10, borderWidth: 1.5, borderColor: colors.border, alignItems: 'center', justifyContent: 'center' },
   planRadioDot:    { width: 10, height: 10, borderRadius: 5 },
   planOptionLabel: { fontFamily: 'Nunito-Bold', fontSize: 14 },
   planOptionDesc:  { fontFamily: 'Nunito-Regular', fontSize: 12, color: colors.mid, marginTop: 2 },
-  currentTag:      { borderRadius: 6, paddingHorizontal: 7, paddingVertical: 2 },
-  currentTagTxt:   { fontFamily: 'Nunito-Bold', fontSize: 9 },
-  inputLabel:      { fontFamily: 'Nunito-Bold', fontSize: 9, color: colors.light, letterSpacing: 0.7, marginBottom: 6 },
-  noteInput:       { backgroundColor: colors.sageLighter, borderTopLeftRadius: 10, borderTopRightRadius: 0, borderBottomLeftRadius: 0, borderBottomRightRadius: 10, padding: spacing.md, fontFamily: 'Nunito-Regular', fontSize: 13, color: colors.dark, minHeight: 64, textAlignVertical: 'top', marginBottom: spacing.md },
-  confirmBtn:      { backgroundColor: colors.sage, borderTopLeftRadius: 14, borderTopRightRadius: 0, borderBottomLeftRadius: 0, borderBottomRightRadius: 14, padding: 14, alignItems: 'center', marginBottom: spacing.sm },
-  confirmTxt:      { fontFamily: 'Nunito-Bold', fontSize: 14, color: '#fff' },
-  cancelBtn:       { alignItems: 'center', padding: spacing.sm },
-  cancelTxt:       { fontFamily: 'Nunito-SemiBold', fontSize: 14, color: colors.mid },
+  currentTag:      { borderRadius: radius.sm, paddingHorizontal: 7, paddingVertical: 2 },
+  currentTagTxt:   { fontFamily: 'Nunito-Bold', fontSize: 10 },
+  inputLabel:      { ...typography.caption, marginBottom: 6 },
+  noteInput:       { backgroundColor: colors.sageLighter, ...radius.leaf, padding: spacing.md, fontFamily: 'Nunito-Regular', fontSize: 13, color: colors.dark, minHeight: 64, textAlignVertical: 'top', marginBottom: spacing.md },
 })

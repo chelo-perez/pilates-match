@@ -1,95 +1,121 @@
 // src/screens/camara/DirectoryScreen.tsx
-import React, { useState } from 'react'
-import {
-  View, Text, StyleSheet, FlatList, TextInput, TouchableOpacity, ScrollView, Alert
-} from 'react-native'
-import { usePendingInstructors } from '../../hooks'
+import React, { useEffect, useState } from 'react'
+import { View, Text, StyleSheet, FlatList, TextInput, TouchableOpacity, ScrollView, RefreshControl } from 'react-native'
 import { useQuery } from '@tanstack/react-query'
 import { db } from '../../lib/supabase'
-import { Avatar, Badge, Button, EmptyState, LoadingScreen, colors, spacing, radius, typography } from '../../components/ui'
+import { VERIFICATION_STATUS } from '../../constants/labels'
+import { Avatar, Badge, EmptyState, ErrorState, LoadingScreen, colors, spacing, radius, typography } from '../../components/ui'
 import BlobCard from '../../components/BlobCard'
 import HeroHeader from '../../components/HeroHeader'
-import type { NativeStackScreenProps } from '@react-navigation/native-stack'
+import { Feather } from '@expo/vector-icons'
 
-type Filter = 'todos' | 'verificado' | 'pendiente' | 'inactivo'
+type Filter = 'todos' | 'pendiente' | 'verificado' | 'rechazado' | 'inactivo'
+const FILTERS: { key: Filter; label: string }[] = [
+  { key: 'todos',      label: 'Todos' },
+  { key: 'pendiente',  label: 'Pendientes' },
+  { key: 'verificado', label: 'Verificados' },
+  { key: 'rechazado',  label: 'Rechazados' },
+  { key: 'inactivo',   label: 'Inactivos' },
+]
 
-export default function DirectoryScreen({ navigation }: any) {
-  const [filter, setFilter] = useState<Filter>('todos')
+export default function DirectoryScreen({ navigation, route }: any) {
+  const [filter, setFilter] = useState<Filter>(route?.params?.filter ?? 'todos')
   const [search, setSearch] = useState('')
+  const [refreshing, setRefreshing] = useState(false)
 
-  const { data: allInstructors = [], isLoading, refetch } = useQuery({
+  // Permite llegar filtrado desde el panel (ej: "Verificar pendientes")
+  useEffect(() => {
+    if (route?.params?.filter) setFilter(route.params.filter)
+  }, [route?.params?.filter])
+
+  const { data: allInstructors = [], isLoading, isError, refetch } = useQuery({
     queryKey: ['camara-instructors', filter],
     queryFn: async () => {
       let q = db.instructors()
-        .select(`*, certifications(*)`)
+        .select('id, full_name, neighborhood, dni, avatar_url, verification_status, is_active, created_at, certifications(id, review_status)')
         .order('created_at', { ascending: false })
       if (filter !== 'todos') q = q.eq('verification_status', filter)
       const { data, error } = await q
       if (error) throw error
-      return data
+      return data ?? []
     },
   })
 
-  const filtered = search
-    ? allInstructors.filter((i: any) => i.full_name.toLowerCase().includes(search.toLowerCase()))
+  const term = search.trim().toLowerCase()
+  const filtered = term
+    ? allInstructors.filter((i: any) =>
+        i.full_name?.toLowerCase().includes(term) || i.dni?.includes(term) || i.neighborhood?.toLowerCase().includes(term))
     : allInstructors
 
-  const BADGE_COLOR: Record<string, any> = {
-    verificado: 'success', verified: 'success',
-    pendiente: 'warning', pending: 'warning',
-    rechazado: 'default', rejected: 'default',
-    inactivo: 'default',
-  }
-  const BADGE_LABEL: Record<string, string> = {
-    verificado: '✓ Verificado', verified: '✓ Verificado',
-    pendiente: '⏳ Pendiente', pending: '⏳ Pendiente',
-    rechazado: '✗ No verificado', rejected: '✗ No verificado',
-    inactivo: '⏸ Inactivo',
-  }
+  const onRefresh = async () => { setRefreshing(true); await refetch(); setRefreshing(false) }
 
   return (
     <View style={{ flex: 1, backgroundColor: colors.cream }}>
-      {/* Search */}
-      <View style={styles.searchBox}>
-        <TextInput style={styles.searchInput} placeholder="Buscar instructor..."
-          placeholderTextColor={colors.light} value={search} onChangeText={setSearch} />
+      <HeroHeader
+        title="Directorio"
+        subtitle={`${allInstructors.length} instructor${allInstructors.length === 1 ? '' : 'es'}`}
+        bottomElement={
+          <View style={styles.searchBox}>
+            <Feather name="search" size={15} color={colors.light} />
+            <TextInput style={styles.searchInput} placeholder="Buscar por nombre, DNI o barrio..."
+              placeholderTextColor={colors.light} value={search} onChangeText={setSearch} />
+            {search ? (
+              <TouchableOpacity onPress={() => setSearch('')}>
+                <Feather name="x" size={15} color={colors.light} />
+              </TouchableOpacity>
+            ) : null}
+          </View>
+        }
+      />
+
+      <View>
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.filtersRow}>
+          {FILTERS.map(f => (
+            <TouchableOpacity key={f.key} style={[styles.chip, filter === f.key && styles.chipActive]} onPress={() => setFilter(f.key)}>
+              <Text style={[styles.chipText, filter === f.key && styles.chipTextActive]}>{f.label}</Text>
+            </TouchableOpacity>
+          ))}
+        </ScrollView>
       </View>
 
-      {/* Filters */}
-      <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.filtersRow} contentContainerStyle={{ paddingHorizontal: spacing.lg }}>
-        {(['todos', 'verificado', 'pendiente', 'inactivo'] as Filter[]).map(f => (
-          <TouchableOpacity key={f} style={[styles.chip, filter === f && styles.chipActive]} onPress={() => setFilter(f)}>
-            <Text style={[styles.chipText, filter === f && styles.chipTextActive]}>
-              {f.charAt(0).toUpperCase() + f.slice(1)}
-            </Text>
-          </TouchableOpacity>
-        ))}
-      </ScrollView>
-
-      {isLoading ? <LoadingScreen /> : (
+      {isLoading ? <LoadingScreen message="Cargando instructores..." /> : isError ? (
+        <ErrorState message="No pudimos cargar el directorio." onRetry={refetch} />
+      ) : (
         <FlatList
           data={filtered}
           keyExtractor={(item: any) => item.id}
-          contentContainerStyle={{ padding: spacing.lg }}
+          contentContainerStyle={{ padding: spacing.md, paddingBottom: 100, flexGrow: 1 }}
+          refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.sage} />}
           ItemSeparatorComponent={() => <View style={{ height: spacing.sm }} />}
-          ListEmptyComponent={<EmptyState title="Sin instructores" subtitle="No hay resultados para este filtro." />}
-          renderItem={({ item, index }: any) => (
-            <BlobCard style={styles.card} onPress={() => navigation.navigate('VerifyInstructor', { instructorId: item.id })}>
-              <Avatar name={item.full_name} size={36} color={colors.sageMid} />
-              <View style={{ flex: 1, marginLeft: spacing.sm }}>
-                <Text style={styles.name}>{item.full_name}</Text>
-                <Text style={styles.meta}>{item.neighborhood} · DNI {item.dni}</Text>
-              </View>
-              <View style={{ alignItems: 'flex-end', gap: 4 }}>
-                <Badge label={BADGE_LABEL[item.verification_status]} color={BADGE_COLOR[item.verification_status]} />
-                {item.score > 0 && (
-                  <View style={{ width: 32, height: 32, borderRadius: 16, backgroundColor: colors.sageLight, alignItems: 'center', justifyContent: 'center' }}>
-                    <Text style={{ fontFamily: 'Nunito-Bold', fontSize: 11, color: colors.sage }}>{item.score.toFixed(1)}</Text>
-                  </View>
-                )}
-              </View>
-            </BlobCard>
-          )}
+          ListEmptyComponent={
+            <EmptyState
+              icon="users"
+              title="Sin instructores"
+              message={term ? 'Nadie coincide con tu búsqueda.' : 'No hay instructores con este estado.'}
+            />
+          }
+          renderItem={({ item }: any) => {
+            const st = VERIFICATION_STATUS[item.verification_status] ?? VERIFICATION_STATUS.pendiente
+            const pendingCerts = (item.certifications ?? []).filter((c: any) => (c.review_status ?? 'pending') === 'pending').length
+            const meta = [item.neighborhood, item.dni ? `DNI ${item.dni}` : null].filter(Boolean).join(' · ')
+            return (
+              <BlobCard style={styles.card} onPress={() => navigation.navigate('VerifyInstructor', { instructorId: item.id })}>
+                <Avatar name={item.full_name} size={40} source={item.avatar_url} />
+                <View style={{ flex: 1, marginLeft: spacing.sm }}>
+                  <Text style={styles.name}>{item.full_name}</Text>
+                  {meta ? <Text style={styles.meta}>{meta}</Text> : null}
+                  {pendingCerts > 0 ? (
+                    <Text style={styles.pendingCerts}>{pendingCerts} certificado{pendingCerts > 1 ? 's' : ''} por revisar</Text>
+                  ) : null}
+                </View>
+                <View style={{ alignItems: 'flex-end', gap: 4 }}>
+                  <Badge label={st.label} variant={st.variant} />
+                  {item.is_active === false && item.verification_status !== 'inactivo' ? <Badge label="Pausado" variant="neutral" /> : null}
+                </View>
+                <Feather name="chevron-right" size={16} color={colors.border} style={{ marginLeft: 6 }} />
+              </BlobCard>
+            )
+          }}
         />
       )}
     </View>
@@ -97,15 +123,15 @@ export default function DirectoryScreen({ navigation }: any) {
 }
 
 const styles = StyleSheet.create({
-  searchBox: { backgroundColor: colors.white, padding: spacing.md, paddingTop: 52, paddingBottom: spacing.sm, borderBottomWidth: 0.5, borderColor: colors.borderLight },
-  searchInput: { backgroundColor: colors.white, borderTopLeftRadius: 14, borderTopRightRadius: 0, borderBottomLeftRadius: 0, borderBottomRightRadius: 14, padding: spacing.md, ...typography.body, color: colors.dark, borderWidth: 0.5, borderColor: colors.border },
-  filtersRow: { paddingVertical: spacing.sm, marginBottom: 0, maxHeight: 44 },
-  chip: { paddingVertical: 5, paddingHorizontal: 12, borderRadius: 999, backgroundColor: colors.white, borderWidth: 0.5, borderColor: colors.border, marginRight: spacing.xs, height: 30, justifyContent: 'center' },
-  chipActive: { backgroundColor: colors.sage, borderColor: colors.sage },
-  chipText: { ...typography.small, color: colors.mid },
-  chipTextActive: { color: colors.white, fontFamily: 'Nunito-SemiBold' },
-  card: { flexDirection: 'row', alignItems: 'center', padding: spacing.md, backgroundColor: colors.white },
-  name: { fontFamily: 'Nunito-SemiBold', fontSize: 14, color: colors.dark },
-  meta: { ...typography.small, color: colors.mid, marginTop: 2 },
-  sectionTitle: { ...typography.label, color: colors.dark, marginBottom: spacing.md },
+  searchBox:      { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, marginTop: 12, backgroundColor: colors.white, ...radius.leaf, paddingHorizontal: spacing.md, height: 44 },
+  searchInput:    { flex: 1, fontFamily: 'Nunito-Regular', fontSize: 14, color: colors.dark },
+  filtersRow:     { paddingHorizontal: spacing.md, paddingTop: spacing.md, gap: spacing.xs },
+  chip:           { paddingVertical: 6, paddingHorizontal: 12, borderRadius: radius.full, backgroundColor: colors.white, borderWidth: 0.5, borderColor: colors.border },
+  chipActive:     { backgroundColor: colors.sage, borderColor: colors.sage },
+  chipText:       { fontFamily: 'Nunito-SemiBold', fontSize: 12, color: colors.mid },
+  chipTextActive: { color: colors.white },
+  card:           { flexDirection: 'row', alignItems: 'center', padding: spacing.md, backgroundColor: colors.white },
+  name:           { fontFamily: 'Nunito-SemiBold', fontSize: 14, color: colors.dark },
+  meta:           { ...typography.small, color: colors.mid, marginTop: 2 },
+  pendingCerts:   { fontFamily: 'Nunito-SemiBold', fontSize: 11, color: colors.warnTx, marginTop: 3 },
 })

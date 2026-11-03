@@ -7,13 +7,15 @@ import {
   Alert, Switch, KeyboardAvoidingView, Platform
 } from 'react-native'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
-import { supabase, db } from '../../lib/supabase'
-import { useAuthStore } from '../../store'
+import { supabase } from '../../lib/supabase'
+import { useMyInstructor } from '../../hooks'
+import { humanizeError } from '../../lib/errors'
+import { formatDate } from '../../lib/dates'
 import {
-  Card, Button, Input, LoadingScreen,
+  Card, Button, Input, ErrorState,
   colors, spacing, radius, typography
 } from '../../components/ui'
-import { useSafeAreaInsets } from 'react-native-safe-area-context'
+import HeroHeader from '../../components/HeroHeader'
 import { Feather } from '@expo/vector-icons'
 import Toast from '../../components/Toast'
 import { useToast } from '../../hooks/useToast'
@@ -39,8 +41,8 @@ const ISSUES = [
 
 export default function EvaluateStudioScreen({ navigation, route }: Props) {
   const { toast, showToast, hideToast } = useToast()
-  const { matchId, studioId, studioName, classDate, classType } = route.params
-  const user = useAuthStore(s => s.user)
+  const { matchId, studioId, studioName, classDate, classType } = route?.params ?? {}
+  const { data: instructor } = useMyInstructor()
   const qc   = useQueryClient()
 
   const [scores, setScores] = useState({
@@ -73,12 +75,7 @@ export default function EvaluateStudioScreen({ navigation, route }: Props) {
 
   const createMutation = useMutation({
     mutationFn: async () => {
-      // Obtener instructor_id del usuario
-      const { data: instructor } = await db.instructors()
-        .select('id')
-        .eq('user_id', user!.id)
-        .single()
-      if (!instructor) throw new Error('Perfil de instructor no encontrado')
+      if (!instructor?.id) throw new Error('No encontramos tu perfil de instructor.')
 
       const { error } = await supabase
         .from('studio_evaluations')
@@ -92,18 +89,21 @@ export default function EvaluateStudioScreen({ navigation, route }: Props) {
           ...scores,
           ...issues,
         })
-      if (error) throw error
+      if (error) {
+        if ((error as any).code === '23505') throw new Error('Ya evaluaste esta clase.')
+        throw error
+      }
     },
     onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ['instructor-matches-history'] })
-      qc.invalidateQueries({ queryKey: ['instructor-matches-pending'] })
+      qc.invalidateQueries({ queryKey: ['instructor-matches'] })
+      qc.invalidateQueries({ queryKey: ['instructor-studio-evals'] })
       Alert.alert(
         'Evaluación enviada',
-        'Gracias por tu feedback. Es anónimo para el estudio pero ayuda a mantener la calidad de la red.',
+        'Gracias. El estudio no ve tu evaluación; la Cámara la usa para cuidar la calidad de la red.',
         [{ text: 'OK', onPress: () => navigation.goBack() }]
       )
     },
-    onError: (e: any) => showToast(e.message, 'error'),
+    onError: (e: any) => showToast(humanizeError(e), 'error'),
   })
 
   const handleSubmit = () => {
@@ -122,13 +122,22 @@ export default function EvaluateStudioScreen({ navigation, route }: Props) {
     }
   }
 
+  if (!matchId || !studioId || !classDate) {
+    return (
+      <View style={styles.container}>
+        <HeroHeader title="Evaluar estudio" onBack={() => navigation.goBack()} backLabel="Propuestas" />
+        <ErrorState message="No encontramos la clase a evaluar. Volvé a Propuestas e intentá de nuevo." onRetry={() => navigation.goBack()} />
+      </View>
+    )
+  }
+
   return (
     <KeyboardAvoidingView
-      style={{ flex: 1 }}
+      style={styles.container}
       behavior={Platform.OS === 'ios' ? 'padding' : undefined}
     >
+      <HeroHeader title="Evaluar estudio" subtitle={studioName} onBack={() => navigation.goBack()} backLabel="Propuestas" />
       <ScrollView
-        style={styles.container}
         contentContainerStyle={styles.content}
         keyboardShouldPersistTaps="handled"
       >
@@ -142,21 +151,19 @@ export default function EvaluateStudioScreen({ navigation, route }: Props) {
               <Text style={styles.studioName}>{studioName}</Text>
               <Text style={styles.studioMeta}>
                 {classType === 'reemplazo' ? 'Reemplazo' : 'Clase regular'} · {
-                  new Date(classDate + 'T00:00:00').toLocaleDateString('es-AR', {
-                    day: 'numeric', month: 'long'
-                  })
+                  formatDate(classDate, { day: 'numeric', month: 'long' })
                 }
               </Text>
             </View>
           </View>
           <View style={styles.anonBadge}>
             <Feather name="eye-off" size={12} color={colors.sage} />
-            <Text style={styles.anonText}>Tu evaluación es anónima para el estudio</Text>
+            <Text style={styles.anonText}>El estudio no ve tu evaluación</Text>
           </View>
         </Card>
 
         {/* Categorías de puntuación */}
-        <Text style={styles.sectionTitle}>Puntaje (1 al 10)</Text>
+        <Text style={styles.sectionTitle}>PUNTAJE (1 AL 10)</Text>
         <Card style={{ marginBottom: spacing.md }}>
           {CATEGORIES.map(({ key, label }) => (
             <View key={key} style={styles.scoreRow}>
@@ -190,7 +197,7 @@ export default function EvaluateStudioScreen({ navigation, route }: Props) {
         </Card>
 
         {/* Reportar problema */}
-        <Text style={styles.sectionTitle}>¿Hubo algún problema?</Text>
+        <Text style={styles.sectionTitle}>¿HUBO ALGÚN PROBLEMA?</Text>
         <Card style={{ marginBottom: spacing.md }}>
           <Text style={styles.issueNote}>
             Los reportes van directo a la Cámara. Usalos solo si corresponde.
@@ -206,7 +213,7 @@ export default function EvaluateStudioScreen({ navigation, route }: Props) {
                 styles.checkbox,
                 issues[key] && { backgroundColor: colors.sage, borderColor: colors.sage }
               ]}>
-                {issues[key] && <Feather name="check" size={12} color="#fff" />}
+                {issues[key] && <Feather name="check" size={12} color={colors.white} />}
               </View>
               <Text style={styles.issueLabel}>{label}</Text>
             </TouchableOpacity>
@@ -214,7 +221,7 @@ export default function EvaluateStudioScreen({ navigation, route }: Props) {
         </Card>
 
         {/* Comentario */}
-        <Text style={styles.sectionTitle}>Comentario (opcional)</Text>
+        <Text style={styles.sectionTitle}>COMENTARIO (OPCIONAL)</Text>
         <Card style={{ marginBottom: spacing.xl }}>
           <Input
             placeholder="Ej: Muy buena organización, el pago fue inmediato."
@@ -231,12 +238,7 @@ export default function EvaluateStudioScreen({ navigation, route }: Props) {
           isLoading={createMutation.isPending}
           fullWidth
         />
-        <TouchableOpacity
-          style={styles.skipBtn}
-          onPress={() => navigation.goBack()}
-        >
-          <Text style={styles.skipText}>Omitir por ahora</Text>
-        </TouchableOpacity>
+        <Button label="Evaluar más tarde" variant="ghost" onPress={() => navigation.goBack()} fullWidth style={{ marginTop: spacing.sm }} />
       </ScrollView>
       <Toast visible={toast.visible} message={toast.message} type={toast.type} onHide={hideToast} />
     </KeyboardAvoidingView>
@@ -248,13 +250,13 @@ const styles = StyleSheet.create({
   content:      { padding: spacing.md, paddingBottom: spacing.xxl },
   studioCard:   { marginBottom: spacing.md, padding: spacing.md },
   studioRow:    { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, marginBottom: spacing.sm },
-  studioAvatar: { width: 44, height: 44, borderRadius: 8, backgroundColor: colors.sageLight, alignItems: 'center', justifyContent: 'center' },
+  studioAvatar: { width: 44, height: 44, ...radius.leaf, backgroundColor: colors.sageLight, alignItems: 'center', justifyContent: 'center' },
   studioLetter: { fontFamily: 'Nunito-SemiBold', fontSize: 18, color: colors.sage },
   studioName:   { fontFamily: 'Nunito-SemiBold', fontSize: 15, color: colors.dark },
   studioMeta:   { ...typography.small, color: colors.mid, marginTop: 2 },
   anonBadge:    { flexDirection: 'row', alignItems: 'center', gap: spacing.xs, backgroundColor: colors.sageLight, borderRadius: radius.sm, padding: spacing.sm },
   anonText:     { ...typography.small, color: colors.sage, fontFamily: 'Nunito-SemiBold' },
-  sectionTitle: { fontFamily: 'Nunito-SemiBold', fontSize: 11, color: colors.mid, textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: spacing.sm },
+  sectionTitle: { ...typography.caption, marginBottom: spacing.sm },
   scoreRow:     { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingVertical: spacing.sm, borderBottomWidth: 0.5, borderColor: colors.borderLight },
   scoreLabel:   { ...typography.body, color: colors.dark, flex: 1, fontSize: 13 },
   scoreControls:{ flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
@@ -269,6 +271,4 @@ const styles = StyleSheet.create({
   issueRow:     { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, paddingVertical: spacing.sm, borderBottomWidth: 0.5, borderColor: colors.borderLight },
   checkbox:     { width: 20, height: 20, borderRadius: 4, borderWidth: 1.5, borderColor: colors.border, alignItems: 'center', justifyContent: 'center' },
   issueLabel:   { ...typography.body, color: colors.dark, flex: 1, fontSize: 13 },
-  skipBtn:      { alignItems: 'center', paddingVertical: spacing.lg },
-  skipText:     { ...typography.body, color: colors.light },
 })

@@ -2,39 +2,51 @@
 // Estado global con Zustand — simple, sin boilerplate
 
 import { create } from 'zustand'
-import { persist, createJSONStorage } from 'zustand/middleware'
-import AsyncStorage from '@react-native-async-storage/async-storage'
-import type { User, Studio, Membership, Instructor, StudioWithMembership } from '../types/database'
+import type { User, Membership, StudioWithMembership } from '../types/database'
 
 // ── Auth Store ──────────────────────────────────────────────
+// `user` NO se persiste: la sesión ya la guarda supabase-js y el perfil se
+// vuelve a leer al abrir la app. Persistirlo mostraba datos viejos (o de una
+// sesión vencida) antes de saber si había sesión.
 interface AuthState {
   user: User | null
   session: any | null
   isLoading: boolean
+  /** Tiene rol pero todavía no tiene fila en studios/instructors (p. ej. entró con Google). */
+  needsOnboarding: boolean
+  /** Hay un registro por email en curso: el listener de auth no debe cambiar de pantalla. */
+  registering: boolean
+  /** Hay sesión pero no se pudo leer el perfil (sin red, etc.). */
+  profileError: boolean
+  /** Entró desde el mail de "olvidé mi contraseña": hay que pedir la nueva. */
+  passwordRecovery: boolean
   setUser: (user: User | null) => void
   setSession: (session: any | null) => void
   setLoading: (loading: boolean) => void
+  setNeedsOnboarding: (v: boolean) => void
+  setRegistering: (v: boolean) => void
+  setProfileError: (v: boolean) => void
+  setPasswordRecovery: (v: boolean) => void
   reset: () => void
 }
 
-export const useAuthStore = create<AuthState>()(
-  persist(
-    (set) => ({
-      user: null,
-      session: null,
-      isLoading: false,
-      setUser: (user) => set({ user }),
-      setSession: (session) => set({ session }),
-      setLoading: (isLoading) => set({ isLoading }),
-      reset: () => set({ user: null, session: null }),
-    }),
-    {
-      name: 'auth-storage',
-      storage: createJSONStorage(() => AsyncStorage),
-      partialize: (state) => ({ user: state.user }),
-    }
-  )
-)
+export const useAuthStore = create<AuthState>()((set) => ({
+  user: null,
+  session: null,
+  isLoading: true,
+  needsOnboarding: false,
+  registering: false,
+  profileError: false,
+  passwordRecovery: false,
+  setUser: (user) => set({ user }),
+  setSession: (session) => set({ session }),
+  setLoading: (isLoading) => set({ isLoading }),
+  setNeedsOnboarding: (needsOnboarding) => set({ needsOnboarding }),
+  setRegistering: (registering) => set({ registering }),
+  setProfileError: (profileError) => set({ profileError }),
+  setPasswordRecovery: (passwordRecovery) => set({ passwordRecovery }),
+  reset: () => set({ user: null, session: null, needsOnboarding: false, registering: false, profileError: false, passwordRecovery: false }),
+}))
 
 // ── Studio Store ────────────────────────────────────────────
 interface StudioState {
@@ -78,28 +90,21 @@ interface SearchState {
   setSearching: (v: boolean) => void
 }
 
+const EMPTY_FILTERS: SearchState['filters'] = {
+  neighborhood: '',
+  classType: null,
+  dayOfWeek: null,
+  minScore: 0,
+  onlyMatches: false,
+}
+
 export const useSearchStore = create<SearchState>()((set) => ({
   results: [],
-  filters: {
-    neighborhood: '',
-    classType: null,
-    dayOfWeek: null,
-    minScore: 0,
-    onlyMatches: false,
-  },
+  filters: EMPTY_FILTERS,
   isSearching: false,
   setResults: (results) => set({ results }),
   setFilter: (key, value) =>
     set((state) => ({ filters: { ...state.filters, [key]: value } })),
-  clearFilters: () =>
-    set({
-      filters: {
-        neighborhood: '',
-        classType: null,
-        dayOfWeek: null,
-        minScore: 0,
-        onlyMatches: false,
-      },
-    }),
+  clearFilters: () => set({ filters: EMPTY_FILTERS }),
   setSearching: (isSearching) => set({ isSearching }),
 }))

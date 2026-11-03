@@ -1,6 +1,3 @@
-// src/screens/camara/StudiosScreen.tsx
-// Lista completa de estudios para la Cámara — estado de membresía + gestión
-
 import React, { useState } from 'react'
 import {
   View, Text, StyleSheet, FlatList, TextInput,
@@ -8,20 +5,18 @@ import {
 } from 'react-native'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { db } from '../../lib/supabase'
-import { Badge, EmptyState, LoadingScreen, colors, spacing, radius, typography } from '../../components/ui'
+import { humanizeError } from '../../lib/errors'
+import { formatDate } from '../../lib/dates'
+import { planLabel, usedThisMonth } from '../../constants/plans'
+import { Badge, Button, EmptyState, ErrorState, LoadingScreen, colors, spacing, radius, typography } from '../../components/ui'
 import BlobCard from '../../components/BlobCard'
 import HeroHeader from '../../components/HeroHeader'
-import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import Toast from '../../components/Toast'
 import { useToast } from '../../hooks/useToast'
 import { Feather } from '@expo/vector-icons'
+import { applyPlan, membershipOf, PAID_PLANS, STUDIO_KEYS } from './planUtils'
 
 type Filter = 'todos' | 'miembro' | 'no_miembro'
-
-function formatDate(dateStr: string | null) {
-  if (!dateStr) return '—'
-  return new Date(dateStr).toLocaleDateString('es-AR', { day: '2-digit', month: 'short', year: 'numeric' })
-}
 
 export default function CamaraStudiosScreen({ navigation }: any) {
   const { toast, showToast, hideToast } = useToast()
@@ -30,13 +25,13 @@ export default function CamaraStudiosScreen({ navigation }: any) {
   const [search, setSearch]   = useState('')
   const [refreshing, setRefreshing] = useState(false)
 
-  const { data: studios = [], isLoading, refetch } = useQuery({
+  const { data: studios = [], isLoading, isError, refetch } = useQuery({
     queryKey: ['camara-studios-full', filter],
     queryFn: async () => {
       let q = db.studios()
         .select(`
-          *,
-          membership:memberships(status, start_date, end_date, matches_used_month, matches_limit)
+          id, name, neighborhood, is_member, created_at,
+          membership:memberships(status, plan_type, start_date, end_date, matches_used_month, matches_limit, last_reset_date)
         `)
         .order('created_at', { ascending: false })
 
@@ -45,55 +40,35 @@ export default function CamaraStudiosScreen({ navigation }: any) {
 
       const { data, error } = await q
       if (error) throw error
-      return data
+      return data ?? []
     },
   })
 
   const toggleMemberMutation = useMutation({
-    mutationFn: async ({ studioId, isMember }: { studioId: string; isMember: boolean }) => {
-      const { error } = await db.studios()
-        .update({
-          is_member: isMember,
-          member_since: isMember ? new Date().toISOString().split('T')[0] : null,
-        })
-        .eq('id', studioId)
-      if (error) throw error
-
-      // Socio de la Cámara -> plan Socio (5/mes, 1 año). Al quitarla vuelve a Freemium (1/mes).
-      const endDate = new Date()
-      endDate.setFullYear(endDate.getFullYear() + (isMember ? 1 : 10))
-      const { error: memError } = await db.memberships().upsert(
-        {
-          studio_id: studioId,
-          status: 'activa',
-          plan_type: isMember ? 'socio' : 'freemium',
-          matches_limit: isMember ? 5 : 1,
-          start_date: new Date().toISOString().split('T')[0],
-          end_date: endDate.toISOString().split('T')[0],
-        },
-        { onConflict: 'studio_id' }
-      )
-      if (memError) throw memError
-    },
+    mutationFn: ({ studioId, isMember }: { studioId: string; isMember: boolean }) =>
+      applyPlan(studioId, isMember ? 'socio' : 'freemium'),
     onSuccess: (_data, vars) => {
-      qc.invalidateQueries({ queryKey: ['camara-studios-full'] })
-      qc.invalidateQueries({ queryKey: ['camara-dashboard'] })
-      showToast(vars.isMember ? 'Membresía activada' : 'Membresía removida')
+      STUDIO_KEYS.forEach(queryKey => qc.invalidateQueries({ queryKey }))
+      showToast(vars.isMember ? 'Ahora es socio de la Cámara' : 'Ya no es socio: pasó a Freemium')
     },
-    onError: (e: any) => showToast(e.message, 'error'),
+    onError: (e: any) => showToast(humanizeError(e), 'error'),
   })
 
   const handleToggleMember = (studio: any) => {
     const nowMember = studio.is_member
+    const current = membershipOf(studio)?.plan_type
+    const paidWarning = current && PAID_PLANS.includes(current)
+      ? `\n\nAtención: hoy tiene el plan ${planLabel(current)}, que se va a reemplazar.`
+      : ''
     Alert.alert(
-      nowMember ? 'Quitar membresía' : 'Activar membresía',
-      nowMember
-        ? `¿Querés remover a "${studio.name}" como estudio miembro?`
-        : `¿Querés activar la membresía de "${studio.name}"? Pasa al plan Socio (5 propuestas por mes) por 12 meses.`,
+      nowMember ? 'Quitar de socios' : 'Hacer socio',
+      (nowMember
+        ? `"${studio.name}" deja de ser socio y pasa al plan Freemium (1 propuesta por mes).`
+        : `"${studio.name}" pasa al plan Socio Cámara (5 propuestas por mes) por 12 meses.`) + paidWarning,
       [
         { text: 'Cancelar', style: 'cancel' },
         {
-          text: nowMember ? 'Quitar' : 'Activar',
+          text: nowMember ? 'Quitar' : 'Hacer socio',
           style: nowMember ? 'destructive' : 'default',
           onPress: () => toggleMemberMutation.mutate({ studioId: studio.id, isMember: !nowMember }),
         },
@@ -120,17 +95,12 @@ export default function CamaraStudiosScreen({ navigation }: any) {
     { key: 'no_miembro', label: 'No socios' },
   ]
 
-  if (isLoading) return <LoadingScreen message="Cargando estudios..." />
-
   return (
     <View style={styles.container}>
-      {/* Header */}
-      <View style={styles.header}>
-        <Text style={styles.title}>Estudios registrados</Text>
-        <Text style={styles.count}>{studios.length} en total</Text>
-      </View>
-
-      {/* Buscador */}
+      <HeroHeader
+        title="Estudios"
+        subtitle={`${studios.length} ${filter === 'todos' ? 'registrados' : filter === 'miembro' ? 'socios' : 'no socios'}`}
+        bottomElement={
       <View style={styles.searchRow}>
         <Feather name="search" size={16} color={colors.light} style={styles.searchIcon} />
         <TextInput
@@ -146,6 +116,8 @@ export default function CamaraStudiosScreen({ navigation }: any) {
           </TouchableOpacity>
         ) : null}
       </View>
+        }
+      />
 
       {/* Filtros */}
       <View style={styles.filters}>
@@ -162,7 +134,9 @@ export default function CamaraStudiosScreen({ navigation }: any) {
         ))}
       </View>
 
-      {/* Lista */}
+      {isLoading ? <LoadingScreen message="Cargando estudios..." /> : isError ? (
+        <ErrorState message="No pudimos cargar los estudios." onRetry={refetch} />
+      ) : (
       <FlatList
         data={filtered}
         keyExtractor={(item: any) => item.id}
@@ -172,14 +146,15 @@ export default function CamaraStudiosScreen({ navigation }: any) {
           <EmptyState
             icon="briefcase"
             title="Sin estudios"
-            subtitle={search ? 'Ningún estudio coincide con tu búsqueda.' : 'No hay estudios registrados aún.'}
+            message={search ? 'Ningún estudio coincide con tu búsqueda.' : 'Todavía no hay estudios en este grupo.'}
           />
         }
         renderItem={({ item: studio, index }: any) => {
-          const membership = Array.isArray(studio.membership) ? studio.membership[0] : studio.membership
+          const membership = membershipOf(studio)
           const isMember   = studio.is_member
-          const matchUsed  = membership?.matches_used_month ?? 0
+          const matchUsed  = membership ? usedThisMonth(membership) : 0
           const matchLimit = membership?.matches_limit ?? null
+          const blocked    = membership && membership.status !== 'activa'
 
           return (
             <BlobCard style={styles.card} onPress={() => navigation.navigate('StudioDetail', { studioId: studio.id })} delay={index * 600}>
@@ -194,53 +169,56 @@ export default function CamaraStudiosScreen({ navigation }: any) {
                     <Feather name="map-pin" size={11} color={colors.light} /> {studio.neighborhood}
                   </Text>
                 </View>
-                <Badge
-                  label={isMember ? 'Socio' : 'No socio'}
-                  variant={isMember ? 'success' : 'default'}
-                />
+                <View style={{ alignItems: 'flex-end', gap: 4 }}>
+                  <Badge label={isMember ? 'Socio' : 'No socio'} variant={isMember ? 'success' : 'neutral'} />
+                  {blocked ? <Badge label={membership.status === 'cancelada' ? 'Bloqueado' : 'Vencida'} variant="danger" /> : null}
+                </View>
               </View>
 
               {/* Detalles membresía */}
               <View style={styles.memberDetail}>
-                {isMember && membership ? (
+                {membership ? (
                   <>
                     <View style={styles.detailRow}>
-                      <Text style={styles.detailLabel}>Vencimiento</Text>
-                      <Text style={styles.detailVal}>{formatDate(membership.end_date)}</Text>
+                      <Text style={styles.detailLabel}>Plan</Text>
+                      <Text style={styles.detailVal}>{planLabel(membership.plan_type ?? 'freemium')}</Text>
                     </View>
+                    {membership.plan_type !== 'freemium' ? (
+                      <View style={styles.detailRow}>
+                        <Text style={styles.detailLabel}>Vencimiento</Text>
+                        <Text style={styles.detailVal}>{membership.end_date ? formatDate(membership.end_date) : '—'}</Text>
+                      </View>
+                    ) : null}
                     <View style={styles.detailRow}>
-                      <Text style={styles.detailLabel}>Matches este mes</Text>
+                      <Text style={styles.detailLabel}>Propuestas este mes</Text>
                       <Text style={styles.detailVal}>
-                        {matchUsed}{matchLimit !== null ? ` / ${matchLimit}` : ' (ilimitado)'}
+                        {matchUsed}{matchLimit !== null ? ` / ${matchLimit}` : ' (ilimitadas)'}
                       </Text>
                     </View>
                   </>
                 ) : (
                   <Text style={styles.noMemberText}>
-                    Registrado el {formatDate(studio.created_at)}
+                    Sin plan asignado · registrado el {formatDate(studio.created_at)}
                   </Text>
                 )}
               </View>
 
               {/* Acción */}
-              <TouchableOpacity
-                style={[styles.actionBtn, isMember ? styles.actionRemove : styles.actionAdd]}
+              <Button
+                label={isMember ? 'Quitar de socios' : 'Hacer socio'}
+                variant={isMember ? 'danger' : 'secondary'}
+                size="sm"
                 onPress={() => handleToggleMember(studio)}
                 disabled={toggleMemberMutation.isPending}
-              >
-                <Feather
-                  name={isMember ? 'user-minus' : 'user-plus'}
-                  size={14}
-                  color={isMember ? '#A32D2D' : colors.sage}
-                />
-                <Text style={[styles.actionText, isMember ? { color: '#A32D2D' } : { color: colors.sage }]}>
-                  {isMember ? 'Quitar membresía' : 'Activar membresía'}
-                </Text>
-              </TouchableOpacity>
+                isLoading={toggleMemberMutation.isPending && toggleMemberMutation.variables?.studioId === studio.id}
+                icon={<Feather name={isMember ? 'user-minus' : 'user-plus'} size={14} color={isMember ? colors.redTx : colors.sage} />}
+                fullWidth
+              />
             </BlobCard>
           )
         }}
       />
+      )}
       <Toast visible={toast.visible} message={toast.message} type={toast.type} onHide={hideToast} />
     </View>
   )
@@ -248,18 +226,15 @@ export default function CamaraStudiosScreen({ navigation }: any) {
 
 const styles = StyleSheet.create({
   container:       { flex: 1, backgroundColor: colors.cream },
-  header:          { paddingHorizontal: spacing.md, paddingTop: 52, paddingBottom: spacing.sm },
-  title:           { fontFamily: 'Nunito-Bold', fontSize: 22, color: colors.dark },
-  count:           { ...typography.small, color: colors.mid, marginTop: 2 },
-  searchRow:       { flexDirection: 'row', alignItems: 'center', marginHorizontal: spacing.md, marginBottom: spacing.sm, backgroundColor: colors.white, borderTopLeftRadius: 14, borderTopRightRadius: 0, borderBottomLeftRadius: 0, borderBottomRightRadius: 14, paddingHorizontal: spacing.md, paddingVertical: spacing.sm, borderWidth: 0.5, borderColor: colors.border },
+  searchRow:       { flexDirection: 'row', alignItems: 'center', marginTop: 12, backgroundColor: colors.white, ...radius.leaf, paddingHorizontal: spacing.md, height: 44 },
   searchIcon:      { marginRight: spacing.sm },
-  searchInput:     { flex: 1, ...typography.body, color: colors.dark, fontSize: 14 },
-  filters:         { flexDirection: 'row', gap: spacing.sm, paddingHorizontal: spacing.md, marginBottom: spacing.sm },
-  filterBtn:       { paddingHorizontal: spacing.md, paddingVertical: spacing.xs, borderRadius: 9999, backgroundColor: colors.white, borderWidth: 0.5, borderColor: colors.border },
+  searchInput:     { flex: 1, fontFamily: 'Nunito-Regular', color: colors.dark, fontSize: 14 },
+  filters:         { flexDirection: 'row', gap: spacing.sm, paddingHorizontal: spacing.md, paddingTop: spacing.md, marginBottom: spacing.sm },
+  filterBtn:       { paddingHorizontal: spacing.md, paddingVertical: 6, borderRadius: radius.full, backgroundColor: colors.white, borderWidth: 0.5, borderColor: colors.border },
   filterActive:    { backgroundColor: colors.sage, borderColor: colors.sage },
-  filterText:      { ...typography.small, color: colors.mid, fontFamily: 'Nunito-SemiBold' },
+  filterText:      { fontFamily: 'Nunito-SemiBold', fontSize: 12, color: colors.mid },
   filterTextActive:{ color: colors.white },
-  list:            { paddingHorizontal: spacing.md, paddingBottom: spacing.xl },
+  list:            { paddingHorizontal: spacing.md, paddingBottom: 100, flexGrow: 1 },
   card:            { marginBottom: spacing.sm, padding: spacing.md, backgroundColor: colors.white },
   row:             { flexDirection: 'row', alignItems: 'center', marginBottom: spacing.sm },
   avatar:          { width: 42, height: 42, borderRadius: 21, backgroundColor: colors.sageLight, alignItems: 'center', justifyContent: 'center', marginRight: spacing.sm },
@@ -267,13 +242,9 @@ const styles = StyleSheet.create({
   info:            { flex: 1 },
   studioName:      { fontFamily: 'Nunito-SemiBold', fontSize: 14, color: colors.dark },
   neighborhood:    { ...typography.small, color: colors.mid, marginTop: 2 },
-  memberDetail:    { backgroundColor: colors.cream, borderTopLeftRadius: 8, borderTopRightRadius: 0, borderBottomLeftRadius: 0, borderBottomRightRadius: 8, padding: spacing.sm, marginBottom: spacing.sm },
+  memberDetail:    { backgroundColor: colors.cream, ...radius.leaf, padding: spacing.sm, marginBottom: spacing.sm },
   detailRow:       { flexDirection: 'row', justifyContent: 'space-between', paddingVertical: 2 },
   detailLabel:     { ...typography.small, color: colors.mid },
   detailVal:       { ...typography.small, color: colors.dark, fontFamily: 'Nunito-SemiBold' },
   noMemberText:    { ...typography.small, color: colors.light },
-  actionBtn:       { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: spacing.xs, paddingVertical: spacing.sm, borderTopLeftRadius: 14, borderTopRightRadius: 0, borderBottomLeftRadius: 0, borderBottomRightRadius: 14, borderWidth: 1 },
-  actionAdd:       { borderColor: colors.sage, backgroundColor: colors.sageLight },
-  actionRemove:    { borderColor: '#F09595', backgroundColor: '#FCEBEB' },
-  actionText:      { fontFamily: 'Nunito-SemiBold', fontSize: 13 },
 })

@@ -1,15 +1,10 @@
 // src/components/ZonasCABA.tsx
 import React from 'react'
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native'
-import { colors, spacing, radius } from '../components/ui'
+import { colors, spacing, radius } from './ui'
+import { ZONAS_CABA } from '../constants/barrios'
 
-const ZONAS: { nombre: string; barrios: string[] }[] = [
-  { nombre: 'Norte', barrios: ['Belgrano','Núñez','Colegiales','Villa Urquiza','Villa Pueyrredón','Agronomía'] },
-  { nombre: 'Palermo / Centro-Norte', barrios: ['Palermo','Villa Crespo','Chacarita','Paternal','Villa Ortúzar','Recoleta'] },
-  { nombre: 'Oeste', barrios: ['Caballito','Almagro','Flores','Floresta','Monte Castro','Villa Real','Villa Luro','Versalles','Liniers','Mataderos','Villa del Parque','Villa Devoto'] },
-  { nombre: 'Centro / Este', barrios: ['Balvanera','San Cristóbal','Montserrat','San Nicolás','Puerto Madero','Retiro'] },
-  { nombre: 'Sur', barrios: ['Boedo','Parque Chacabuco','Nueva Pompeya','Parque Patricios','Barracas','La Boca','San Telmo','Villa Lugano'] },
-]
+const ZONAS = ZONAS_CABA
 
 const ALL = ZONAS.flatMap(z => z.barrios)
 
@@ -59,7 +54,7 @@ export default function ZonasCABA({ selected, onToggle }: Props) {
 }
 
 const s = StyleSheet.create({
-  allBtn:         { borderWidth: 1.5, borderColor: colors.sage, borderRadius: radius.md, padding: spacing.md, alignItems: 'center', marginBottom: spacing.sm },
+  allBtn:         { borderWidth: 1.5, borderColor: colors.sage, ...radius.leaf, padding: spacing.md, alignItems: 'center', marginBottom: spacing.sm },
   allBtnActive:   { backgroundColor: colors.sage },
   allBtnText:     { fontFamily: 'Nunito-SemiBold', fontSize: 14, color: colors.sage },
   allBtnTextActive:{ color: colors.white },

@@ -1,94 +1,83 @@
 // src/lib/notifications.ts
-// Manejo completo de push notifications con Expo
+// Push notifications con Expo: permisos, canales Android y token en Supabase.
 
-import { Platform, Alert } from 'react-native'
+import { Platform } from 'react-native'
 import * as Notifications from 'expo-notifications'
+import * as Device from 'expo-device'
 import Constants from 'expo-constants'
 import { supabase } from './supabase'
+import { colors } from '../components/ui'
 
-// Configurar cómo se muestran las notificaciones cuando la app está en primer plano
+// Cómo se muestran las notificaciones cuando la app está en primer plano
 Notifications.setNotificationHandler({
   handleNotification: async () => ({
-    shouldShowAlert: true,
     shouldShowBanner: true,
     shouldShowList: true,
     shouldPlaySound: true,
-    shouldSetBadge:  true,
+    shouldSetBadge: true,
   }),
 })
 
 /**
- * Solicita permisos y registra el token en Supabase.
- * Llamar desde App.tsx al inicio de sesión.
+ * Pide permisos y guarda el token en push_tokens. Nunca tira error:
+ * las notificaciones no deben bloquear el uso de la app.
  */
 export async function registerPushToken(userId: string): Promise<void> {
   try {
-    // Android necesita canal de notificaciones
+    if (!Device.isDevice) return // Emulador: no hay push
+
     if (Platform.OS === 'android') {
-      await Notifications.setNotificationChannelAsync('matches', {
-        name: 'Solicitudes de cobertura',
+      await Notifications.setNotificationChannelAsync('default', {
+        name: 'Propuestas y novedades',
         importance: Notifications.AndroidImportance.MAX,
         vibrationPattern: [0, 250, 250, 250],
-        lightColor: '#4A5D4E',
+        lightColor: colors.sage,
         sound: 'default',
       })
-      await Notifications.setNotificationChannelAsync('default', {
-        name: 'General',
-        importance: Notifications.AndroidImportance.DEFAULT,
+      await Notifications.setNotificationChannelAsync('urgente', {
+        name: 'Reemplazos urgentes',
+        importance: Notifications.AndroidImportance.MAX,
+        vibrationPattern: [0, 500, 250, 500],
+        lightColor: colors.redTx,
+        sound: 'default',
       })
     }
 
-    // Verificar si ya tiene permisos
     const { status: existing } = await Notifications.getPermissionsAsync()
     let finalStatus = existing
-
     if (existing !== 'granted') {
       const { status } = await Notifications.requestPermissionsAsync()
       finalStatus = status
     }
+    if (finalStatus !== 'granted') return // El usuario no quiso: no insistimos
 
-    if (finalStatus !== 'granted') {
-      // El usuario rechazó — no insistir, no es bloqueante
-      console.log('[Notifications] Permisos no otorgados')
-      return
-    }
-
-    // Obtener token de Expo Push
-    const projectId = Constants.expoConfig?.extra?.eas?.projectId
+    const projectId = Constants.expoConfig?.extra?.eas?.projectId ?? Constants.easConfig?.projectId
     if (!projectId) {
-      console.warn('[Notifications] EXPO_PUBLIC_PROJECT_ID no configurado')
+      if (__DEV__) console.warn('[push] falta extra.eas.projectId en app.json')
       return
     }
+    const { data: token } = await Notifications.getExpoPushTokenAsync({ projectId })
 
-    const token = await Notifications.getExpoPushTokenAsync({ projectId })
-
-    // Guardar en Supabase
+    // push_tokens: id, user_id (UNIQUE), token, updated_at, camara_id
     const { error } = await supabase
       .from('push_tokens')
-      .upsert({ user_id: userId, token: token.data }, { onConflict: 'user_id' })
-
-    if (error) {
-      console.error('[Notifications] Error guardando token:', error.message)
-    } else {
-      console.log('[Notifications] Token registrado correctamente')
-    }
+      .upsert({ user_id: userId, token, updated_at: new Date().toISOString() }, { onConflict: 'user_id' })
+    if (error && __DEV__) console.warn('[push] no se guardó el token:', error.message)
   } catch (err) {
-    // No bloquear el arranque de la app por errores de notificaciones
-    console.error('[Notifications] Error en setup:', err)
+    if (__DEV__) console.warn('[push] error en el registro:', err)
   }
 }
 
 /**
- * Escuchar notificaciones recibidas mientras la app está abierta.
+ * Escucha notificaciones recibidas y toques sobre ellas.
  * Devuelve una función de limpieza para usar en useEffect.
  */
 export function listenForNotifications(
   onNotification: (notification: Notifications.Notification) => void,
-  onResponse:     (response: Notifications.NotificationResponse) => void,
+  onResponse: (response: Notifications.NotificationResponse) => void,
 ) {
   const notifSub = Notifications.addNotificationReceivedListener(onNotification)
-  const respSub  = Notifications.addNotificationResponseReceivedListener(onResponse)
-
+  const respSub = Notifications.addNotificationResponseReceivedListener(onResponse)
   return () => {
     notifSub.remove()
     respSub.remove()

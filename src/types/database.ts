@@ -1,5 +1,6 @@
 // src/types/database.ts
-// Auto-generado desde el schema de Supabase
+// Tipos escritos a mano a partir del esquema real de Supabase (2026-11-03).
+// Si cambia la base, regenerar con `supabase gen types` o actualizar acá.
 
 export type UserRole = 'estudio' | 'instructor' | 'camara_admin' | 'super_admin'
 export type VerificationStatus = 'pendiente' | 'verificado' | 'rechazado' | 'inactivo'
@@ -39,6 +40,7 @@ export interface Studio {
   camara_code: string | null
   is_member: boolean
   member_since: string | null
+  camara_id: string | null
   created_at: string
   updated_at: string
   logo_url: string | null
@@ -62,10 +64,11 @@ export interface Membership {
   monthly_price_ars: number
   matches_used_month: number
   matches_limit: number | null   // null = ilimitado
-  last_reset_date: string
+  last_reset_date: string | null
   created_at: string
   updated_at: string
-  plan_type: string | null
+  camara_id: string | null
+  plan_type: 'freemium' | 'starter' | 'socio' | 'premium' | string | null
   price_ars: number | null
 }
 
@@ -82,9 +85,14 @@ export interface Instructor {
   verification_status: VerificationStatus
   verified_at: string | null
   verified_by: string | null
+  verification_note: string | null
   added_by_studio: string | null
   created_at: string
   updated_at: string
+  regular_rate: number | null
+  replacement_rate: number | null
+  camara_id: string | null
+  is_active: boolean | null
 }
 
 export interface Certification {
@@ -94,11 +102,19 @@ export interface Certification {
   institution: string
   year: number | null
   hours: number | null
+  /** PATH dentro del bucket privado 'certifications' (no una URL) */
   document_url: string | null
-  verified: boolean
+  verified: boolean | null
   verified_at: string | null
   created_at: string
+  camara_id: string | null
+  review_status: CertReviewStatus | null
+  review_note: string | null
+  reviewed_by: string | null
+  reviewed_at: string | null
 }
+
+export type CertReviewStatus = 'pending' | 'approved' | 'rejected'
 
 export interface InstructorSpecialty {
   id: string
@@ -150,9 +166,10 @@ export interface Evaluation {
   score_punctuality: number
   score_student_care: number
   score_presentation: number
-  average_score: number
+  average_score: number | null
   comment: string | null
   created_at: string
+  camara_id: string | null
 }
 
 export interface Match {
@@ -169,13 +186,12 @@ export interface Match {
   agreed_rate: number | null
   created_at: string
   responded_at: string | null
-  expires_at: string
-  // Campos para clase regular
-  schedule_days: string[] | null       // ['lunes', 'miercoles']
-  schedule_from: string | null         // '08:00'
-  schedule_to: string | null           // '12:00'
-  trial_date: string | null            // Fecha de la clase de prueba acordada
-  trial_time: string | null            // Horario de la prueba
+  expires_at: string | null
+  camara_id: string | null
+  // Propuesta "regular": días y franja (migración 20261103e)
+  schedule_days: DayOfWeek[] | null
+  schedule_from: string | null         // 'HH:MM'
+  schedule_to: string | null           // 'HH:MM'
 }
 
 export interface RateRange {
@@ -248,11 +264,11 @@ export interface CreateMatchDTO {
   class_date: string
   start_time: string
   end_time: string
-  note_studio?: string
+  note_studio?: string | null
   // Solo para clase regular
-  schedule_days?: string[]
-  schedule_from?: string
-  schedule_to?: string
+  schedule_days?: DayOfWeek[] | null
+  schedule_from?: string | null
+  schedule_to?: string | null
 }
 
 export interface InstructorSearchFilters {

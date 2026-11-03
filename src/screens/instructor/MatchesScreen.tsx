@@ -1,146 +1,131 @@
 // src/screens/instructor/MatchesScreen.tsx
-// Pantalla de solicitudes de cobertura para el instructor
-// Ve solicitudes pendientes, acepta/rechaza y consulta historial
+// Propuestas de los estudios: el instructor acepta/rechaza, ve el historial y evalúa al estudio
 
 import React, { useState, useCallback } from 'react'
 import {
   View, Text, StyleSheet, FlatList, TouchableOpacity,
-  Alert, TextInput, Modal, ScrollView, RefreshControl
+  TextInput, Modal, RefreshControl, Linking,
 } from 'react-native'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useFocusEffect } from '@react-navigation/native'
-import { supabase, db } from '../../lib/supabase'
-import { useAuthStore } from '../../store'
-import { Badge, EmptyState, LoadingScreen, Button, colors, spacing, radius, typography } from '../../components/ui'
+import { supabase } from '../../lib/supabase'
+import { useMyInstructor } from '../../hooks'
+import { humanizeError } from '../../lib/errors'
+import { formatDate, isPastDate } from '../../lib/dates'
+import { MATCH_STATUS } from '../../constants/labels'
+import { Badge, EmptyState, ErrorState, LoadingScreen, Button, colors, spacing, radius, typography } from '../../components/ui'
 import BlobCard from '../../components/BlobCard'
 import HeroHeader from '../../components/HeroHeader'
-import { useSafeAreaInsets } from 'react-native-safe-area-context'
+import Toast from '../../components/Toast'
+import { useToast } from '../../hooks/useToast'
 import { Feather } from '@expo/vector-icons'
 
 type Tab = 'pendientes' | 'historial'
 
-const DAYS_ES: Record<string, string> = {
+const DAYS_SHORT: Record<string, string> = {
   lunes: 'Lun', martes: 'Mar', miercoles: 'Mié',
   jueves: 'Jue', viernes: 'Vie', sabado: 'Sáb', domingo: 'Dom',
 }
+const DAY_ORDER = ['lunes', 'martes', 'miercoles', 'jueves', 'viernes', 'sabado', 'domingo']
 
-function formatDate(dateStr: string) {
-  const d = new Date(dateStr + 'T00:00:00')
-  return d.toLocaleDateString('es-AR', { weekday: 'long', day: 'numeric', month: 'long' })
-}
+const longDate = (d: string) => formatDate(d, { weekday: 'long', day: 'numeric', month: 'long' })
+const hhmm = (t?: string | null) => t?.slice(0, 5) ?? ''
+const isExpired = (m: any) => m.status === 'pendiente' && !!m.expires_at && new Date(m.expires_at).getTime() <= Date.now()
 
-function formatTime(t: string) {
-  return t?.slice(0, 5) ?? ''
-}
+const STUDIO_FIELDS = 'studio:studios(id, name, neighborhood, address, phone, instagram)'
 
-const STATUS_LABEL: Record<string, string> = {
-  pendiente: 'Pendiente',
-  aceptado:  'Aceptado',
-  rechazado: 'Rechazado',
-  expirado:  'Expirado',
-  cancelado: 'Cancelado',
-}
-
-const STATUS_VARIANT: Record<string, any> = {
-  pendiente: 'warning',
-  aceptado:  'success',
-  rechazado: 'danger',
-  expirado:  'default',
-  cancelado: 'default',
-}
-
-export default function InstructorMatchesScreen() {
+export default function InstructorMatchesScreen({ navigation }: any) {
   const qc = useQueryClient()
-  const user = useAuthStore(s => s.user)
-  const [tab, setTab]                   = useState<Tab>('pendientes')
-  const [selected, setSelected]         = useState<any>(null)
-  const [noteText, setNoteText]         = useState('')
-  const [actionType, setActionType]     = useState<'accept' | 'reject' | null>(null)
-  const [refreshing, setRefreshing]     = useState(false)
+  const { toast, showToast, hideToast } = useToast()
+  const [tab, setTab]               = useState<Tab>('pendientes')
+  const [selected, setSelected]     = useState<any>(null)
+  const [noteText, setNoteText]     = useState('')
+  const [actionType, setActionType] = useState<'accept' | 'reject' | null>(null)
+  const [refreshing, setRefreshing] = useState(false)
 
-  // Obtener instructor_id del usuario logueado
-  const { data: instructor } = useQuery({
-    queryKey: ['my-instructor-id', user?.id],
-    queryFn: async () => {
-      const { data } = await db.instructors().select('id').eq('user_id', user!.id).single()
-      return data
-    },
-    enabled: !!user?.id,
-  })
+  const { data: instructor, isLoading: loadingInstructor } = useMyInstructor()
+  const instructorId = instructor?.id
 
-  // Solicitudes pendientes
-  const { data: pending = [], isLoading: loadingPending, refetch: refetchPending } = useQuery({
-    queryKey: ['instructor-matches-pending', instructor?.id],
+  // Pendientes vigentes
+  const pendingQ = useQuery({
+    queryKey: ['instructor-matches', instructorId, 'pending'],
     queryFn: async () => {
       const { data, error } = await supabase
         .from('matches')
-        .select(`
-          *,
-          studio:studios(id, name, neighborhood, address, phone, instagram)
-        `)
-        .eq('instructor_id', instructor!.id)
+        .select(`*, ${STUDIO_FIELDS}`)
+        .eq('instructor_id', instructorId!)
         .eq('status', 'pendiente')
-        .gt('expires_at', new Date().toISOString())
+        .or(`expires_at.is.null,expires_at.gt.${new Date().toISOString()}`)
         .order('class_date', { ascending: true })
       if (error) throw error
       return data ?? []
     },
-    enabled: !!instructor?.id,
-    refetchInterval: 30_000, // refrescar cada 30s para nuevas solicitudes
+    enabled: !!instructorId,
+    refetchInterval: 30_000,
   })
 
-  // Historial
-  const { data: history = [], isLoading: loadingHistory, refetch: refetchHistory } = useQuery({
-    queryKey: ['instructor-matches-history', instructor?.id],
+  // Historial: respondidas + pendientes que ya vencieron
+  const historyQ = useQuery({
+    queryKey: ['instructor-matches', instructorId, 'history'],
     queryFn: async () => {
       const { data, error } = await supabase
         .from('matches')
-        .select(`
-          *,
-          studio:studios(id, name, neighborhood)
-        `)
-        .eq('instructor_id', instructor!.id)
-        .not('status', 'eq', 'pendiente')
+        .select(`*, ${STUDIO_FIELDS}`)
+        .eq('instructor_id', instructorId!)
+        .or(`status.neq.pendiente,expires_at.lte.${new Date().toISOString()}`)
         .order('class_date', { ascending: false })
-        .limit(30)
+        .limit(50)
       if (error) throw error
       return data ?? []
     },
-    enabled: !!instructor?.id,
+    enabled: !!instructorId,
+  })
+
+  // Matches que el instructor ya evaluó
+  const evaluatedQ = useQuery({
+    queryKey: ['instructor-studio-evals', instructorId, 'match-ids'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('studio_evaluations').select('match_id').eq('instructor_id', instructorId!)
+      if (error) throw error
+      return new Set((data ?? []).map((e: any) => e.match_id).filter(Boolean))
+    },
+    enabled: !!instructorId,
   })
 
   const respondMutation = useMutation({
     mutationFn: async ({ matchId, status, note }: { matchId: string; status: string; note?: string }) => {
-      const { error } = await supabase
+      const { data, error } = await supabase
         .from('matches')
-        .update({
-          status,
-          note_instructor: note || null,
-          responded_at: new Date().toISOString(),
-        })
+        .update({ status, note_instructor: note || null, responded_at: new Date().toISOString() })
         .eq('id', matchId)
+        .eq('status', 'pendiente')
+        .select('id')
       if (error) throw error
+      if (!data?.length) throw new Error('Esta propuesta ya no está disponible (puede haber vencido o sido cancelada).')
     },
-    onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ['instructor-matches-pending'] })
-      qc.invalidateQueries({ queryKey: ['instructor-matches-history'] })
-      setSelected(null)
-      setNoteText('')
-      setActionType(null)
+    onSuccess: (_d, vars) => {
+      qc.invalidateQueries({ queryKey: ['instructor-matches'] })
+      closeModal()
+      showToast(vars.status === 'aceptado' ? 'Propuesta aceptada' : 'Propuesta rechazada')
     },
-    onError: (e: any) => Alert.alert('Error', e.message),
+    onError: (e: any) => {
+      showToast(humanizeError(e), 'error')
+      qc.invalidateQueries({ queryKey: ['instructor-matches'] })
+    },
   })
 
   useFocusEffect(useCallback(() => {
-    if (instructor?.id) {
-      refetchPending()
-      refetchHistory()
+    if (instructorId) {
+      pendingQ.refetch()
+      historyQ.refetch()
+      evaluatedQ.refetch()
     }
-  }, [instructor?.id]))
+  }, [instructorId]))
 
   const onRefresh = async () => {
     setRefreshing(true)
-    await Promise.all([refetchPending(), refetchHistory()])
+    await Promise.all([pendingQ.refetch(), historyQ.refetch(), evaluatedQ.refetch()])
     setRefreshing(false)
   }
 
@@ -149,6 +134,7 @@ export default function InstructorMatchesScreen() {
     setActionType(type)
     setNoteText('')
   }
+  const closeModal = () => { setSelected(null); setActionType(null); setNoteText('') }
 
   const confirmAction = () => {
     if (!selected || !actionType) return
@@ -159,14 +145,149 @@ export default function InstructorMatchesScreen() {
     })
   }
 
-  const isLoading = tab === 'pendientes' ? loadingPending : loadingHistory
-  const data      = tab === 'pendientes' ? pending : history
+  const goEvaluate = (m: any) => navigation.navigate('EvaluateStudio', {
+    matchId: m.id, studioId: m.studio_id, studioName: m.studio?.name ?? 'Estudio',
+    classDate: m.class_date, classType: m.class_type,
+  })
+
+  const pending = pendingQ.data ?? []
+  const history = historyQ.data ?? []
+  const evaluated: Set<string> = evaluatedQ.data ?? new Set()
+  const activeQ = tab === 'pendientes' ? pendingQ : historyQ
+  const data    = tab === 'pendientes' ? pending : history
+  const toEvaluate = history.filter((m: any) => m.status === 'aceptado' && isPastDate(m.class_date) && !evaluated.has(m.id)).length
+
+  const renderItem = ({ item: match }: any) => {
+    const studio    = match.studio
+    const expired   = isExpired(match)
+    const isPending = match.status === 'pendiente' && !expired
+    const statusKey = expired ? 'expirado' : match.status
+    const status    = MATCH_STATUS[statusKey] ?? { label: statusKey, variant: 'neutral' }
+    const accepted  = match.status === 'aceptado'
+    const canEvaluate = accepted && isPastDate(match.class_date) && !evaluated.has(match.id)
+    const minutesLeft = match.expires_at ? Math.max(0, Math.round((new Date(match.expires_at).getTime() - Date.now()) / 60_000)) : null
+    const scheduleDays: string[] = (match.schedule_days ?? []).slice().sort((a: string, b: string) => DAY_ORDER.indexOf(a) - DAY_ORDER.indexOf(b))
+
+    return (
+      <BlobCard style={styles.card}>
+        <View style={styles.cardHeader}>
+          <View style={styles.studioAvatar}>
+            <Text style={styles.studioLetter}>{studio?.name?.[0]?.toUpperCase() ?? '?'}</Text>
+          </View>
+          <View style={{ flex: 1 }}>
+            <Text style={styles.studioName}>{studio?.name ?? 'Estudio'}</Text>
+            {studio?.neighborhood ? (
+              <Text style={styles.studioNeighborhood}>
+                <Feather name="map-pin" size={11} color={colors.light} /> {studio.neighborhood}
+              </Text>
+            ) : null}
+          </View>
+          <Badge
+            label={match.class_type === 'reemplazo' ? 'Reemplazo' : 'Regular'}
+            variant={match.class_type === 'reemplazo' ? 'warning' : 'success'}
+          />
+        </View>
+
+        <View style={styles.datetimeRow}>
+          <View style={styles.datetimeItem}>
+            <Feather name="calendar" size={13} color={colors.sage} />
+            <Text style={styles.datetimeText}>
+              {match.class_type === 'regular' ? 'Desde el ' : ''}{longDate(match.class_date)}
+            </Text>
+          </View>
+          <View style={styles.datetimeItem}>
+            <Feather name="clock" size={13} color={colors.sage} />
+            <Text style={styles.datetimeText}>{hhmm(match.start_time)} – {hhmm(match.end_time)}</Text>
+          </View>
+          {match.class_type === 'regular' && scheduleDays.length > 0 && (
+            <View style={styles.datetimeItem}>
+              <Feather name="repeat" size={13} color={colors.sage} />
+              <Text style={styles.datetimeText}>
+                {scheduleDays.map(d => DAYS_SHORT[d] ?? d).join(', ')}
+                {match.schedule_from ? ` · ${hhmm(match.schedule_from)} – ${hhmm(match.schedule_to)}` : ''}
+              </Text>
+            </View>
+          )}
+          {match.agreed_rate ? (
+            <View style={styles.datetimeItem}>
+              <Feather name="dollar-sign" size={13} color={colors.sage} />
+              <Text style={styles.datetimeText}>${Number(match.agreed_rate).toLocaleString('es-AR')} por hora</Text>
+            </View>
+          ) : null}
+        </View>
+
+        {match.note_studio ? (
+          <View style={styles.noteBox}>
+            <Text style={styles.noteLabel}>Nota del estudio</Text>
+            <Text style={styles.noteText}>"{match.note_studio}"</Text>
+          </View>
+        ) : null}
+        {!isPending && match.note_instructor ? (
+          <View style={styles.noteBox}>
+            <Text style={styles.noteLabel}>Tu respuesta</Text>
+            <Text style={styles.noteText}>"{match.note_instructor}"</Text>
+          </View>
+        ) : null}
+
+        {/* Datos de contacto cuando la clase está confirmada */}
+        {accepted && (studio?.address || studio?.phone) ? (
+          <View style={styles.contactBox}>
+            {studio?.address ? (
+              <View style={styles.datetimeItem}>
+                <Feather name="navigation" size={13} color={colors.sage} />
+                <Text style={styles.datetimeText}>{studio.address}</Text>
+              </View>
+            ) : null}
+            {studio?.phone ? (
+              <TouchableOpacity style={styles.datetimeItem} onPress={() => Linking.openURL(`tel:${studio.phone}`)}>
+                <Feather name="phone" size={13} color={colors.sage} />
+                <Text style={[styles.datetimeText, styles.link]}>{studio.phone}</Text>
+              </TouchableOpacity>
+            ) : null}
+          </View>
+        ) : null}
+
+        {isPending ? (
+          <Text style={[styles.expiry, minutesLeft !== null && minutesLeft < 240 && { color: colors.redTx }]}>
+            <Feather name="alert-circle" size={11} />{' '}
+            {minutesLeft === null ? 'Sin vencimiento'
+              : minutesLeft < 60 ? 'Vence en menos de 1 h'
+              : `Vence en ${Math.round(minutesLeft / 60)} h`}
+          </Text>
+        ) : (
+          <View style={styles.statusRow}>
+            <Badge label={status.label} variant={status.variant} />
+            {match.responded_at ? (
+              <Text style={styles.respondedAt}>Respondida el {formatDate(match.responded_at)}</Text>
+            ) : null}
+          </View>
+        )}
+
+        {isPending && (
+          <View style={styles.actions}>
+            <Button label="Rechazar" variant="danger" onPress={() => openAction(match, 'reject')}
+              icon={<Feather name="x" size={16} color={colors.redTx} />} style={{ flex: 1 }} />
+            <Button label="Aceptar" onPress={() => openAction(match, 'accept')}
+              icon={<Feather name="check" size={16} color={colors.white} />} style={{ flex: 2 }} />
+          </View>
+        )}
+
+        {canEvaluate && (
+          <Button label="Evaluar estudio" variant="secondary" size="sm" onPress={() => goEvaluate(match)}
+            icon={<Feather name="star" size={14} color={colors.sage} />} style={{ marginTop: spacing.sm }} />
+        )}
+        {accepted && evaluated.has(match.id) && (
+          <Text style={styles.evaluatedTxt}>✓ Ya evaluaste esta clase</Text>
+        )}
+      </BlobCard>
+    )
+  }
 
   return (
     <View style={styles.container}>
       <HeroHeader
-        title="Solicitudes"
-        subtitle="Respondé antes de que expiren"
+        title="Propuestas"
+        subtitle="Respondé antes de que venzan"
         rightElement={pending.length > 0 ? (
           <View style={styles.countBadge}>
             <Text style={styles.countBadgeTxt}>{pending.length}</Text>
@@ -177,7 +298,9 @@ export default function InstructorMatchesScreen() {
             {(['pendientes', 'historial'] as Tab[]).map(t => (
               <TouchableOpacity key={t} style={[styles.tab, tab === t && styles.tabActive]} onPress={() => setTab(t)}>
                 <Text style={[styles.tabText, tab === t && styles.tabTextActive]}>
-                  {t === 'pendientes' ? `Pendientes${pending.length > 0 ? ` (${pending.length})` : ''}` : 'Historial'}
+                  {t === 'pendientes'
+                    ? `Pendientes${pending.length > 0 ? ` (${pending.length})` : ''}`
+                    : `Historial${toEvaluate > 0 ? ` · ${toEvaluate} por evaluar` : ''}`}
                 </Text>
               </TouchableOpacity>
             ))}
@@ -185,8 +308,10 @@ export default function InstructorMatchesScreen() {
         }
       />
 
-      {isLoading ? (
-        <LoadingScreen message="Cargando solicitudes..." />
+      {loadingInstructor || activeQ.isLoading ? (
+        <LoadingScreen message="Cargando propuestas..." />
+      ) : activeQ.isError ? (
+        <ErrorState message="No pudimos cargar tus propuestas." onRetry={() => activeQ.refetch()} />
       ) : (
         <FlatList
           data={data}
@@ -196,124 +321,34 @@ export default function InstructorMatchesScreen() {
           ListEmptyComponent={
             <EmptyState
               icon={tab === 'pendientes' ? 'inbox' : 'clock'}
-              title={tab === 'pendientes' ? 'Sin solicitudes pendientes' : 'Sin historial aún'}
-              subtitle={
+              title={tab === 'pendientes' ? 'Sin propuestas pendientes' : 'Sin historial todavía'}
+              message={
                 tab === 'pendientes'
-                  ? 'Cuando un estudio te contacte, la solicitud aparecerá acá.'
-                  : 'Las solicitudes respondidas quedarán registradas acá.'
+                  ? 'Cuando un estudio te proponga una clase, la vas a ver acá. Mantené tus horarios y zonas al día.'
+                  : 'Las propuestas que respondas o que venzan van a quedar registradas acá.'
               }
             />
           }
-          renderItem={({ item: match }: any) => {
-            const studio = match.studio
-            const isPending = match.status === 'pendiente'
-            const expiresAt = new Date(match.expires_at)
-            const now = new Date()
-            const hoursLeft = Math.max(0, Math.round((expiresAt.getTime() - now.getTime()) / 3_600_000))
-
-            return (
-              <BlobCard style={styles.card}>
-                {/* Studio + tipo */}
-                <View style={styles.cardHeader}>
-                  <View style={styles.studioAvatar}>
-                    <Text style={styles.studioLetter}>{studio?.name?.[0] ?? '?'}</Text>
-                  </View>
-                  <View style={{ flex: 1 }}>
-                    <Text style={styles.studioName}>{studio?.name ?? 'Estudio'}</Text>
-                    <Text style={styles.studioNeighborhood}>
-                      <Feather name="map-pin" size={11} color={colors.light} /> {studio?.neighborhood}
-                    </Text>
-                  </View>
-                  <Badge
-                    label={match.class_type === 'reemplazo' ? 'Reemplazo' : 'Regular'}
-                    variant={match.class_type === 'reemplazo' ? 'warning' : 'success'}
-                  />
-                </View>
-
-                {/* Fecha y hora */}
-                <View style={styles.datetimeRow}>
-                  <View style={styles.datetimeItem}>
-                    <Feather name="calendar" size={13} color={colors.sage} />
-                    <Text style={styles.datetimeText}>{formatDate(match.class_date)}</Text>
-                  </View>
-                  <View style={styles.datetimeItem}>
-                    <Feather name="clock" size={13} color={colors.sage} />
-                    <Text style={styles.datetimeText}>
-                      {formatTime(match.start_time)} – {formatTime(match.end_time)}
-                    </Text>
-                  </View>
-                </View>
-
-                {/* Nota del estudio */}
-                {match.note_studio ? (
-                  <View style={styles.noteBox}>
-                    <Text style={styles.noteLabel}>Nota del estudio</Text>
-                    <Text style={styles.noteText}>"{match.note_studio}"</Text>
-                  </View>
-                ) : null}
-
-                {/* Expiración o estado */}
-                {isPending ? (
-                  <Text style={[styles.expiry, hoursLeft < 4 && { color: '#A32D2D' }]}>
-                    <Feather name="alert-circle" size={11} /> Expira en {hoursLeft}h
-                  </Text>
-                ) : (
-                  <View style={styles.statusRow}>
-                    <Badge label={STATUS_LABEL[match.status] ?? match.status} variant={STATUS_VARIANT[match.status]} />
-                    {match.responded_at && (
-                      <Text style={styles.respondedAt}>
-                        {new Date(match.responded_at).toLocaleDateString('es-AR')}
-                      </Text>
-                    )}
-                  </View>
-                )}
-
-                {/* Acciones para pendientes */}
-                {isPending && (
-                  <View style={styles.actions}>
-                    <TouchableOpacity
-                      style={styles.rejectBtn}
-                      onPress={() => openAction(match, 'reject')}
-                    >
-                      <Feather name="x" size={16} color="#A32D2D" />
-                      <Text style={styles.rejectText}>Rechazar</Text>
-                    </TouchableOpacity>
-                    <TouchableOpacity
-                      style={styles.acceptBtn}
-                      onPress={() => openAction(match, 'accept')}
-                    >
-                      <Feather name="check" size={16} color={colors.white} />
-                      <Text style={styles.acceptText}>Aceptar</Text>
-                    </TouchableOpacity>
-                  </View>
-                )}
-              </BlobCard>
-            )
-          }}
+          renderItem={renderItem}
         />
       )}
 
-      {/* Modal de confirmación con nota opcional */}
-      <Modal visible={!!selected && !!actionType} transparent animationType="slide">
+      <Modal visible={!!selected && !!actionType} transparent animationType="slide" onRequestClose={closeModal}>
         <View style={styles.modalOverlay}>
           <View style={styles.modalBox}>
             <Text style={styles.modalTitle}>
-              {actionType === 'accept' ? '¿Aceptar solicitud?' : '¿Rechazar solicitud?'}
+              {actionType === 'accept' ? '¿Aceptar propuesta?' : '¿Rechazar propuesta?'}
             </Text>
             <Text style={styles.modalSub}>
               {actionType === 'accept'
-                ? `Confirmarás la cobertura en ${selected?.studio?.name} el ${selected?.class_date ? formatDate(selected.class_date) : ''}.`
-                : 'El estudio recibirá una notificación informando que no podés cubrir la clase.'}
+                ? `Confirmás la clase en ${selected?.studio?.name ?? 'el estudio'} el ${selected?.class_date ? longDate(selected.class_date) : ''}.`
+                : 'El estudio va a ver en su historial que no podés tomar esta clase.'}
             </Text>
 
-            <Text style={styles.noteInputLabel}>Nota para el estudio (opcional)</Text>
+            <Text style={styles.noteInputLabel}>NOTA PARA EL ESTUDIO (OPCIONAL)</Text>
             <TextInput
               style={styles.noteInput}
-              placeholder={
-                actionType === 'accept'
-                  ? 'Ej: Confirmo asistencia. Llego 10 min antes.'
-                  : 'Ej: Ya tengo clase a esa hora.'
-              }
+              placeholder={actionType === 'accept' ? 'Ej: Confirmo. Llego 10 min antes.' : 'Ej: Ya tengo clase a esa hora.'}
               placeholderTextColor={colors.light}
               value={noteText}
               onChangeText={setNoteText}
@@ -322,68 +357,57 @@ export default function InstructorMatchesScreen() {
             />
 
             <View style={styles.modalActions}>
-              <TouchableOpacity
-                style={styles.cancelBtn}
-                onPress={() => { setSelected(null); setActionType(null); setNoteText('') }}
-              >
-                <Text style={styles.cancelText}>Cancelar</Text>
-              </TouchableOpacity>
               <Button
-                label={actionType === 'accept' ? 'Confirmar aceptación' : 'Confirmar rechazo'}
+                label={actionType === 'accept' ? 'Confirmar' : 'Rechazar propuesta'}
+                variant={actionType === 'reject' ? 'danger' : 'primary'}
                 onPress={confirmAction}
                 isLoading={respondMutation.isPending}
-                style={[
-                  styles.confirmBtn,
-                  actionType === 'reject' && { backgroundColor: '#A32D2D' }
-                ]}
+                fullWidth
               />
+              <Button label="Cancelar" variant="ghost" onPress={closeModal} fullWidth />
             </View>
           </View>
         </View>
       </Modal>
+      <Toast visible={toast.visible} message={toast.message} type={toast.type} onHide={hideToast} />
     </View>
   )
 }
 
 const styles = StyleSheet.create({
   container:         { flex: 1, backgroundColor: colors.cream },
-  countBadge:        { width: 28, height: 28, borderRadius: 14, backgroundColor: '#fff', alignItems: 'center', justifyContent: 'center' },
+  countBadge:        { width: 28, height: 28, borderRadius: 14, backgroundColor: colors.white, alignItems: 'center', justifyContent: 'center' },
   countBadgeTxt:     { fontFamily: 'Nunito-Bold', fontSize: 13, color: colors.sage },
   tabs:              { flexDirection: 'row', marginTop: 12, gap: 6 },
-  tab:               { paddingVertical: 5, paddingHorizontal: 16, borderRadius: 999, backgroundColor: 'rgba(255,255,255,0.15)', borderWidth: 0.5, borderColor: 'rgba(255,255,255,0.3)' },
-  tabActive:         { backgroundColor: '#fff' },
-  tabText:           { fontFamily: 'Nunito-SemiBold', fontSize: 12, color: 'rgba(255,255,255,0.7)' },
+  tab:               { paddingVertical: 5, paddingHorizontal: 16, borderRadius: radius.full, backgroundColor: 'rgba(255,255,255,0.15)', borderWidth: 0.5, borderColor: 'rgba(255,255,255,0.3)' },
+  tabActive:         { backgroundColor: colors.white },
+  tabText:           { fontFamily: 'Nunito-SemiBold', fontSize: 12, color: 'rgba(255,255,255,0.75)' },
   tabTextActive:     { color: colors.sage, fontFamily: 'Nunito-Bold' },
-  list:              { paddingHorizontal: spacing.md, paddingBottom: spacing.xl },
+  list:              { padding: spacing.md, paddingBottom: spacing.xxl, flexGrow: 1 },
   card:              { marginBottom: spacing.sm, padding: spacing.md, backgroundColor: colors.white },
   cardHeader:        { flexDirection: 'row', alignItems: 'center', marginBottom: spacing.sm },
-  studioAvatar:      { width: 40, height: 40, borderTopLeftRadius: 20, borderTopRightRadius: 0, borderBottomLeftRadius: 0, borderBottomRightRadius: 20, backgroundColor: colors.sageLight, alignItems: 'center', justifyContent: 'center', marginRight: spacing.sm },
+  studioAvatar:      { width: 40, height: 40, ...radius.leaf, backgroundColor: colors.sageLight, alignItems: 'center', justifyContent: 'center', marginRight: spacing.sm },
   studioLetter:      { fontFamily: 'Nunito-SemiBold', fontSize: 17, color: colors.sage },
   studioName:        { fontFamily: 'Nunito-SemiBold', fontSize: 14, color: colors.dark },
   studioNeighborhood:{ ...typography.small, color: colors.mid, marginTop: 1 },
   datetimeRow:       { gap: spacing.xs, marginBottom: spacing.sm },
   datetimeItem:      { flexDirection: 'row', alignItems: 'center', gap: spacing.xs },
-  datetimeText:      { ...typography.small, color: colors.dark, fontSize: 13 },
-  noteBox:           { backgroundColor: colors.cream, borderTopLeftRadius: 8, borderTopRightRadius: 0, borderBottomLeftRadius: 0, borderBottomRightRadius: 8, padding: spacing.sm, marginBottom: spacing.sm },
+  datetimeText:      { fontFamily: 'Nunito-Medium', fontSize: 13, color: colors.dark, flexShrink: 1 },
+  link:              { color: colors.sage, textDecorationLine: 'underline' },
+  noteBox:           { backgroundColor: colors.cream, ...radius.leaf, padding: spacing.sm, marginBottom: spacing.sm },
+  contactBox:        { backgroundColor: colors.sageLighter, ...radius.leaf, padding: spacing.sm, marginBottom: spacing.sm, gap: spacing.xs },
   noteLabel:         { ...typography.small, color: colors.light, marginBottom: 2 },
-  noteText:          { ...typography.small, color: colors.mid, fontStyle: 'italic' },
-  expiry:            { ...typography.small, color: colors.mid, marginBottom: spacing.sm },
+  noteText:          { fontFamily: 'Nunito-Regular', fontSize: 12, color: colors.mid, fontStyle: 'italic' },
+  expiry:            { ...typography.small, color: colors.mid, marginBottom: spacing.xs },
   statusRow:         { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, marginBottom: spacing.xs },
   respondedAt:       { ...typography.small, color: colors.light },
   actions:           { flexDirection: 'row', gap: spacing.sm, marginTop: spacing.sm },
-  rejectBtn:         { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: spacing.xs, paddingVertical: spacing.sm, borderTopLeftRadius: 14, borderTopRightRadius: 0, borderBottomLeftRadius: 0, borderBottomRightRadius: 14, borderWidth: 1, borderColor: '#F09595', backgroundColor: '#FCEBEB' },
-  rejectText:        { fontFamily: 'Nunito-SemiBold', fontSize: 14, color: '#A32D2D' },
-  acceptBtn:         { flex: 2, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: spacing.xs, paddingVertical: spacing.sm, borderTopLeftRadius: 14, borderTopRightRadius: 0, borderBottomLeftRadius: 0, borderBottomRightRadius: 14, backgroundColor: colors.sage },
-  acceptText:        { fontFamily: 'Nunito-SemiBold', fontSize: 14, color: colors.white },
-  // Modal
+  evaluatedTxt:      { ...typography.small, color: colors.okTx, marginTop: spacing.xs },
   modalOverlay:      { flex: 1, backgroundColor: 'rgba(0,0,0,0.45)', justifyContent: 'flex-end' },
   modalBox:          { backgroundColor: colors.white, borderTopLeftRadius: 20, borderTopRightRadius: 20, padding: spacing.xl, paddingBottom: spacing.xxl },
   modalTitle:        { fontFamily: 'Nunito-Bold', fontSize: 20, color: colors.dark, marginBottom: spacing.xs },
   modalSub:          { ...typography.body, color: colors.mid, marginBottom: spacing.lg },
-  noteInputLabel:    { ...typography.small, color: colors.mid, fontFamily: 'Nunito-SemiBold', marginBottom: spacing.xs },
-  noteInput:         { backgroundColor: colors.cream, borderTopLeftRadius: 14, borderTopRightRadius: 0, borderBottomLeftRadius: 0, borderBottomRightRadius: 14, padding: spacing.md, ...typography.body, color: colors.dark, minHeight: 80, textAlignVertical: 'top', borderWidth: 0.5, borderColor: colors.border, marginBottom: spacing.lg },
+  noteInputLabel:    { ...typography.caption, marginBottom: spacing.xs },
+  noteInput:         { backgroundColor: colors.cream, ...radius.leaf, padding: spacing.md, fontFamily: 'Nunito-Regular', fontSize: 14, color: colors.dark, minHeight: 80, textAlignVertical: 'top', borderWidth: 0.5, borderColor: colors.border, marginBottom: spacing.lg },
   modalActions:      { gap: spacing.sm },
-  cancelBtn:         { alignItems: 'center', paddingVertical: spacing.md },
-  cancelText:        { ...typography.body, color: colors.mid, fontFamily: 'Nunito-SemiBold' },
-  confirmBtn:        { borderTopLeftRadius: 14, borderTopRightRadius: 0, borderBottomLeftRadius: 0, borderBottomRightRadius: 14 },
 })

@@ -1,158 +1,220 @@
-// Pantalla post-OAuth para nuevos usuarios — eligen su rol
+// src/screens/auth/SelectRoleScreen.tsx
+// Onboarding para cuentas sin perfil: quien entró con Google/Apple, o quien
+// cortó el registro a la mitad. Elige el rol, completa nombre y barrio, y se
+// crea el estudio (con plan Freemium) o el perfil de instructor.
 import React, { useState } from 'react'
-import { View, Text, StyleSheet, TouchableOpacity, ActivityIndicator } from 'react-native'
-import { supabase } from '../../lib/supabase'
-import { useAuthStore } from '../../store'
-import { colors, spacing } from '../../components/ui'
+import { View, Text, StyleSheet, TouchableOpacity, ScrollView, KeyboardAvoidingView, Platform } from 'react-native'
 import { Feather } from '@expo/vector-icons'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
+import { supabase } from '../../lib/supabase'
+import { humanizeError } from '../../lib/errors'
+import { syncAuthUser, signOutNow } from '../../lib/auth'
+import { toLocalISODate } from '../../lib/dates'
+import { BARRIOS_CABA } from '../../constants/barrios'
+import { useAuthStore } from '../../store'
+import { Button, Chip, Input, colors, radius, spacing, typography } from '../../components/ui'
 import Toast from '../../components/Toast'
 import { useToast } from '../../hooks/useToast'
 
-const ROLES = [
-  {
-    key: 'instructor',
-    icon: 'activity' as const,
-    title: 'Soy instructor/a',
-    desc: 'Ofrezco clases de Pilates y busco estudios donde trabajar',
-    color: colors.sage,
-    bg: colors.sageLight,
-    note: 'Necesitás verificación de la Cámara para aparecer en búsquedas',
-  },
+type Role = 'instructor' | 'estudio'
+
+const ROLES: { key: Role; icon: 'activity' | 'home'; title: string; desc: string; note: string }[] = [
   {
     key: 'estudio',
-    icon: 'home' as const,
-    title: 'Soy dueño/a de un estudio',
-    desc: 'Busco instructores verificados para mis clases',
-    color: '#0C447C',
-    bg: '#E6F1FB',
-    note: 'Empezás con 1 propuesta/mes gratis. Podés actualizar tu plan cuando quieras',
+    icon: 'home',
+    title: 'Tengo un estudio',
+    desc: 'Busco instructores verificados para clases regulares y reemplazos',
+    note: 'Empezás con el plan Freemium: 1 propuesta por mes sin costo',
+  },
+  {
+    key: 'instructor',
+    icon: 'activity',
+    title: 'Soy instructor/a',
+    desc: 'Doy clases de Pilates y busco estudios donde trabajar',
+    note: 'La Cámara verifica tu perfil antes de que aparezcas en las búsquedas',
   },
 ]
 
-export default function SelectRoleScreen({ navigation }: any) {
+/** Inserta y, si ya existía (23505), lo da por bueno: permite reintentar sin romper. */
+async function insertIgnoringDuplicate(table: string, row: Record<string, any>) {
+  const { error } = await supabase.from(table).insert(row)
+  if (error && error.code !== '23505') throw error
+}
+
+export default function SelectRoleScreen() {
   const { toast, showToast, hideToast } = useToast()
-  const { user } = useAuthStore()
+  const session = useAuthStore((s) => s.session)
+  const profile = useAuthStore((s) => s.user)
   const insets = useSafeAreaInsets()
-  const [loading, setLoading] = useState(false)
-  const [selected, setSelected] = useState<string | null>(null)
+  const authUser = session?.user
+  const metaName: string = authUser?.user_metadata?.full_name ?? profile?.full_name ?? ''
 
-  const handleSelect = async (role: string) => {
-    setSelected(role)
-    setLoading(true)
+  const [role, setRole] = useState<Role | null>(null)
+  const [name, setName] = useState('')
+  const [barrio, setBarrio] = useState('')
+  const [errors, setErrors] = useState<{ name?: string; barrio?: string }>({})
+  const [saving, setSaving] = useState(false)
+
+  const pickRole = (r: Role) => {
+    setRole(r)
+    setName(r === 'instructor' ? metaName : '')
+    setErrors({})
+  }
+
+  const submit = async () => {
+    if (!role || !authUser) return
+    const e: typeof errors = {}
+    if (name.trim().length < 2) e.name = role === 'estudio' ? 'Escribí el nombre del estudio' : 'Escribí tu nombre y apellido'
+    if (!barrio) e.barrio = 'Elegí un barrio'
+    setErrors(e)
+    if (Object.keys(e).length) return
+
+    setSaving(true)
     try {
-      const { data: { user: authUser } } = await supabase.auth.getUser()
-      if (!authUser) throw new Error('No hay sesión activa')
-
-      // Create user record
+      // 1. Rol en users (el trigger handle_new_user ya creó la fila; la base
+      //    solo deja elegir entre estudio e instructor)
       const { error: userError } = await supabase.from('users').upsert({
         id: authUser.id,
         email: authUser.email,
-        full_name: authUser.user_metadata?.full_name ?? authUser.email?.split('@')[0],
+        full_name: role === 'instructor' ? name.trim() : (metaName || null),
         role,
       }, { onConflict: 'id' })
       if (userError) throw userError
 
       if (role === 'instructor') {
-        // Create instructor profile
-        const { error: instrError } = await supabase.from('instructors').upsert({
+        await insertIgnoringDuplicate('instructors', {
           user_id: authUser.id,
-          full_name: authUser.user_metadata?.full_name ?? '',
+          full_name: name.trim(),
+          email: authUser.email,
+          neighborhood: barrio,
           verification_status: 'pendiente',
           is_active: true,
-        }, { onConflict: 'user_id' })
-        if (instrError) throw instrError
-        navigation.replace('InstructorTabs')
+        })
       } else {
-        // Create studio with Freemium membership
-        const { data: studio, error: studioError } = await supabase.from('studios').upsert({
+        await insertIgnoringDuplicate('studios', {
           user_id: authUser.id,
-          name: authUser.user_metadata?.full_name ?? 'Mi estudio',
-          neighborhood: '',
-          is_member: false,
-        }, { onConflict: 'user_id' }).select().single()
+          name: name.trim(),
+          neighborhood: barrio,
+          owner_name: metaName || null,
+          owner_email: authUser.email,
+        })
+        const { data: studio, error: studioError } = await supabase
+          .from('studios').select('id').eq('user_id', authUser.id).single()
         if (studioError) throw studioError
 
-        if (studio) {
-          // Auto-assign Freemium
-          const end = new Date()
-          end.setFullYear(end.getFullYear() + 10) // Freemium no vence
-          const { error: memError } = await supabase.from('memberships').upsert({
-            studio_id: studio.id,
-            status: 'activa',
-            plan_type: 'freemium',
-            matches_limit: 1,
-            matches_used_month: 0,
-            start_date: new Date().toISOString().split('T')[0],
-            end_date: end.toISOString().split('T')[0],
-          }, { onConflict: 'studio_id' })
-          if (memError) throw memError
-        }
-        navigation.replace('EstudioHome')
+        const end = new Date()
+        end.setFullYear(end.getFullYear() + 10) // Freemium no vence
+        await insertIgnoringDuplicate('memberships', {
+          studio_id: studio.id,
+          status: 'activa',
+          plan_type: 'freemium',
+          matches_limit: 1,
+          matches_used_month: 0,
+          start_date: toLocalISODate(new Date()),
+          end_date: toLocalISODate(end),
+        })
       }
-    } catch (e: any) {
-      console.error(e)
-      showToast('No pudimos crear tu perfil: ' + (e?.message ?? 'intentá de nuevo'), 'error')
-      setLoading(false)
-      setSelected(null)
+      // Relee el perfil: RootNavigator pasa solo a las pantallas del rol
+      await syncAuthUser(authUser.id)
+    } catch (err) {
+      showToast(humanizeError(err), 'error')
+      setSaving(false)
     }
   }
 
   return (
-    <View style={[s.container, { paddingTop: insets.top + 32 }]}>
-      <View style={s.header}>
-        <Text style={s.title}>¿Cómo querés usar la app?</Text>
-        <Text style={s.subtitle}>Elegí tu rol para continuar. No se puede cambiar después.</Text>
-      </View>
+    <KeyboardAvoidingView style={{ flex: 1, backgroundColor: colors.cream }} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
+      <ScrollView contentContainerStyle={[s.container, { paddingTop: insets.top + spacing.xl, paddingBottom: insets.bottom + spacing.xl }]} keyboardShouldPersistTaps="handled">
+        <View style={s.progress}>
+          <View style={[s.progressDot, s.progressDotActive]} />
+          <View style={[s.progressDot, role && s.progressDotActive]} />
+        </View>
 
-      <View style={s.roles}>
-        {ROLES.map(role => (
-          <TouchableOpacity
-            key={role.key}
-            style={[s.roleCard, { borderColor: role.color, backgroundColor: selected === role.key ? role.bg : colors.white }]}
-            onPress={() => handleSelect(role.key)}
-            disabled={loading}
-            activeOpacity={0.85}
-          >
-            <View style={[s.roleIcon, { backgroundColor: role.bg }]}>
-              <Feather name={role.icon} size={28} color={role.color} />
+        {!role ? (
+          <>
+            <Text style={s.title}>¿Cómo vas a usar la app?</Text>
+            <Text style={s.subtitle}>Elegí una opción para crear tu perfil.</Text>
+            <View style={s.roles}>
+              {ROLES.map(r => (
+                <TouchableOpacity key={r.key} style={s.roleCard} onPress={() => pickRole(r.key)} activeOpacity={0.85}>
+                  <View style={s.roleIcon}>
+                    <Feather name={r.icon} size={26} color={colors.sage} />
+                  </View>
+                  <View style={{ flex: 1 }}>
+                    <Text style={s.roleTitle}>{r.title}</Text>
+                    <Text style={s.roleDesc}>{r.desc}</Text>
+                    <View style={s.roleNote}>
+                      <Feather name="info" size={12} color={colors.light} />
+                      <Text style={s.roleNoteTxt}>{r.note}</Text>
+                    </View>
+                  </View>
+                  <Feather name="chevron-right" size={20} color={colors.sage} />
+                </TouchableOpacity>
+              ))}
             </View>
-            <View style={{ flex: 1 }}>
-              <Text style={[s.roleTitle, { color: role.color }]}>{role.title}</Text>
-              <Text style={s.roleDesc}>{role.desc}</Text>
-              <View style={s.roleNote}>
-                <Feather name="info" size={11} color={colors.light} />
-                <Text style={s.roleNoteTxt}>{role.note}</Text>
-              </View>
+            <Text style={s.footer}>
+              ¿Administrás una Cámara? Escribinos y te damos el acceso.
+            </Text>
+          </>
+        ) : (
+          <>
+            <Text style={s.title}>{role === 'estudio' ? 'Tu estudio' : 'Tus datos'}</Text>
+            <Text style={s.subtitle}>
+              {role === 'estudio'
+                ? 'Así te van a ver los instructores. Después podés completar el resto desde tu perfil.'
+                : 'La Cámara usa estos datos para verificarte. Después podés sumar certificados y tarifas.'}
+            </Text>
+            <Input
+              label={role === 'estudio' ? 'NOMBRE DEL ESTUDIO' : 'NOMBRE Y APELLIDO'}
+              placeholder={role === 'estudio' ? 'Studio Zen Palermo' : 'Martina Ruiz'}
+              value={name}
+              onChangeText={setName}
+              autoCapitalize="words"
+              error={errors.name}
+            />
+            <Text style={s.fieldLabel}>{role === 'estudio' ? 'BARRIO DEL ESTUDIO' : 'BARRIO DONDE VIVÍS'}</Text>
+            <View style={s.chipGrid}>
+              {BARRIOS_CABA.map(b => (
+                <Chip key={b} label={b} selected={barrio === b} onPress={() => setBarrio(b)} />
+              ))}
             </View>
-            {selected === role.key && loading ? (
-              <ActivityIndicator size="small" color={role.color} />
-            ) : (
-              <Feather name="chevron-right" size={20} color={role.color} />
-            )}
-          </TouchableOpacity>
-        ))}
-      </View>
+            {errors.barrio ? <Text style={s.errorText}>{errors.barrio}</Text> : null}
 
-      <Text style={s.footer}>
-        Si sos administrador de una Cámara, contactá directamente a Trabajo Más Fácil.
-      </Text>
+            <Button label="Crear perfil" onPress={submit} isLoading={saving} size="lg" fullWidth style={{ marginTop: spacing.lg }} />
+            <Button label="← Elegir otra opción" variant="ghost" onPress={() => setRole(null)} disabled={saving} fullWidth style={{ marginTop: spacing.sm }} />
+          </>
+        )}
+
+        <TouchableOpacity style={s.otherAccount} onPress={() => signOutNow()} disabled={saving}>
+          <Text style={s.otherAccountTxt}>
+            {authUser?.email ? `Entraste como ${authUser.email}. ` : ''}
+            <Text style={{ fontFamily: 'Nunito-SemiBold', color: colors.sage }}>Usar otra cuenta</Text>
+          </Text>
+        </TouchableOpacity>
+      </ScrollView>
       <Toast visible={toast.visible} message={toast.message} type={toast.type} onHide={hideToast} />
-    </View>
+    </KeyboardAvoidingView>
   )
 }
 
 const s = StyleSheet.create({
-  container:    { flex: 1, backgroundColor: colors.cream, paddingHorizontal: spacing.xl },
-  header:       { marginBottom: spacing.xl },
-  title:        { fontFamily: 'Nunito-Bold', fontSize: 26, color: colors.dark, marginBottom: 8 },
-  subtitle:     { fontFamily: 'Nunito-Regular', fontSize: 14, color: colors.mid, lineHeight: 22 },
-  roles:        { gap: spacing.md },
-  roleCard:     { flexDirection: 'row', alignItems: 'center', gap: spacing.md, padding: spacing.md, borderTopLeftRadius: 20, borderTopRightRadius: 0, borderBottomLeftRadius: 0, borderBottomRightRadius: 20, borderWidth: 1.5, elevation: 2, shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.06, shadowRadius: 6 },
-  roleIcon:     { width: 60, height: 60, borderRadius: 30, alignItems: 'center', justifyContent: 'center', flexShrink: 0 },
-  roleTitle:    { fontFamily: 'Nunito-Bold', fontSize: 16, marginBottom: 4 },
-  roleDesc:     { fontFamily: 'Nunito-Regular', fontSize: 13, color: colors.mid, lineHeight: 18, marginBottom: 8 },
-  roleNote:     { flexDirection: 'row', alignItems: 'flex-start', gap: 5 },
-  roleNoteTxt:  { fontFamily: 'Nunito-Regular', fontSize: 11, color: colors.light, flex: 1, lineHeight: 16 },
-  footer:       { fontFamily: 'Nunito-Regular', fontSize: 11, color: colors.light, textAlign: 'center', marginTop: spacing.xl, lineHeight: 17 },
+  container:   { flexGrow: 1, paddingHorizontal: spacing.lg },
+  progress:    { flexDirection: 'row', gap: spacing.xs, marginBottom: spacing.xl },
+  progressDot: { flex: 1, height: 3, borderRadius: 2, backgroundColor: colors.sageLight },
+  progressDotActive: { backgroundColor: colors.sage },
+  title:       { fontFamily: 'Nunito-Bold', fontSize: 26, color: colors.dark, marginBottom: spacing.sm },
+  subtitle:    { ...typography.body, marginBottom: spacing.xl },
+  roles:       { gap: spacing.md },
+  roleCard:    { flexDirection: 'row', alignItems: 'center', gap: spacing.md, padding: spacing.md, backgroundColor: colors.white, ...radius.leafLg, borderWidth: 1, borderColor: colors.mint, ...{ shadowColor: colors.black, shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.06, shadowRadius: 6, elevation: 2 } },
+  roleIcon:    { width: 56, height: 56, borderRadius: 28, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.sageLight },
+  roleTitle:   { fontFamily: 'Nunito-Bold', fontSize: 16, color: colors.sage, marginBottom: 4 },
+  roleDesc:    { fontFamily: 'Nunito-Regular', fontSize: 13, color: colors.mid, lineHeight: 18, marginBottom: 8 },
+  roleNote:    { flexDirection: 'row', alignItems: 'flex-start', gap: 5 },
+  roleNoteTxt: { fontFamily: 'Nunito-Regular', fontSize: 12, color: colors.light, flex: 1, lineHeight: 16 },
+  fieldLabel:  { ...typography.caption, marginBottom: spacing.sm },
+  chipGrid:    { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.xs },
+  errorText:   { fontFamily: 'Nunito-Regular', fontSize: 12, color: colors.redTx, marginTop: spacing.xs },
+  footer:      { fontFamily: 'Nunito-Regular', fontSize: 12, color: colors.light, textAlign: 'center', marginTop: spacing.xl, lineHeight: 17 },
+  otherAccount:    { alignItems: 'center', marginTop: spacing.xl, padding: spacing.sm },
+  otherAccountTxt: { fontFamily: 'Nunito-Regular', fontSize: 13, color: colors.mid, textAlign: 'center' },
 })

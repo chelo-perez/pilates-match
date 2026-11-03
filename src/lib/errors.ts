@@ -5,7 +5,7 @@
 type AnyErr = { message?: string; code?: string; status?: number; details?: string } | null | undefined
 
 const RULES: { test: (m: string, code: string) => boolean; msg: string }[] = [
-  { test: (m) => m.includes('MATCH_LIMIT_REACHED'), msg: 'Llegaste al límite de propuestas de tu plan este mes.' },
+  { test: (m) => m.includes('match_limit_reached'), msg: 'Llegaste al límite de propuestas de tu plan este mes.' },
   { test: (m) => m.includes('invalid login credentials'), msg: 'Email o contraseña incorrectos.' },
   { test: (m) => m.includes('email not confirmed'), msg: 'Confirmá tu email antes de entrar (revisá tu casilla).' },
   { test: (m) => m.includes('user already registered') || m.includes('already been registered'), msg: 'Ya existe una cuenta con ese email. Iniciá sesión.' },

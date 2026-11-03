@@ -1,111 +1,170 @@
 // src/screens/instructor/DashboardScreen.tsx
-import React from 'react'
+import React, { useState } from 'react'
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, RefreshControl } from 'react-native'
 import { useQuery } from '@tanstack/react-query'
 import { supabase } from '../../lib/supabase'
-import { useAuthStore } from '../../store'
-import { LoadingScreen, colors, spacing, radius } from '../../components/ui'
-import { useSafeAreaInsets } from 'react-native-safe-area-context'
+import { useMyInstructor } from '../../hooks'
+import { toLocalISODate } from '../../lib/dates'
+import { VERIFICATION_STATUS } from '../../constants/labels'
+import { LoadingScreen, ErrorState, Button, colors, spacing, radius, typography } from '../../components/ui'
 import { Feather } from '@expo/vector-icons'
 import BlobCard from '../../components/BlobCard'
 import HeroHeader from '../../components/HeroHeader'
 
-export default function InstructorDashboardScreen({ navigation }: any) {
-  const user   = useAuthStore(s => s.user)
-  const insets = useSafeAreaInsets()
+const fmtMoney = (n?: number | null) => (n ? '$' + n.toLocaleString('es-AR') : 'Sin cargar')
 
-  const { data: instructor, isLoading, refetch } = useQuery({
-    queryKey: ['my-instructor-profile'],
+export default function InstructorDashboardScreen({ navigation }: any) {
+  const [refreshing, setRefreshing] = useState(false)
+  const { data: instructor, isLoading, isError, refetch } = useMyInstructor()
+  const instructorId = instructor?.id
+
+  // Nombre de la Cámara que verifica (no hardcodeado)
+  const { data: camaraName } = useQuery({
+    queryKey: ['camara-name', instructor?.camara_id ?? 'default'],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from('instructors')
-        .select('*, certifications(*), specialties:instructor_specialties(*), rates:instructor_rates(*)')
-        .eq('user_id', user?.id).single()
+      let q = supabase.from('camaras').select('name').limit(1)
+      if (instructor?.camara_id) q = q.eq('id', instructor.camara_id)
+      const { data, error } = await q.maybeSingle()
       if (error) throw error
-      return data
+      return data?.name ?? 'la Cámara'
     },
-    enabled: !!user?.id,
+    enabled: !!instructor,
+    staleTime: 60 * 60 * 1000,
   })
 
-  const { data: stats } = useQuery({
-    queryKey: ['my-instructor-stats'],
+  const { data: stats, refetch: refetchStats } = useQuery({
+    queryKey: ['my-instructor-stats', instructorId],
     queryFn: async () => {
-      const { data } = await supabase.rpc('get_instructor_stats', { p_instructor_id: instructor?.id })
+      const { data, error } = await supabase.rpc('get_instructor_stats', { p_instructor_id: instructorId })
+      if (error) throw error
       return data?.[0] ?? null
     },
-    enabled: !!instructor?.id,
+    enabled: !!instructorId,
   })
 
-  const { data: recentEvals = [] } = useQuery({
-    queryKey: ['my-recent-evals'],
+  // Clases dadas y estudios distintos: matches aceptados con fecha pasada
+  const { data: activity, refetch: refetchActivity } = useQuery({
+    queryKey: ['instructor-matches', instructorId, 'activity'],
+    queryFn: async () => {
+      const today = toLocalISODate(new Date())
+      const [done, pending] = await Promise.all([
+        supabase.from('matches').select('studio_id').eq('instructor_id', instructorId!)
+          .eq('status', 'aceptado').lt('class_date', today),
+        supabase.from('matches').select('id', { count: 'exact', head: true }).eq('instructor_id', instructorId!)
+          .eq('status', 'pendiente'),
+      ])
+      if (done.error) throw done.error
+      if (pending.error) throw pending.error
+      const rows = done.data ?? []
+      return {
+        classes: rows.length,
+        studios: new Set(rows.map((r: any) => r.studio_id)).size,
+        pending: pending.count ?? 0,
+      }
+    },
+    enabled: !!instructorId,
+  })
+
+  const { data: recentEvals = [], refetch: refetchEvals } = useQuery({
+    queryKey: ['my-recent-evals', instructorId],
     queryFn: async () => {
       const { data, error } = await supabase
-        .from('evaluations').select('*, studio:studios(*)')
-        .eq('instructor_id', instructor?.id)
+        .from('evaluations').select('id, average_score, comment, studio:studios(name)')
+        .eq('instructor_id', instructorId!)
         .order('created_at', { ascending: false }).limit(3)
       if (error) throw error
-      return data
+      return data ?? []
     },
-    enabled: !!instructor?.id,
+    enabled: !!instructorId,
   })
 
-  if (isLoading) return <LoadingScreen message="Cargando tu perfil..." />
+  const onRefresh = async () => {
+    setRefreshing(true)
+    await Promise.all([refetch(), refetchStats(), refetchActivity(), refetchEvals()])
+    setRefreshing(false)
+  }
 
-  const isVerified    = instructor?.verification_status === 'verificado'
-  const firstName     = instructor?.full_name?.split(' ')?.[0] ?? 'Hola'
-  const avgScore      = stats?.avg_score ?? instructor?.score ?? 0
-  const totalClasses  = stats?.total_classes ?? 0
-  const uniqueStudios = stats?.unique_studios ?? 0
+  if (isLoading) return <LoadingScreen message="Cargando tu perfil..." />
+  if (isError || !instructor) return <ErrorState message="No pudimos cargar tu perfil." onRetry={refetch} />
+
+  const status      = instructor.verification_status ?? 'pendiente'
+  const statusInfo  = VERIFICATION_STATUS[status] ?? VERIFICATION_STATUS.pendiente
+  const isVerified  = status === 'verificado'
+  const firstName   = instructor.full_name?.split(' ')?.[0] ?? 'Hola'
+  const camara      = camaraName ?? 'la Cámara'
+  const avgScore    = stats?.avg_score ? Number(stats.avg_score).toFixed(1) : '—'
+  const rates: any  = Array.isArray(instructor.rates) ? instructor.rates[0] : instructor.rates
+  const bannerColors = status === 'rechazado'
+    ? { bg: colors.redBg, tx: colors.redTx }
+    : status === 'inactivo'
+      ? { bg: colors.borderLight, tx: colors.mid }
+      : { bg: colors.warnBg, tx: colors.warnTx }
 
   return (
     <View style={s.container}>
       <ScrollView
         contentContainerStyle={s.content}
         showsVerticalScrollIndicator={false}
-        refreshControl={<RefreshControl refreshing={false} onRefresh={refetch} tintColor="#fff" />}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.sage} />}
       >
-        {/* Hero */}
         <HeroHeader
           title={firstName}
-          subtitle={isVerified ? 'Instructor verificado · CAPIAF' : 'Perfil pendiente de verificación'}
+          subtitle={isVerified ? `Verificado por ${camara}` : statusInfo.label}
           centered
-          avatarUri={instructor?.avatar_url}
+          avatarUri={instructor.avatar_url}
           avatarFallback={firstName}
           onAvatarPress={() => navigation.navigate('InstructorPerfil')}
-
           bottomElement={
             isVerified ? (
               <View style={s.verifiedTag}>
-                <Text style={s.verifiedTxt}>✓ VERIFICADO · CAPIAF</Text>
+                <Feather name="check" size={11} color={colors.goldLight} />
+                <Text style={s.verifiedTxt}>VERIFICADO</Text>
               </View>
             ) : null
           }
         />
 
-        {/* KPI row — flota sobre el hero */}
+        {/* KPIs */}
         <View style={s.kpiRow}>
           <BlobCard style={s.kpiCard} delay={0}>
-            <Text style={s.kpiNum}>{totalClasses}</Text>
-            <Text style={s.kpiLbl}>Clases</Text>
+            <Text style={s.kpiNum}>{activity?.classes ?? 0}</Text>
+            <Text style={s.kpiLbl}>Clases dadas</Text>
           </BlobCard>
-          <BlobCard style={s.kpiCard} blobColor="rgba(184,150,12,0.16)" blobColor2="rgba(184,150,12,0.10)" delay={3500}>
-            <Text style={s.kpiNum}>{uniqueStudios}</Text>
+          <BlobCard style={s.kpiCard} blobColor="rgba(184,150,12,0.16)" blobColor2="rgba(184,150,12,0.10)" delay={2500}>
+            <Text style={s.kpiNum}>{activity?.studios ?? 0}</Text>
             <Text style={s.kpiLbl}>Estudios</Text>
+          </BlobCard>
+          <BlobCard style={s.kpiCard} delay={5000}>
+            <Text style={s.kpiNum}>{avgScore}</Text>
+            <Text style={s.kpiLbl}>Puntaje</Text>
           </BlobCard>
         </View>
 
-        {/* Banner pending */}
+        {/* Estado de verificación */}
         {!isVerified && (
-          <View style={s.pendingBanner}>
-            <View style={s.pendingDot} />
-            <Text style={s.pendingText}>Tu perfil está siendo revisado por CAPIAF</Text>
+          <View style={[s.statusBanner, { backgroundColor: bannerColors.bg }]}>
+            <Feather name={status === 'rechazado' ? 'alert-circle' : 'clock'} size={14} color={bannerColors.tx} />
+            <View style={{ flex: 1 }}>
+              <Text style={[s.statusTitle, { color: bannerColors.tx }]}>{statusInfo.label}</Text>
+              <Text style={[s.statusText, { color: bannerColors.tx }]}>
+                {statusInfo.message ?? `Tu perfil está siendo revisado por ${camara}.`}
+              </Text>
+              {instructor.verification_note ? (
+                <Text style={[s.statusNote, { color: bannerColors.tx }]}>Motivo: {instructor.verification_note}</Text>
+              ) : null}
+              {(status === 'rechazado' || instructor.verification_note) && (
+                <TouchableOpacity onPress={() => navigation.navigate('InstructorPerfil')}>
+                  <Text style={[s.statusLink, { color: bannerColors.tx }]}>Revisar mi perfil y certificados →</Text>
+                </TouchableOpacity>
+              )}
+            </View>
           </View>
         )}
 
         {/* Tarifas */}
         <BlobCard style={s.section} delay={1500}>
           <View style={s.sectionHeader}>
-            <Text style={s.sectionTitle}>Mis tarifas por hora</Text>
+            <Text style={s.sectionTitle}>MIS TARIFAS POR HORA</Text>
             <TouchableOpacity onPress={() => navigation.navigate('InstructorTarifas')}>
               <Text style={s.editLink}>Editar</Text>
             </TouchableOpacity>
@@ -113,15 +172,11 @@ export default function InstructorDashboardScreen({ navigation }: any) {
           <View style={s.ratesRow}>
             <View style={[s.rateCard, { backgroundColor: colors.sageLight }]}>
               <Text style={s.rateLabel}>Regular</Text>
-              <Text style={s.rateVal}>
-                {instructor?.rates?.rate_regular ? '$' + instructor.rates.rate_regular.toLocaleString('es-AR') : '$0'}
-              </Text>
+              <Text style={s.rateVal}>{fmtMoney(rates?.rate_regular)}</Text>
             </View>
             <View style={[s.rateCard, { backgroundColor: colors.goldLight }]}>
-              <Text style={[s.rateLabel, { color: '#7A5000' }]}>Reemplazo</Text>
-              <Text style={[s.rateVal, { color: colors.gold }]}>
-                {instructor?.rates?.rate_replacement ? '$' + instructor.rates.rate_replacement.toLocaleString('es-AR') : '$0'}
-              </Text>
+              <Text style={[s.rateLabel, { color: colors.warnTx }]}>Reemplazo</Text>
+              <Text style={[s.rateVal, { color: colors.gold }]}>{fmtMoney(rates?.rate_replacement)}</Text>
             </View>
           </View>
         </BlobCard>
@@ -129,34 +184,36 @@ export default function InstructorDashboardScreen({ navigation }: any) {
         {/* Feedback */}
         <BlobCard style={s.section} delay={5000}>
           <View style={s.sectionHeader}>
-            <Text style={s.sectionTitle}>Último feedback</Text>
+            <Text style={s.sectionTitle}>ÚLTIMO FEEDBACK DE ESTUDIOS</Text>
           </View>
           {recentEvals.length === 0 ? (
-            <Text style={s.emptyText}>Aún no tenés evaluaciones registradas.</Text>
+            <Text style={s.emptyText}>Todavía no tenés evaluaciones. Aparecen acá cuando un estudio te evalúa después de una clase.</Text>
           ) : (
             recentEvals.map((item: any) => (
               <View key={item.id} style={s.evalRow}>
                 <View style={s.evalAv}>
-                  <Text style={s.evalAvTxt}>{item.studio?.name?.[0] ?? '?'}</Text>
+                  <Text style={s.evalAvTxt}>{item.studio?.name?.[0]?.toUpperCase() ?? '?'}</Text>
                 </View>
                 <View style={s.evalLeft}>
-                  <Text style={s.evalStudio}>{item.studio?.name}</Text>
-                  {item.comment && <Text style={s.evalComment}>"{item.comment}"</Text>}
+                  <Text style={s.evalStudio}>{item.studio?.name ?? 'Estudio'}</Text>
+                  {item.comment ? <Text style={s.evalComment}>"{item.comment}"</Text> : null}
                 </View>
                 <View style={s.evalScoreCircle}>
-                  <Text style={s.evalScoreNum}>{item.score?.toFixed(1) ?? '—'}</Text>
+                  <Text style={s.evalScoreNum}>{item.average_score != null ? Number(item.average_score).toFixed(1) : '—'}</Text>
                 </View>
               </View>
             ))
           )}
         </BlobCard>
 
-        {/* CTA */}
-        <TouchableOpacity style={s.cta} onPress={() => navigation.navigate('InstructorPropuestas')} activeOpacity={0.85}>
-          <Text style={s.ctaTxt}>Ver solicitudes</Text>
-          <Feather name="arrow-right" size={16} color="#fff" />
-        </TouchableOpacity>
-
+        <View style={{ paddingHorizontal: spacing.md }}>
+          <Button
+            label={activity?.pending ? `Ver propuestas (${activity.pending})` : 'Ver propuestas'}
+            onPress={() => navigation.navigate('InstructorPropuestas')}
+            icon={<Feather name="arrow-right" size={16} color={colors.white} />}
+            fullWidth
+          />
+        </View>
       </ScrollView>
     </View>
   )
@@ -166,49 +223,37 @@ const s = StyleSheet.create({
   container:       { flex: 1, backgroundColor: colors.cream },
   content:         { paddingBottom: 100 },
 
-  sponsorBanner:    { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginHorizontal: spacing.md, marginBottom: spacing.md, backgroundColor: '#F0F4F0', borderTopLeftRadius: 10, borderTopRightRadius: 0, borderBottomLeftRadius: 0, borderBottomRightRadius: 10, paddingHorizontal: spacing.md, paddingVertical: 10, borderWidth: 0.5, borderColor: colors.border, height: 60 },
-  sponsorLeft:      { flex: 1 },
-  sponsorTag:       { fontFamily: 'Nunito-Bold', fontSize: 7, color: colors.light, letterSpacing: 1, marginBottom: 2 },
-  sponsorTitle:     { fontFamily: 'Nunito-Bold', fontSize: 13, color: colors.dark },
-  sponsorSub:       { fontFamily: 'Nunito-Regular', fontSize: 10, color: colors.light },
-  sponsorLogo:      { width: 40, height: 40, borderRadius: 20, backgroundColor: colors.sageLight, alignItems: 'center', justifyContent: 'center' },
-  sponsorLogoTxt:   { fontSize: 18, color: colors.sage },
-  scorePill:       { flexDirection: 'row', alignItems: 'center', gap: 7, backgroundColor: 'rgba(255,255,255,0.14)', borderRadius: 999, paddingVertical: 5, paddingLeft: 5, paddingRight: 12, borderWidth: 0.5, borderColor: 'rgba(255,255,255,0.2)' },
-  scoreCircle:     { width: 30, height: 30, borderRadius: 15, backgroundColor: '#fff', alignItems: 'center', justifyContent: 'center' },
-  scoreNum:        { fontFamily: 'Nunito-Bold', fontSize: 12, color: colors.sage },
-  scoreLabel:      { fontFamily: 'Nunito-Bold', fontSize: 10, color: 'rgba(255,255,255,0.8)' },
-  verifiedTag:     { alignSelf: 'flex-start', marginTop: 12, backgroundColor: 'rgba(184,150,12,0.22)', borderWidth: 1, borderColor: 'rgba(184,150,12,0.38)', borderRadius: 999, paddingHorizontal: 10, paddingVertical: 3 },
-  verifiedTxt:     { fontFamily: 'Nunito-Bold', fontSize: 9, color: '#FFD060', letterSpacing: 0.7 },
+  verifiedTag:     { flexDirection: 'row', alignItems: 'center', gap: 4, alignSelf: 'center', marginTop: 12, backgroundColor: 'rgba(184,150,12,0.22)', borderWidth: 1, borderColor: 'rgba(184,150,12,0.38)', borderRadius: radius.full, paddingHorizontal: 10, paddingVertical: 3 },
+  verifiedTxt:     { fontFamily: 'Nunito-Bold', fontSize: 10, color: colors.goldLight, letterSpacing: 0.7 },
 
   kpiRow:          { flexDirection: 'row', gap: spacing.sm, marginHorizontal: spacing.md, marginTop: -12, marginBottom: spacing.md, zIndex: 2 },
   kpiCard:         { flex: 1, padding: spacing.md },
-  kpiNum:          { fontFamily: 'Nunito-Bold', fontSize: 26, color: colors.dark, lineHeight: 28 },
-  kpiLbl:          { fontFamily: 'Nunito-Bold', fontSize: 9, color: colors.light, textTransform: 'uppercase', letterSpacing: 0.6, marginTop: 3 },
+  kpiNum:          { fontFamily: 'Nunito-Bold', fontSize: 24, color: colors.dark, lineHeight: 28 },
+  kpiLbl:          { ...typography.caption, marginTop: 3 },
 
-  pendingBanner:   { flexDirection: 'row', alignItems: 'center', gap: 8, marginHorizontal: spacing.md, marginBottom: spacing.md, backgroundColor: colors.warnBg, borderTopLeftRadius: 14, borderTopRightRadius: 0, borderBottomLeftRadius: 0, borderBottomRightRadius: 14, padding: spacing.sm, borderWidth: 0.5, borderColor: 'rgba(122,80,0,0.2)' },
-  pendingDot:      { width: 6, height: 6, borderRadius: 3, backgroundColor: '#C4600A' },
-  pendingText:     { fontFamily: 'Nunito-Bold', fontSize: 11, color: colors.warnTx, flex: 1 },
+  statusBanner:    { flexDirection: 'row', alignItems: 'flex-start', gap: 8, marginHorizontal: spacing.md, marginBottom: spacing.md, ...radius.leaf, padding: spacing.md },
+  statusTitle:     { fontFamily: 'Nunito-Bold', fontSize: 13 },
+  statusText:      { fontFamily: 'Nunito-Regular', fontSize: 12, marginTop: 2, lineHeight: 17 },
+  statusNote:      { fontFamily: 'Nunito-SemiBold', fontSize: 12, marginTop: 6 },
+  statusLink:      { fontFamily: 'Nunito-Bold', fontSize: 12, marginTop: 8 },
 
   section:         { marginHorizontal: spacing.md, marginBottom: spacing.md, padding: spacing.md },
   sectionHeader:   { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: spacing.md },
-  sectionTitle:    { fontFamily: 'Nunito-Bold', fontSize: 13, color: colors.dark },
-  editLink:        { fontFamily: 'Nunito-Bold', fontSize: 11, color: colors.sage },
+  sectionTitle:    { ...typography.caption },
+  editLink:        { fontFamily: 'Nunito-Bold', fontSize: 12, color: colors.sage },
 
   ratesRow:        { flexDirection: 'row', gap: spacing.sm },
-  rateCard:        { flex: 1, borderTopLeftRadius: 14, borderTopRightRadius: 0, borderBottomLeftRadius: 0, borderBottomRightRadius: 14, padding: spacing.md },
-  rateLabel:       { fontFamily: 'Nunito-Bold', fontSize: 9, color: colors.sageMid, textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 5 },
-  rateVal:         { fontFamily: 'Nunito-Bold', fontSize: 20, color: colors.sage },
+  rateCard:        { flex: 1, ...radius.leaf, padding: spacing.md },
+  rateLabel:       { fontFamily: 'Nunito-Bold', fontSize: 10, color: colors.sageMid, textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 5 },
+  rateVal:         { fontFamily: 'Nunito-Bold', fontSize: 18, color: colors.sage },
 
   evalRow:         { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, paddingVertical: spacing.sm, borderBottomWidth: 0.5, borderColor: colors.borderLight },
-  evalAv:          { width: 34, height: 34, borderRadius: 17, backgroundColor: colors.sageLight, alignItems: 'center', justifyContent: 'center', flexShrink: 0 },
+  evalAv:          { width: 34, height: 34, borderRadius: 17, backgroundColor: colors.sageLight, alignItems: 'center', justifyContent: 'center' },
   evalAvTxt:       { fontFamily: 'Nunito-Bold', fontSize: 12, color: colors.sage },
   evalLeft:        { flex: 1 },
-  evalStudio:      { fontFamily: 'Nunito-Bold', fontSize: 12, color: colors.dark },
-  evalComment:     { fontFamily: 'Nunito-Regular', fontSize: 10, color: colors.mid, fontStyle: 'italic', marginTop: 3 },
-  evalScoreCircle: { width: 34, height: 34, borderRadius: 17, backgroundColor: colors.sageLight, alignItems: 'center', justifyContent: 'center', flexShrink: 0 },
+  evalStudio:      { fontFamily: 'Nunito-Bold', fontSize: 13, color: colors.dark },
+  evalComment:     { fontFamily: 'Nunito-Regular', fontSize: 11, color: colors.mid, fontStyle: 'italic', marginTop: 3 },
+  evalScoreCircle: { width: 34, height: 34, borderRadius: 17, backgroundColor: colors.sageLight, alignItems: 'center', justifyContent: 'center' },
   evalScoreNum:    { fontFamily: 'Nunito-Bold', fontSize: 12, color: colors.sage },
-  emptyText:       { fontFamily: 'Nunito-Regular', fontSize: 13, color: colors.light, paddingVertical: spacing.sm },
-
-  cta:             { marginHorizontal: spacing.md, backgroundColor: colors.sage, borderTopLeftRadius: 14, borderTopRightRadius: 0, borderBottomLeftRadius: 0, borderBottomRightRadius: 14, padding: 15, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8 },
-  ctaTxt:          { fontFamily: 'Nunito-Bold', fontSize: 14, color: '#fff' },
+  emptyText:       { fontFamily: 'Nunito-Regular', fontSize: 13, color: colors.light, lineHeight: 19 },
 })

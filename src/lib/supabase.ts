@@ -1,15 +1,12 @@
 // src/lib/supabase.ts
 import { createClient } from '@supabase/supabase-js'
 import AsyncStorage from '@react-native-async-storage/async-storage'
-// database.types se genera con: npm run db:types
-// Por ahora usamos any para no bloquear el desarrollo
 
+// La URL y la anon key salen del entorno (EXPO_PUBLIC_*). La anon key es
+// pública por diseño (la seguridad la da RLS), así que se deja un valor por
+// defecto para que los builds sin .env sigan funcionando.
 const SUPABASE_URL = process.env.EXPO_PUBLIC_SUPABASE_URL || 'https://tkhaiovstwgqzabvxxss.supabase.co'
 const SUPABASE_ANON_KEY = process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InRraGFpb3ZzdHdncXphYnZ4eHNzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzg3MzU4NzksImV4cCI6MjA5NDMxMTg3OX0.KuuF4sOr4Bs51vvgCJQz0C1ophIyFLLpTNwFgrcS1Sc'
-
-// DEBUG — verificar que las variables se leen correctamente
-console.log('SUPABASE_URL:', SUPABASE_URL ? SUPABASE_URL.substring(0, 30) + '...' : 'UNDEFINED')
-console.log('ANON_KEY:', SUPABASE_ANON_KEY ? 'OK (empieza con: ' + SUPABASE_ANON_KEY.substring(0, 10) + ')' : 'UNDEFINED')
 
 export const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
   auth: {
@@ -20,7 +17,7 @@ export const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
   },
 })
 
-// ── Typed query helpers ─────────────────────────────────────
+// ── Atajos por tabla ────────────────────────────────────────
 
 export const db = {
   users: () => supabase.from('users'),
@@ -38,31 +35,38 @@ export const db = {
   rateRanges: () => supabase.from('rate_ranges'),
 }
 
-// ── Storage helpers ─────────────────────────────────────────
+// ── Storage ─────────────────────────────────────────────────
+// Buckets que existen: 'avatars' (público, path `${user.id}/...`) y
+// 'certifications' (privado, path `${instructor.id}/...`, sin upsert).
 
 export const storage = {
-  avatars: supabase.storage.from('avatars'),
-  certifications: supabase.storage.from('certifications'),
-
-  uploadAvatar: async (userId: string, file: Blob) => {
-    const path = `${userId}/avatar.jpg`
-    const { data, error } = await supabase.storage
-      .from('avatars')
-      .upload(path, file, { upsert: true })
+  /** Sube la foto de perfil y devuelve la URL pública (con cache-buster). */
+  uploadAvatar: async (userId: string, file: Blob | ArrayBuffer, ext = 'jpg', contentType = 'image/jpeg') => {
+    const path = `${userId}/avatar.${ext}`
+    const { error } = await supabase.storage.from('avatars').upload(path, file, { upsert: true, contentType })
     if (error) throw error
-    return supabase.storage.from('avatars').getPublicUrl(path).data.publicUrl
+    return supabase.storage.from('avatars').getPublicUrl(path).data.publicUrl + '?t=' + Date.now()
   },
 
-  uploadCertification: async (instructorId: string, certId: string, file: Blob) => {
-    const path = `${instructorId}/${certId}.pdf`
-    const { data, error } = await supabase.storage
-      .from('certifications')
-      .upload(path, file, { upsert: true })
+  /**
+   * Sube el documento de un certificado y devuelve el PATH (guardarlo en
+   * certifications.document_url). No hay policy de UPDATE: cada subida usa un
+   * nombre nuevo.
+   */
+  uploadCertification: async (
+    instructorId: string, certId: string, file: Blob | ArrayBuffer,
+    ext = 'pdf', contentType = 'application/pdf',
+  ): Promise<string> => {
+    const path = `${instructorId}/${certId}-${Date.now()}.${ext.replace(/^\./, '').toLowerCase()}`
+    const { error } = await supabase.storage.from('certifications').upload(path, file, { upsert: false, contentType })
     if (error) throw error
-    // Signed URL con 24h expiry (documentos privados)
-    const { data: signed } = await supabase.storage
-      .from('certifications')
-      .createSignedUrl(path, 86400)
-    return signed?.signedUrl
+    return path
+  },
+
+  /** URL firmada temporal (10 min) para ver un certificado. */
+  certificationUrl: async (path: string, expiresIn = 600): Promise<string> => {
+    const { data, error } = await supabase.storage.from('certifications').createSignedUrl(path, expiresIn)
+    if (error) throw error
+    return data.signedUrl
   },
 }

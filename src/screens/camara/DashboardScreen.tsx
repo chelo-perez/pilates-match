@@ -3,33 +3,35 @@ import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from 'react-nati
 import { useQuery } from '@tanstack/react-query'
 import { supabase } from '../../lib/supabase'
 import { useAuthStore } from '../../store'
-import { LoadingScreen, colors, spacing } from '../../components/ui'
+import { confirmSignOut } from '../../lib/auth'
+import { LoadingScreen, ErrorState, colors, spacing, radius, typography } from '../../components/ui'
 import { Feather } from '@expo/vector-icons'
 import BlobCard from '../../components/BlobCard'
 import HeroHeader from '../../components/HeroHeader'
 
 export default function CamaraDashboardScreen({ navigation }: any) {
   const user = useAuthStore(s => s.user)
-  const { reset } = useAuthStore()
 
-  const { data: stats, isLoading } = useQuery({
-    queryKey: ['camara-stats', user?.camara_id],
+  // Sin filtrar por camara_id: los registros nuevos llegan con camara_id null
+  const { data: stats, isLoading, isError, refetch } = useQuery({
+    queryKey: ['camara-stats'],
     queryFn: async () => {
-      const [instructors, studios, pending] = await Promise.all([
-        supabase.from('instructors').select('id, verification_status').eq('camara_id', user?.camara_id),
-        supabase.from('studios').select('id, membership:memberships(status)').eq('camara_id', user?.camara_id),
-        supabase.from('instructors').select('id').eq('camara_id', user?.camara_id).eq('verification_status', 'pendiente'),
+      const [instructors, studios] = await Promise.all([
+        supabase.from('instructors').select('id, verification_status'),
+        supabase.from('studios').select('id, is_member'),
       ])
-      const verified  = (instructors.data ?? []).filter((i: any) => i.verification_status === 'verificado').length
-      const members   = (studios.data ?? []).filter((s: any) => s.membership?.status === 'activa').length
+      if (instructors.error) throw instructors.error
+      if (studios.error) throw studios.error
+      const ins = instructors.data ?? []
+      const sts = studios.data ?? []
+      const members = sts.filter((s: any) => s.is_member).length
       return {
-        verified_instructors:  verified,
+        verified_instructors:  ins.filter((i: any) => i.verification_status === 'verificado').length,
+        pending_verifications: ins.filter((i: any) => i.verification_status === 'pendiente').length,
         member_studios:        members,
-        non_member_studios:    (studios.data?.length ?? 0) - members,
-        pending_verifications: pending.data?.length ?? 0,
+        non_member_studios:    sts.length - members,
       }
     },
-    enabled: !!user?.camara_id,
   })
 
   // Mismo queryKey que CamaraProfileEdit: al editar el perfil se refresca acá también
@@ -45,20 +47,18 @@ export default function CamaraDashboardScreen({ navigation }: any) {
   })
 
   const { data: potentialMembers = [] } = useQuery({
-    queryKey: ['potential-members', user?.camara_id],
+    queryKey: ['potential-members'],
     queryFn: async () => {
-      const { data } = await supabase
+      const { data, error } = await supabase
         .from('studios').select('id, name')
-        .eq('camara_id', user?.camara_id)
         .eq('is_member', false).limit(5)
+      if (error) throw error
       return data ?? []
     },
-    enabled: !!user?.camara_id,
   })
 
-  const handleSignOut = async () => { await supabase.auth.signOut(); reset() }
-
   if (isLoading) return <LoadingScreen message="Cargando panel..." />
+  if (isError) return <ErrorState message="No pudimos cargar el panel." onRetry={refetch} />
 
   const pendingCount = stats?.pending_verifications ?? 0
 
@@ -73,8 +73,8 @@ export default function CamaraDashboardScreen({ navigation }: any) {
           avatarFallback={camara?.name ?? 'C'}
           onAvatarPress={() => navigation.navigate('CamaraProfileEdit')}
           rightElement={
-            <TouchableOpacity style={s.logoutBtn} onPress={handleSignOut}>
-              <Feather name="log-out" size={13} color="rgba(255,255,255,0.65)" />
+            <TouchableOpacity style={s.logoutBtn} onPress={() => confirmSignOut()}>
+              <Feather name="log-out" size={13} color={colors.white} />
               <Text style={s.logoutTxt}>Salir</Text>
             </TouchableOpacity>
           }
@@ -86,17 +86,18 @@ export default function CamaraDashboardScreen({ navigation }: any) {
           <BlobCard style={s.kpiCard} delay={0}
             blobColor="rgba(184,150,12,0.18)" blobColor2="rgba(184,150,12,0.10)">
             <Text style={[s.kpiNum, { color: colors.gold }]}>{stats?.member_studios ?? 0}</Text>
-            <Text style={[s.kpiLbl, { color: '#7A5000' }]}>Estudios miembros</Text>
+            <Text style={[s.kpiLbl, { color: colors.warnTx }]}>Estudios socios</Text>
           </BlobCard>
           <BlobCard style={s.kpiCard} delay={2500}>
             <Text style={[s.kpiNum, { color: colors.sage }]}>{stats?.verified_instructors ?? 0}</Text>
             <Text style={[s.kpiLbl, { color: colors.sageMid }]}>Instructores verificados</Text>
           </BlobCard>
           <BlobCard style={s.kpiCard} delay={5000}
+            onPress={() => navigation.navigate('Directorio', { filter: 'pendiente' })}
             blobColor={pendingCount > 0 ? 'rgba(196,96,10,0.16)' : undefined}
             blobColor2={pendingCount > 0 ? 'rgba(196,96,10,0.09)' : undefined}>
-            <Text style={[s.kpiNum, { color: pendingCount > 0 ? '#C4600A' : colors.sageMid }]}>{pendingCount}</Text>
-            <Text style={[s.kpiLbl, { color: pendingCount > 0 ? '#8B4000' : colors.mid }]}>Verificaciones pendientes</Text>
+            <Text style={[s.kpiNum, { color: pendingCount > 0 ? colors.warnTx : colors.sageMid }]}>{pendingCount}</Text>
+            <Text style={[s.kpiLbl, { color: pendingCount > 0 ? colors.warnTx : colors.mid }]}>Verificaciones pendientes</Text>
           </BlobCard>
           <BlobCard style={s.kpiCard} delay={7500}>
             <Text style={[s.kpiNum, { color: colors.sageMid }]}>{stats?.non_member_studios ?? 0}</Text>
@@ -109,8 +110,10 @@ export default function CamaraDashboardScreen({ navigation }: any) {
           <TouchableOpacity style={s.alertCard} onPress={() => navigation.navigate('Estudios')} activeOpacity={0.85}>
             <View style={s.alertIcon}><Feather name="users" size={16} color={colors.sage} /></View>
             <View style={{ flex: 1 }}>
-              <Text style={s.alertTitle}>{potentialMembers.length} estudio{potentialMembers.length > 1 ? 's' : ''} potencial{potentialMembers.length > 1 ? 'es' : ''} socio</Text>
-              <Text style={s.alertSub}>Con actividad en la app este mes</Text>
+              <Text style={s.alertTitle}>
+                {potentialMembers.length >= 5 ? 'Varios estudios' : `${potentialMembers.length} estudio${potentialMembers.length > 1 ? 's' : ''}`} todavía no {potentialMembers.length > 1 ? 'son socios' : 'es socio'}
+              </Text>
+              <Text style={s.alertSub}>Invitalos a sumarse a la Cámara</Text>
             </View>
             <Feather name="chevron-right" size={16} color={colors.sage} />
           </TouchableOpacity>
@@ -120,12 +123,12 @@ export default function CamaraDashboardScreen({ navigation }: any) {
         <Text style={s.actionsLabel}>ACCIONES RÁPIDAS</Text>
         <View style={s.actionsGrid}>
           {[
-            { label: 'Directorio de instructores', icon: 'users',      screen: 'Directorio' },
-            { label: 'Verificar pendientes',       icon: 'user-check', screen: 'Directorio' },
-            { label: 'Estudios registrados',       icon: 'home',       screen: 'Estudios'   },
-            { label: 'Rangos de tarifas',          icon: 'sliders',    screen: 'Tarifas'    },
+            { label: 'Directorio de instructores', icon: 'users',      screen: 'Directorio', params: { filter: 'todos' } },
+            { label: `Verificar pendientes${pendingCount ? ` (${pendingCount})` : ''}`, icon: 'user-check', screen: 'Directorio', params: { filter: 'pendiente' } },
+            { label: 'Estudios registrados',       icon: 'home',       screen: 'Estudios',   params: undefined },
+            { label: 'Rangos de tarifas',          icon: 'sliders',    screen: 'Tarifas',    params: undefined },
           ].map((a, i) => (
-            <TouchableOpacity key={i} style={s.actionCard} onPress={() => navigation.navigate(a.screen)} activeOpacity={0.85}>
+            <TouchableOpacity key={i} style={s.actionCard} onPress={() => navigation.navigate(a.screen, a.params)} activeOpacity={0.85}>
               <View style={s.actionIcon}>
                 <Feather name={a.icon as any} size={16} color={colors.sage} />
               </View>
@@ -142,23 +145,21 @@ export default function CamaraDashboardScreen({ navigation }: any) {
 
 const s = StyleSheet.create({
   logoutBtn:     { flexDirection: 'row', alignItems: 'center', gap: 4, backgroundColor: 'rgba(255,255,255,0.1)', borderRadius: 999, paddingHorizontal: 10, paddingVertical: 6 },
-  logoutTxt:     { fontFamily: 'Nunito-SemiBold', fontSize: 11, color: 'rgba(255,255,255,0.65)' },
-  camaraBadge:   { alignSelf: 'flex-start', marginTop: 12, backgroundColor: 'rgba(184,150,12,0.22)', borderWidth: 1, borderColor: 'rgba(184,150,12,0.38)', borderRadius: 999, paddingHorizontal: 10, paddingVertical: 3 },
-  camaraBadgeTxt:{ fontFamily: 'Nunito-Bold', fontSize: 10, color: '#FFD060' },
+  logoutTxt:     { fontFamily: 'Nunito-SemiBold', fontSize: 11, color: colors.white },
 
   kpiGrid:       { flexDirection: 'row', flexWrap: 'wrap', paddingHorizontal: spacing.md, paddingTop: spacing.xs, gap: spacing.sm, marginTop: -12, zIndex: 2, marginBottom: spacing.md },
   kpiCard:       { flexBasis: '47%', padding: spacing.md },
   kpiNum:        { fontFamily: 'Nunito-Bold', fontSize: 28, lineHeight: 32, marginBottom: 3 },
-  kpiLbl:        { fontFamily: 'Nunito-Bold', fontSize: 9, textTransform: 'uppercase' as const, letterSpacing: 0.5 },
+  kpiLbl:        { ...typography.caption },
 
-  alertCard:     { marginHorizontal: spacing.md, marginBottom: spacing.md, backgroundColor: colors.sageLighter, borderTopLeftRadius: 14, borderTopRightRadius: 0, borderBottomLeftRadius: 0, borderBottomRightRadius: 14, padding: spacing.md, flexDirection: 'row', alignItems: 'center', gap: spacing.sm, borderWidth: 0.5, borderColor: colors.border },
+  alertCard:     { marginHorizontal: spacing.md, marginBottom: spacing.md, backgroundColor: colors.sageLighter, ...radius.leaf, padding: spacing.md, flexDirection: 'row', alignItems: 'center', gap: spacing.sm, borderWidth: 0.5, borderColor: colors.border },
   alertIcon:     { width: 36, height: 36, borderRadius: 18, backgroundColor: colors.sageLight, alignItems: 'center', justifyContent: 'center' },
   alertTitle:    { fontFamily: 'Nunito-Bold', fontSize: 13, color: colors.sage },
   alertSub:      { fontFamily: 'Nunito-Regular', fontSize: 11, color: colors.light, marginTop: 1 },
 
-  actionsLabel:  { fontFamily: 'Nunito-Bold', fontSize: 9, color: colors.light, letterSpacing: 0.8, marginHorizontal: spacing.md, marginBottom: 8 },
+  actionsLabel:  { ...typography.caption, marginHorizontal: spacing.md, marginBottom: 8 },
   actionsGrid:   { paddingHorizontal: spacing.md, gap: 8 },
-  actionCard:    { backgroundColor: colors.white, borderTopLeftRadius: 14, borderTopRightRadius: 0, borderBottomLeftRadius: 0, borderBottomRightRadius: 14, padding: spacing.md, borderWidth: 0.5, borderColor: colors.borderLight, flexDirection: 'row', alignItems: 'center', gap: spacing.sm, elevation: 1 },
+  actionCard:    { backgroundColor: colors.white, ...radius.leaf, padding: spacing.md, borderWidth: 0.5, borderColor: colors.borderLight, flexDirection: 'row', alignItems: 'center', gap: spacing.sm, elevation: 1 },
   actionIcon:    { width: 32, height: 32, borderRadius: 999, backgroundColor: colors.sageLight, alignItems: 'center', justifyContent: 'center', flexShrink: 0 },
   actionLbl:     { fontFamily: 'Nunito-SemiBold', fontSize: 13, color: colors.dark, flex: 1 },
 })
