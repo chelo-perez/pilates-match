@@ -23,13 +23,10 @@ export default function HeroHeader({
   avatarUri, avatarFallback, onAvatarPress, centered,
 }: HeroHeaderProps) {
   const insets = useSafeAreaInsets()
-  // La punta ("hoja") va solo en encabezados de título o de perfil. Si el encabezado
-  // termina en un control (buscador, pestañas, filtros), cierra recto: la punta
-  // quedaría colgando debajo del control y sumaría espacio vacío.
-  const showWave = centered || !bottomElement
+  // El encabezado cierra recto en todas las pantallas (sin la punta de "hoja")
 
   return (
-    <View style={[s.hero, { paddingTop: insets.top + 12 }, !showWave && s.heroFlat]}>
+    <View style={[s.hero, { paddingTop: insets.top + 12 }]}>
       <View style={s.blob1} />
       <View style={s.blob2} />
 
@@ -102,19 +99,12 @@ export default function HeroHeader({
 
       </View>
 
-      {showWave ? (
-        <View style={s.waveRow}>
-          <View style={s.waveLeft} />
-          <View style={s.waveRight} />
-        </View>
-      ) : null}
     </View>
   )
 }
 
 const s = StyleSheet.create({
-  hero:            { backgroundColor: colors.forest, paddingHorizontal: spacing.md, paddingBottom: 28, position: 'relative', overflow: 'hidden' },
-  heroFlat:        { paddingBottom: spacing.md },
+  hero:            { backgroundColor: colors.forest, paddingHorizontal: spacing.md, paddingBottom: spacing.md + 2, position: 'relative', overflow: 'hidden' },
   blob1:           { position: 'absolute', width: 200, height: 200, borderRadius: 100, backgroundColor: 'rgba(255,255,255,0.06)', top: -60, right: -50 },
   blob2:           { position: 'absolute', width: 130, height: 130, borderRadius: 65, backgroundColor: 'rgba(255,255,255,0.04)', bottom: -40, left: -20 },
   inner:           { position: 'relative', zIndex: 1 },
@@ -134,8 +124,4 @@ const s = StyleSheet.create({
   cameraIcon:      { position: 'absolute', bottom: 0, right: 0, width: 20, height: 20, borderRadius: 10, backgroundColor: colors.sage, alignItems: 'center', justifyContent: 'center', borderWidth: 2, borderColor: colors.white },
   centeredTitle:   { fontFamily: 'Nunito-Bold', fontSize: 20, color: colors.white, letterSpacing: -0.3, textAlign: 'center' },
   centeredSubtitle:{ fontFamily: 'Nunito-SemiBold', fontSize: 12, color: 'rgba(255,255,255,0.7)', textAlign: 'center', marginTop: 2 },
-  // Wave
-  waveRow:         { position: 'absolute', bottom: -1, left: 0, right: 0, height: 28, flexDirection: 'row' },
-  waveLeft:        { flex: 1, height: 28, backgroundColor: colors.cream, borderTopRightRadius: 40 },
-  waveRight:       { flex: 1, height: 28, backgroundColor: colors.cream, borderTopLeftRadius: 40 },
 })

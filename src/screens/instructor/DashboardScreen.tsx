@@ -127,6 +127,7 @@ export default function InstructorDashboardScreen({ navigation }: any) {
             ) : null
           }
         />
+        <View style={{ height: spacing.md }} />
 
         {/* Estado de verificación */}
         {!isVerified && (

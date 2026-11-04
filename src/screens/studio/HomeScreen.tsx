@@ -208,7 +208,7 @@ const s = StyleSheet.create({
 
   kpiGrid:        { flexDirection: 'row', flexWrap: 'wrap', paddingHorizontal: spacing.md, gap: spacing.sm, marginBottom: spacing.md },
   blockTitle:     { ...typography.caption, paddingHorizontal: spacing.md, marginBottom: spacing.sm, marginTop: spacing.xs },
-  searchHero:     { paddingHorizontal: spacing.md, marginTop: spacing.sm, marginBottom: spacing.md },
+  searchHero:     { paddingHorizontal: spacing.md, marginTop: spacing.md, marginBottom: spacing.md },
   kpiCard:        { flexBasis: '47%', padding: spacing.md },
   kpiWarn:        { borderLeftWidth: 3, borderLeftColor: colors.warnTx },
   kpiNum:         { fontFamily: 'Nunito-Bold', fontSize: 28, color: colors.dark, marginBottom: 2 },

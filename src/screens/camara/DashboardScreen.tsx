@@ -88,7 +88,7 @@ export default function CamaraDashboardScreen({ navigation }: any) {
         />
 
         {/* 1. Lo que necesita atención: instructores esperando verificación */}
-        <View style={s.section}>
+        <View style={[s.section, { marginTop: spacing.md }]}>
           <View style={s.sectionHead}>
             <Text style={s.sectionTitle}>PARA REVISAR{pendingCount ? ` (${pendingCount})` : ''}</Text>
             {pendingCount > pending.length ? (
