@@ -31,7 +31,12 @@ const TIME_OPTIONS = [
   '06:00','07:00','08:00','09:00','10:00','11:00','12:00',
   '13:00','14:00','15:00','16:00','17:00','18:00','19:00','20:00','21:00','22:00'
 ]
-const slotKey = (s: Slot) => `${s.day}|${s.start}|${s.end}|${s.type}`
+const PRESETS = [
+  { label: 'Mañana',   start: '07:00', end: '12:00' },
+  { label: 'Mediodía', start: '12:00', end: '15:00' },
+  { label: 'Tarde',    start: '15:00', end: '19:00' },
+  { label: 'Noche',    start: '19:00', end: '22:00' },
+]
 
 export default function AvailabilityScreen() {
   const { toast, showToast, hideToast } = useToast()
@@ -40,10 +45,10 @@ export default function AvailabilityScreen() {
   const [selectedZones, setSelectedZones] = useState<string[]>([])
   const [dirty, setDirty] = useState(false)
   const [showAddModal, setShowAddModal] = useState(false)
-  const [addingDay, setAddingDay] = useState<DayOfWeek>('lunes')
+  const [addingDays, setAddingDays] = useState<DayOfWeek[]>(['lunes'])
   const [newStart, setNewStart] = useState('09:00')
-  const [newEnd, setNewEnd] = useState('10:00')
-  const [newType, setNewType] = useState<ClassType>('reemplazo')
+  const [newEnd, setNewEnd] = useState('13:00')
+  const [newType, setNewType] = useState<ClassType | 'ambos'>('ambos')
   const [addError, setAddError] = useState('')
   const [activeTab, setActiveTab] = useState<'horarios' | 'zonas'>('horarios')
 
@@ -124,17 +129,36 @@ export default function AvailabilityScreen() {
     },
   })
 
+  // Agrega la misma franja a todos los días elegidos (y a los dos tipos si es "ambos").
+  // Los días donde se superpone con algo ya cargado se saltean y se avisa.
   const addSlot = () => {
+    if (!addingDays.length) { setAddError('Elegí al menos un día.'); return }
     if (newEnd <= newStart) { setAddError('El horario de fin tiene que ser posterior al de inicio.'); return }
-    const overlap = slots.some(s => s.day === addingDay && s.start < newEnd && newStart < s.end)
-    if (overlap) { setAddError(`Ya tenés un horario que se superpone el ${DAYS_LABEL[addingDay].toLowerCase()}.`); return }
-    setSlots(prev => [...prev, { day: addingDay, start: newStart, end: newEnd, type: newType }]
-      .sort((a, b) => a.start.localeCompare(b.start)))
+    const types: ClassType[] = newType === 'ambos' ? ['regular', 'reemplazo'] : [newType]
+    const added: Slot[] = []
+    const skipped: DayOfWeek[] = []
+    for (const day of addingDays) {
+      const clash = slots.some(s => s.day === day && types.includes(s.type) && s.start < newEnd && newStart < s.end)
+      if (clash) { skipped.push(day); continue }
+      types.forEach(type => added.push({ day, start: newStart, end: newEnd, type }))
+    }
+    if (!added.length) {
+      setAddError(skipped.length === 1
+        ? `El ${DAYS_LABEL[skipped[0]].toLowerCase()} ya tiene un horario que se superpone.`
+        : 'Esos días ya tienen horarios que se superponen.')
+      return
+    }
+    setSlots(prev => [...prev, ...added].sort((a, b) => a.start.localeCompare(b.start)))
     setDirty(true)
     setShowAddModal(false)
+    if (skipped.length) showToast(`No se agregó el ${skipped.map(d => DAYS_LABEL[d].toLowerCase()).join(', ')}: se superponía con otro horario`, 'warning')
   }
 
-  const removeSlot = (slot: Slot) => { setSlots(prev => prev.filter(s => s !== slot)); setDirty(true) }
+  // Quita una franja (todas sus filas: regular y/o reemplazo)
+  const removeGroup = (day: DayOfWeek, start: string, end: string) => {
+    setSlots(prev => prev.filter(s => !(s.day === day && s.start === start && s.end === end)))
+    setDirty(true)
+  }
   const toggleZone = (z: string) => {
     setDirty(true)
     if (z === '__all__') { setSelectedZones(BARRIOS_CABA); return }
@@ -142,16 +166,31 @@ export default function AvailabilityScreen() {
     setSelectedZones(prev => prev.includes(z) ? prev.filter(x => x !== z) : [...prev, z])
   }
 
-  const openAdd = (day: DayOfWeek) => {
-    setAddingDay(day)
+  const openAdd = (days: DayOfWeek[]) => {
+    setAddingDays(days)
     setNewStart('09:00')
-    setNewEnd('10:00')
-    setNewType('reemplazo')
+    setNewEnd('13:00')
+    setNewType('ambos')
     setAddError('')
     setShowAddModal(true)
   }
+  const toggleDay = (d: DayOfWeek) => {
+    setAddError('')
+    setAddingDays(prev => prev.includes(d) ? prev.filter(x => x !== d) : DAYS.filter(x => prev.includes(x) || x === d))
+  }
 
-  const slotsForDay = (day: DayOfWeek) => slots.filter(s => s.day === day)
+  // Franjas del día agrupadas por horario: una misma franja regular + reemplazo se muestra como "Ambos"
+  const groupsForDay = (day: DayOfWeek) => {
+    const map = new Map<string, { start: string; end: string; types: Set<ClassType> }>()
+    for (const s of slots.filter(x => x.day === day)) {
+      const k = `${s.start}-${s.end}`
+      if (!map.has(k)) map.set(k, { start: s.start, end: s.end, types: new Set() })
+      map.get(k)!.types.add(s.type)
+    }
+    return [...map.values()].sort((a, b) => a.start.localeCompare(b.start))
+  }
+  const typeLabel = (types: Set<ClassType>) => types.size === 2 ? 'Ambos' : types.has('regular') ? 'Regular' : 'Reemplazo'
+  const daysWithSlots = DAYS.filter(d => slots.some(s => s.day === d)).length
 
   if (loadingInstructor || (instructorId && loadingSaved)) return <LoadingScreen message="Cargando tu disponibilidad..." />
   if (errorInstructor || errorSaved || !instructor) {
@@ -189,39 +228,43 @@ export default function AvailabilityScreen() {
 
         {activeTab === 'horarios' && (
           <>
-            {DAYS.map(day => {
-              const daySlots = slotsForDay(day)
-              return (
-                <View key={day} style={s.daySection}>
-                  <View style={s.dayHeader}>
-                    <Text style={s.dayName}>{DAYS_LABEL[day]}</Text>
-                    <TouchableOpacity style={s.addBtn} onPress={() => openAdd(day)}>
-                      <Feather name="plus" size={14} color={colors.sage} />
-                      <Text style={s.addBtnText}>Agregar</Text>
+            <Text style={s.intro}>
+              {daysWithSlots
+                ? `Cargaste horarios en ${daysWithSlots} día${daysWithSlots > 1 ? 's' : ''}. Los estudios ven si una clase coincide con tu disponibilidad.`
+                : 'Contá cuándo podés dar clases. Podés cargar la misma franja para varios días a la vez.'}
+            </Text>
+            <View style={s.week}>
+              {DAYS.map((day, idx) => {
+                const groups = groupsForDay(day)
+                return (
+                  <View key={day} style={[s.weekRow, idx > 0 && s.weekRowBorder]}>
+                    <Text style={[s.weekDay, !groups.length && s.weekDayEmpty]}>{DAYS_SHORT[day]}</Text>
+                    <View style={s.weekSlots}>
+                      {groups.length === 0 ? <Text style={s.weekNone}>—</Text> : groups.map(g => {
+                        const label = typeLabel(g.types)
+                        const tone = label === 'Reemplazo' ? s.pillRep : label === 'Regular' ? s.pillReg : s.pillBoth
+                        return (
+                          <View key={`${g.start}-${g.end}`} style={[s.pill, tone]}>
+                            <Text style={s.pillTime}>{g.start}–{g.end}</Text>
+                            <Text style={s.pillType}>{label}</Text>
+                            <TouchableOpacity onPress={() => removeGroup(day, g.start, g.end)} hitSlop={10} accessibilityLabel={`Quitar ${g.start} a ${g.end}`}>
+                              <Feather name="x" size={13} color={colors.mid} />
+                            </TouchableOpacity>
+                          </View>
+                        )
+                      })}
+                    </View>
+                    <TouchableOpacity onPress={() => openAdd([day])} hitSlop={10} style={s.weekAdd} accessibilityLabel={`Agregar horario el ${DAYS_LABEL[day]}`}>
+                      <Feather name="plus" size={16} color={colors.sage} />
                     </TouchableOpacity>
                   </View>
-                  {daySlots.length === 0 ? (
-                    <Text style={s.noSlots}>Sin horarios cargados</Text>
-                  ) : (
-                    daySlots.map((slot) => {
-                      return (
-                        <View key={slot.id ?? slotKey(slot)} style={s.slotRow}>
-                          <View style={[s.slotType, { backgroundColor: slot.type === 'regular' ? colors.sageLight : colors.goldLight }]}>
-                            <Text style={[s.slotTypeText, { color: slot.type === 'regular' ? colors.sage : colors.gold }]}>
-                              {slot.type === 'regular' ? 'Regular' : 'Reemplazo'}
-                            </Text>
-                          </View>
-                          <Text style={s.slotTime}>{slot.start} – {slot.end}</Text>
-                          <TouchableOpacity onPress={() => removeSlot(slot)} style={s.removeBtn}>
-                            <Feather name="x" size={16} color={colors.redTx} />
-                          </TouchableOpacity>
-                        </View>
-                      )
-                    })
-                  )}
-                </View>
-              )
-            })}
+                )
+              })}
+            </View>
+            <Button label="Agregar horario" variant="secondary" fullWidth
+              icon={<Feather name="plus" size={16} color={colors.sage} />}
+              onPress={() => openAdd(['lunes', 'martes', 'miercoles', 'jueves', 'viernes'])}
+              style={{ marginBottom: spacing.lg }} />
           </>
         )}
 
@@ -246,35 +289,46 @@ export default function AvailabilityScreen() {
               </TouchableOpacity>
             </View>
 
-            {/* Día */}
-            <Text style={s.fieldLabel}>DÍA</Text>
-            <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginBottom: spacing.md }}>
+            {/* Días (varios) */}
+            <View style={s.labelRow}>
+              <Text style={s.fieldLabel}>DÍAS</Text>
+              <View style={{ flexDirection: 'row', gap: spacing.sm }}>
+                <TouchableOpacity onPress={() => { setAddingDays(DAYS.slice(0, 5)); setAddError('') }}><Text style={s.quickLink}>Lun a Vie</Text></TouchableOpacity>
+                <TouchableOpacity onPress={() => { setAddingDays([...DAYS]); setAddError('') }}><Text style={s.quickLink}>Todos</Text></TouchableOpacity>
+              </View>
+            </View>
+            <View style={s.daysRow}>
               {DAYS.map(d => (
-                <TouchableOpacity
-                  key={d}
-                  style={[s.dayChip, addingDay === d && s.dayChipActive]}
-                  onPress={() => { setAddingDay(d); setAddError('') }}
-                >
-                  <Text style={[s.dayChipText, addingDay === d && s.dayChipTextActive]}>{DAYS_SHORT[d]}</Text>
-                </TouchableOpacity>
-              ))}
-            </ScrollView>
-
-            {/* Tipo */}
-            <Text style={s.fieldLabel}>TIPO DE CLASE</Text>
-            <View style={{ flexDirection: 'row', gap: spacing.sm, marginBottom: spacing.md }}>
-              {(['reemplazo', 'regular'] as ClassType[]).map(t => (
-                <TouchableOpacity
-                  key={t}
-                  style={[s.typeBtn, newType === t && s.typeBtnActive]}
-                  onPress={() => setNewType(t)}
-                >
-                  <Text style={[s.typeBtnText, newType === t && s.typeBtnTextActive]}>
-                    {t === 'regular' ? 'Clase regular' : 'Reemplazo'}
-                  </Text>
+                <TouchableOpacity key={d} style={[s.dayChip, addingDays.includes(d) && s.dayChipActive]} onPress={() => toggleDay(d)}>
+                  <Text style={[s.dayChipText, addingDays.includes(d) && s.dayChipTextActive]}>{DAYS_SHORT[d]}</Text>
                 </TouchableOpacity>
               ))}
             </View>
+
+            {/* Tipo */}
+            <Text style={s.fieldLabel}>PARA</Text>
+            <View style={{ flexDirection: 'row', gap: spacing.xs, marginBottom: spacing.md }}>
+              {([['ambos', 'Ambos'], ['reemplazo', 'Reemplazo'], ['regular', 'Clase regular']] as const).map(([k, l]) => (
+                <TouchableOpacity key={k} style={[s.typeBtn, newType === k && s.typeBtnActive]} onPress={() => setNewType(k)}>
+                  <Text style={[s.typeBtnText, newType === k && s.typeBtnTextActive]}>{l}</Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+
+            {/* Franjas rápidas */}
+            <Text style={s.fieldLabel}>FRANJA</Text>
+            <View style={[s.daysRow, { marginBottom: spacing.sm }]}>
+              {PRESETS.map(p => {
+                const on = newStart === p.start && newEnd === p.end
+                return (
+                  <TouchableOpacity key={p.label} style={[s.presetChip, on && s.dayChipActive]} onPress={() => { setNewStart(p.start); setNewEnd(p.end); setAddError('') }}>
+                    <Text style={[s.dayChipText, on && s.dayChipTextActive]}>{p.label}</Text>
+                    <Text style={[s.presetSub, on && s.dayChipTextActive]}>{p.start.slice(0, 2)}–{p.end.slice(0, 2)} h</Text>
+                  </TouchableOpacity>
+                )
+              })}
+            </View>
+            <Text style={s.orExact}>o elegí la hora exacta</Text>
 
             {/* Inicio */}
             <Text style={s.fieldLabel}>DESDE</Text>
@@ -297,7 +351,7 @@ export default function AvailabilityScreen() {
             </ScrollView>
 
             {addError ? <Text style={s.addError}>{addError}</Text> : null}
-            <Button label="Agregar horario" onPress={addSlot} fullWidth />
+            <Button label={addingDays.length > 1 ? `Agregar a ${addingDays.length} días` : 'Agregar horario'} onPress={addSlot} fullWidth disabled={!addingDays.length} />
           </View>
         </View>
       </Modal>
@@ -332,13 +386,34 @@ const s = StyleSheet.create({
   zoneChipActive:  { backgroundColor: colors.sage, borderColor: colors.sage },
   zoneText:        { fontFamily: 'Nunito-Regular', fontSize: 12, color: colors.mid },
   zoneTextActive:  { color: colors.white, fontFamily: 'Nunito-SemiBold' },
+  intro:           { fontFamily: 'Nunito-Regular', fontSize: 13, color: colors.mid, lineHeight: 19, marginBottom: spacing.md },
+  week:            { backgroundColor: colors.white, ...radius.leaf, borderWidth: 0.5, borderColor: colors.borderLight, paddingHorizontal: spacing.md, marginBottom: spacing.md },
+  weekRow:         { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, paddingVertical: 10, minHeight: 50 },
+  weekRowBorder:   { borderTopWidth: 0.5, borderColor: colors.borderLight },
+  weekDay:         { width: 28, fontFamily: 'Nunito-Bold', fontSize: 14, color: colors.dark },
+  weekDayEmpty:    { color: colors.light },
+  weekSlots:       { flex: 1, flexDirection: 'row', flexWrap: 'wrap', gap: 6 },
+  weekNone:        { fontFamily: 'Nunito-Regular', fontSize: 14, color: colors.light },
+  weekAdd:         { width: 32, height: 32, borderRadius: 16, backgroundColor: colors.sageLight, alignItems: 'center', justifyContent: 'center' },
+  pill:            { flexDirection: 'row', alignItems: 'center', gap: 6, paddingLeft: 10, paddingRight: 8, paddingVertical: 5, ...radius.leafSm },
+  pillReg:         { backgroundColor: colors.sageLight },
+  pillRep:         { backgroundColor: colors.goldLight },
+  pillBoth:        { backgroundColor: colors.sageLighter, borderWidth: 0.5, borderColor: colors.mint },
+  pillTime:        { fontFamily: 'Nunito-Bold', fontSize: 12, color: colors.dark },
+  pillType:        { fontFamily: 'Nunito-SemiBold', fontSize: 11, color: colors.mid },
+  labelRow:        { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
+  quickLink:       { fontFamily: 'Nunito-Bold', fontSize: 12, color: colors.sage, marginBottom: spacing.xs },
+  daysRow:         { flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginBottom: spacing.md },
+  presetChip:      { paddingVertical: 7, paddingHorizontal: 12, ...radius.leafSm, backgroundColor: colors.cream, borderWidth: 0.5, borderColor: colors.border, alignItems: 'center' },
+  presetSub:       { fontFamily: 'Nunito-Regular', fontSize: 10, color: colors.light, marginTop: 1 },
+  orExact:         { fontFamily: 'Nunito-Regular', fontSize: 12, color: colors.light, marginBottom: spacing.sm },
   // Modal
   modalOverlay:    { flex: 1, backgroundColor: 'rgba(0,0,0,0.4)', justifyContent: 'flex-end' },
   modalBox:        { backgroundColor: colors.white, borderTopLeftRadius: 20, borderTopRightRadius: 20, padding: spacing.lg, paddingBottom: 40 },
   modalHeader:     { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: spacing.lg },
   modalTitle:      { fontFamily: 'Nunito-Bold', fontSize: 18, color: colors.dark },
   fieldLabel:      { ...typography.caption, marginBottom: spacing.xs },
-  dayChip:         { paddingVertical: 8, paddingHorizontal: 14, borderRadius: 999, backgroundColor: colors.cream, marginRight: spacing.xs, borderWidth: 0.5, borderColor: colors.border },
+  dayChip:         { minWidth: 42, alignItems: 'center', paddingVertical: 8, paddingHorizontal: 10, borderRadius: 999, backgroundColor: colors.cream, borderWidth: 0.5, borderColor: colors.border },
   dayChipActive:   { backgroundColor: colors.sage, borderColor: colors.sage },
   dayChipText:     { fontFamily: 'Nunito-SemiBold', fontSize: 12, color: colors.mid },
   dayChipTextActive:{ color: colors.white },

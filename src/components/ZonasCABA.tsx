@@ -1,51 +1,93 @@
 // src/components/ZonasCABA.tsx
-import React from 'react'
-import { View, Text, TouchableOpacity, StyleSheet } from 'react-native'
-import { colors, spacing, radius } from './ui'
+// Elegir barrios de trabajo: buscador, resumen de lo elegido y selección por zona.
+import React, { useMemo, useState } from 'react'
+import { View, Text, TextInput, TouchableOpacity, StyleSheet } from 'react-native'
+import { Feather } from '@expo/vector-icons'
+import { colors, spacing, radius, typography } from './ui'
 import { ZONAS_CABA } from '../constants/barrios'
 
-const ZONAS = ZONAS_CABA
+const ALL = ZONAS_CABA.flatMap(z => z.barrios)
+// Ignora mayúsculas y tildes ("nunez" encuentra "Núñez")
+const norm = (s: string) => s.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase()
 
-const ALL = ZONAS.flatMap(z => z.barrios)
-
+// onToggle recibe un barrio, '__all__' (toda CABA) o '__clear__' (ninguno)
 interface Props { selected: string[]; onToggle: (b: string) => void }
 
 export default function ZonasCABA({ selected, onToggle }: Props) {
+  const [query, setQuery] = useState('')
   const allSelected = ALL.every(b => selected.includes(b))
+  const q = norm(query.trim())
+  const matches = useMemo(() => (q ? ALL.filter(b => norm(b).includes(q)) : []), [q])
+
+  const setZone = (barrios: string[], on: boolean) =>
+    barrios.forEach(b => { if (on !== selected.includes(b)) onToggle(b) })
+
+  const Chip = ({ b }: { b: string }) => {
+    const on = selected.includes(b)
+    return (
+      <TouchableOpacity style={[s.chip, on && s.chipActive]} onPress={() => onToggle(b)} accessibilityState={{ selected: on }}>
+        {on ? <Feather name="check" size={12} color={colors.white} /> : null}
+        <Text style={[s.chipText, on && s.chipTextActive]}>{b}</Text>
+      </TouchableOpacity>
+    )
+  }
+
   return (
     <View>
-      <TouchableOpacity
-        style={[s.allBtn, allSelected && s.allBtnActive]}
-        onPress={() => onToggle(allSelected ? '__clear__' : '__all__')}
-      >
-        <Text style={[s.allBtnText, allSelected && s.allBtnTextActive]}>
-          {allSelected ? '✓ Toda CABA seleccionada' : 'Seleccionar toda CABA'}
-        </Text>
-      </TouchableOpacity>
-      <Text style={s.count}>{selected.length} barrio{selected.length !== 1 ? 's' : ''} seleccionado{selected.length !== 1 ? 's' : ''}</Text>
-      {ZONAS.map(zona => {
-        const allIn = zona.barrios.every(b => selected.includes(b))
-        const someIn = zona.barrios.some(b => selected.includes(b))
+      {/* Lo elegido, siempre a la vista */}
+      <View style={s.summary}>
+        <View style={s.summaryHead}>
+          <Text style={s.caption}>
+            {selected.length === 0 ? 'TODAVÍA NO ELEGISTE BARRIOS' : allSelected ? 'TRABAJÁS EN TODA CABA' : `TUS BARRIOS (${selected.length})`}
+          </Text>
+          <TouchableOpacity onPress={() => onToggle(allSelected ? '__clear__' : '__all__')}>
+            <Text style={s.link}>{allSelected ? 'Quitar todos' : 'Toda CABA'}</Text>
+          </TouchableOpacity>
+        </View>
+        {selected.length > 0 && !allSelected ? (
+          <View style={s.selectedWrap}>
+            {[...selected].sort((a, b) => a.localeCompare(b, 'es')).map(b => (
+              <TouchableOpacity key={b} style={s.selectedChip} onPress={() => onToggle(b)} accessibilityLabel={`Quitar ${b}`}>
+                <Text style={s.selectedTxt}>{b}</Text>
+                <Feather name="x" size={12} color={colors.sage} />
+              </TouchableOpacity>
+            ))}
+          </View>
+        ) : selected.length === 0 ? (
+          <Text style={s.hint}>Elegí los barrios donde podés dar clases. Los estudios de esos barrios te ven primero.</Text>
+        ) : null}
+      </View>
+
+      {/* Buscador */}
+      <View style={s.search}>
+        <Feather name="search" size={15} color={colors.light} />
+        <TextInput style={s.searchInput} value={query} onChangeText={setQuery}
+          placeholder="Buscar barrio..." placeholderTextColor={colors.light} autoCorrect={false} />
+        {query ? (
+          <TouchableOpacity onPress={() => setQuery('')} hitSlop={10}><Feather name="x" size={15} color={colors.light} /></TouchableOpacity>
+        ) : null}
+      </View>
+
+      {q ? (
+        <View style={s.zone}>
+          {matches.length ? <View style={s.grid}>{matches.map(b => <Chip key={b} b={b} />)}</View>
+            : <Text style={[s.hint, { padding: spacing.md }]}>No encontramos ese barrio</Text>}
+        </View>
+      ) : ZONAS_CABA.map(zona => {
+        const count = zona.barrios.filter(b => selected.includes(b)).length
+        const allIn = count === zona.barrios.length
         return (
-          <View key={zona.nombre} style={s.zonaSection}>
-            <TouchableOpacity style={s.zonaHeader} onPress={() => {
-              zona.barrios.forEach(b => {
-                if (allIn && selected.includes(b)) onToggle(b)
-                else if (!allIn && !selected.includes(b)) onToggle(b)
-              })
-            }}>
-              <Text style={s.zonaName}>{zona.nombre}</Text>
-              <View style={[s.check, allIn && s.checkActive, someIn && !allIn && s.checkPartial]}>
-                <Text style={s.checkText}>{allIn ? '✓' : someIn ? '–' : ''}</Text>
+          <View key={zona.nombre} style={s.zone}>
+            <View style={s.zoneHead}>
+              <View>
+                <Text style={s.zoneName}>{zona.nombre}</Text>
+                <Text style={s.zoneCount}>{count ? `${count} de ${zona.barrios.length}` : `${zona.barrios.length} barrios`}</Text>
               </View>
-            </TouchableOpacity>
-            <View style={s.grid}>
-              {zona.barrios.map(b => (
-                <TouchableOpacity key={b} style={[s.chip, selected.includes(b) && s.chipActive]} onPress={() => onToggle(b)}>
-                  <Text style={[s.chipText, selected.includes(b) && s.chipTextActive]}>{b}</Text>
-                </TouchableOpacity>
-              ))}
+              <TouchableOpacity style={[s.zoneBtn, allIn && s.zoneBtnOn]} onPress={() => setZone(zona.barrios, !allIn)}>
+                <Text style={[s.zoneBtnTxt, allIn && s.zoneBtnTxtOn]}>{allIn ? 'Quitar' : 'Todos'}</Text>
+              </TouchableOpacity>
             </View>
+            <View style={s.grid}>{zona.barrios.map(b => <Chip key={b} b={b} />)}</View>
           </View>
         )
       })}
@@ -54,21 +96,27 @@ export default function ZonasCABA({ selected, onToggle }: Props) {
 }
 
 const s = StyleSheet.create({
-  allBtn:         { borderWidth: 1.5, borderColor: colors.sage, ...radius.leaf, padding: spacing.md, alignItems: 'center', marginBottom: spacing.sm },
-  allBtnActive:   { backgroundColor: colors.sage },
-  allBtnText:     { fontFamily: 'Nunito-SemiBold', fontSize: 14, color: colors.sage },
-  allBtnTextActive:{ color: colors.white },
-  count:          { fontFamily: 'Nunito-Regular', fontSize: 12, color: colors.mid, marginBottom: spacing.md, textAlign: 'center' },
-  zonaSection:    { marginBottom: spacing.sm, backgroundColor: colors.white, borderRadius: radius.md, overflow: 'hidden', borderWidth: 0.5, borderColor: colors.borderLight },
-  zonaHeader:     { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', padding: spacing.md, backgroundColor: colors.cream, borderBottomWidth: 0.5, borderColor: colors.borderLight },
-  zonaName:       { fontFamily: 'Nunito-Bold', fontSize: 13, color: colors.dark },
-  check:          { width: 24, height: 24, borderRadius: 12, borderWidth: 1.5, borderColor: colors.border, alignItems: 'center', justifyContent: 'center' },
-  checkActive:    { backgroundColor: colors.sage, borderColor: colors.sage },
-  checkPartial:   { backgroundColor: colors.sageLight, borderColor: colors.sageMid },
-  checkText:      { fontFamily: 'Nunito-Bold', fontSize: 11, color: colors.white },
-  grid:           { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.xs, padding: spacing.sm },
-  chip:           { paddingVertical: 6, paddingHorizontal: 10, borderRadius: 999, backgroundColor: colors.cream, borderWidth: 0.5, borderColor: colors.border },
-  chipActive:     { backgroundColor: colors.sage, borderColor: colors.sage },
-  chipText:       { fontFamily: 'Nunito-Regular', fontSize: 12, color: colors.mid },
-  chipTextActive: { color: colors.white, fontFamily: 'Nunito-SemiBold' },
+  summary:       { backgroundColor: colors.white, ...radius.leaf, borderWidth: 0.5, borderColor: colors.borderLight, padding: spacing.md, marginBottom: spacing.md },
+  summaryHead:   { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
+  caption:       { ...typography.caption },
+  link:          { fontFamily: 'Nunito-Bold', fontSize: 13, color: colors.sage },
+  hint:          { fontFamily: 'Nunito-Regular', fontSize: 13, color: colors.mid, lineHeight: 19, marginTop: spacing.sm },
+  selectedWrap:  { flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginTop: spacing.sm },
+  selectedChip:  { flexDirection: 'row', alignItems: 'center', gap: 6, paddingVertical: 6, paddingLeft: 10, paddingRight: 8, borderRadius: 999, backgroundColor: colors.sageLight },
+  selectedTxt:   { fontFamily: 'Nunito-SemiBold', fontSize: 12, color: colors.sage },
+  search:        { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, height: 44, paddingHorizontal: spacing.md, backgroundColor: colors.white, ...radius.leaf, borderWidth: 0.5, borderColor: colors.border, marginBottom: spacing.md },
+  searchInput:   { flex: 1, fontFamily: 'Nunito-Regular', fontSize: 14, color: colors.dark },
+  zone:          { marginBottom: spacing.sm, backgroundColor: colors.white, ...radius.leaf, borderWidth: 0.5, borderColor: colors.borderLight, overflow: 'hidden' },
+  zoneHead:      { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: spacing.md, paddingTop: spacing.md, paddingBottom: spacing.xs },
+  zoneName:      { fontFamily: 'Nunito-Bold', fontSize: 14, color: colors.dark },
+  zoneCount:     { fontFamily: 'Nunito-Regular', fontSize: 12, color: colors.light, marginTop: 1 },
+  zoneBtn:       { paddingVertical: 6, paddingHorizontal: 14, ...radius.leafSm, borderWidth: 1, borderColor: colors.sage },
+  zoneBtnOn:     { backgroundColor: colors.sageLight, borderColor: colors.sageLight },
+  zoneBtnTxt:    { fontFamily: 'Nunito-Bold', fontSize: 12, color: colors.sage },
+  zoneBtnTxtOn:  { color: colors.sage },
+  grid:          { flexDirection: 'row', flexWrap: 'wrap', gap: 6, padding: spacing.md, paddingTop: spacing.sm },
+  chip:          { flexDirection: 'row', alignItems: 'center', gap: 4, paddingVertical: 7, paddingHorizontal: 12, borderRadius: 999, backgroundColor: colors.cream, borderWidth: 0.5, borderColor: colors.border },
+  chipActive:    { backgroundColor: colors.sage, borderColor: colors.sage },
+  chipText:      { fontFamily: 'Nunito-Regular', fontSize: 13, color: colors.mid },
+  chipTextActive:{ color: colors.white, fontFamily: 'Nunito-SemiBold' },
 })
