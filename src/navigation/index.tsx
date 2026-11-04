@@ -8,7 +8,7 @@
 // Las pantallas no hacen navigation.replace() entre stacks: cambian el store.
 import React, { useEffect } from 'react'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
-import { View } from 'react-native'
+import { View, Text } from 'react-native'
 import { StatusBar } from 'expo-status-bar'
 import { NavigationContainer, createNavigationContainerRef } from '@react-navigation/native'
 import { createNativeStackNavigator } from '@react-navigation/native-stack'
@@ -104,9 +104,13 @@ function lottieIcon(source: any) {
 const tabScreenOptions = (tabStyle: any) => ({
   headerShown: false,
   tabBarStyle: tabStyle,
+  // Íconos y textos en verde agua apagado; la pestaña actual en el verde principal,
+  // con fondo resaltado (en LottieTab) y texto en negrita
   tabBarActiveTintColor: colors.sage,
-  tabBarInactiveTintColor: colors.light,
-  tabBarLabelStyle: { fontFamily: 'Nunito-SemiBold', fontSize: 11, marginTop: 2 },
+  tabBarInactiveTintColor: colors.sageMid,
+  tabBarLabel: ({ focused, color, children }: any) => (
+    <Text style={{ fontFamily: focused ? 'Nunito-Bold' : 'Nunito-SemiBold', fontSize: 11, marginTop: 4, color }}>{children}</Text>
+  ),
 })
 
 // ── INSTRUCTOR TABS ──────────────────────────────────────────

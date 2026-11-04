@@ -9,6 +9,7 @@ import { colors } from './ui'
 export default function NotificationBell() {
   const nav: any = useNavigation()
   const unread = useUnreadNotifications()
+  if (unread < 0) return null // centro de notificaciones todavía no disponible
   return (
     <TouchableOpacity style={s.btn} onPress={() => nav.navigate('Notifications')} hitSlop={8}
       accessibilityRole="button" accessibilityLabel={unread ? `Notificaciones, ${unread} sin leer` : 'Notificaciones'}>

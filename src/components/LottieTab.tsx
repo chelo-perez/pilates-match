@@ -23,7 +23,9 @@ export default function LottieTab({ source, focused, size = 26 }: LottieTabProps
   }, [focused])
 
   return (
-    <View style={{ width: size, height: size }}>
+    // Pestaña actual: el ícono va sobre una "píldora" verde agua clara
+    <View style={{ width: size + 30, height: size + 6, borderRadius: (size + 6) / 2, alignItems: 'center', justifyContent: 'center',
+      backgroundColor: focused ? colors.sageLight : 'transparent' }}>
       <LottieView
         ref={ref}
         source={source}
@@ -33,7 +35,7 @@ export default function LottieTab({ source, focused, size = 26 }: LottieTabProps
         colorFilters={[
           {
             keypath: '**',
-            color: focused ? colors.sage : colors.light,
+            color: focused ? colors.sage : colors.sageMid,
           },
         ]}
         speed={1.2}

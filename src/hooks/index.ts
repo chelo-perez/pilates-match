@@ -160,7 +160,7 @@ export const useUnreadNotifications = () => {
     queryFn: async () => {
       const { count, error } = await supabase
         .from('notifications').select('id', { count: 'exact', head: true }).is('read_at', null)
-      if (error) return 0 // si la tabla todavía no existe, la campanita queda sin número
+      if (error) return -1 // -1 = la tabla todavía no existe: la campanita se oculta
       return count ?? 0
     },
     enabled: !!userId,

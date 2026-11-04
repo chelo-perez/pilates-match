@@ -2,7 +2,7 @@
 import React, { useState, useEffect } from 'react'
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Modal, FlatList, ActivityIndicator, Alert, Linking } from 'react-native'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
-import { pickSquareImage } from '../../lib/images'
+import { usePhotoCropper } from '../../components/PhotoCropper'
 import * as FileSystem from 'expo-file-system/legacy'
 import * as DocumentPicker from 'expo-document-picker'
 import { supabase, storage } from '../../lib/supabase'
@@ -41,6 +41,7 @@ async function readBytes(uri: string, ext: string): Promise<Uint8Array> {
 }
 
 export default function ProfileEditScreen() {
+  const { pickPhoto, cropModal } = usePhotoCropper('Ajustá tu foto')
   const user = useAuthStore(s => s.user)
   const { toast, showToast, hideToast } = useToast()
   const qc = useQueryClient()
@@ -104,7 +105,7 @@ export default function ProfileEditScreen() {
     if (!user?.id || !instructor) return
     // Sin el recortador nativo (en Android 15 no deja guardar): recortamos nosotros
     let pickedUri: string | null
-    try { pickedUri = await pickSquareImage() } catch (e) { showToast(errorText(e), 'warning'); return }
+    try { pickedUri = await pickPhoto() } catch (e) { showToast(errorText(e), 'warning'); return }
     if (!pickedUri) return
 
     try {
@@ -421,6 +422,7 @@ export default function ProfileEditScreen() {
         </View>
       </Modal>
       <Toast visible={toast.visible} message={toast.message} type={toast.type} onHide={hideToast} />
+      {cropModal}
     </View>
   )
 }

@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react'
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, TextInput, Alert } from 'react-native'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { pickSquareImage } from '../../lib/images'
+import { usePhotoCropper } from '../../components/PhotoCropper'
 import * as FileSystem from 'expo-file-system/legacy'
 import { supabase } from '../../lib/supabase'
 import { useAuthStore } from '../../store'
@@ -15,6 +15,7 @@ import Toast from '../../components/Toast'
 import { useToast } from '../../hooks/useToast'
 
 export default function CamaraProfileEditScreen({ navigation }: any) {
+  const { pickPhoto, cropModal } = usePhotoCropper('Ajustá el logo')
   const user = useAuthStore(s => s.user)
   const qc   = useQueryClient()
   const { toast, showToast, hideToast } = useToast()
@@ -67,7 +68,7 @@ export default function CamaraProfileEditScreen({ navigation }: any) {
   ) => {
     // Sin el recortador nativo (en Android 15 no deja guardar): recortamos nosotros
     let pickedUri: string | null
-    try { pickedUri = await pickSquareImage() } catch (e) { showToast(errorText(e), 'warning'); return }
+    try { pickedUri = await pickPhoto() } catch (e) { showToast(errorText(e), 'warning'); return }
     if (!pickedUri) return
 
     try {
@@ -194,6 +195,7 @@ export default function CamaraProfileEditScreen({ navigation }: any) {
       </ScrollView>
 
       <Toast visible={toast.visible} message={toast.message} type={toast.type} onHide={hideToast} />
+      {cropModal}
     </View>
   )
 }

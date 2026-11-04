@@ -2,7 +2,7 @@
 import React, { useState, useEffect } from 'react'
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, TextInput, Alert } from 'react-native'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { pickSquareImage } from '../../lib/images'
+import { usePhotoCropper } from '../../components/PhotoCropper'
 import * as FileSystem from 'expo-file-system/legacy'
 import { supabase } from '../../lib/supabase'
 import { useAuthStore } from '../../store'
@@ -29,6 +29,7 @@ const EQUIPMENT_KEYS: string[] = EQUIPMENT_OPTIONS.map(e => e.key)
 const equipLabel = (k: string) => (SPECIALTY_LABELS as Record<string, string>)[k] ?? k
 
 export default function StudioProfileEditScreen({ navigation }: any) {
+  const { pickPhoto, cropModal } = usePhotoCropper('Ajustá el logo')
   const { data: studio, isLoading } = useMyStudio()
   const user = useAuthStore(s => s.user)
   const qc   = useQueryClient()
@@ -56,7 +57,7 @@ export default function StudioProfileEditScreen({ navigation }: any) {
   const pickLogo = async () => {
     // Sin el recortador nativo (en Android 15 no deja guardar): recortamos nosotros
     let pickedUri: string | null
-    try { pickedUri = await pickSquareImage() } catch (e) { showToast(humanizeError(e), 'warning'); return }
+    try { pickedUri = await pickPhoto() } catch (e) { showToast(humanizeError(e), 'warning'); return }
     if (!pickedUri) return
     try {
       setUploading(true)
@@ -253,6 +254,7 @@ export default function StudioProfileEditScreen({ navigation }: any) {
       </ScrollView>
 
       <Toast visible={toast.visible} message={toast.message} type={toast.type} onHide={hideToast} />
+      {cropModal}
     </View>
   )
 }
