@@ -8,6 +8,7 @@ import { Avatar, Badge, EmptyState, ErrorState, LoadingScreen, colors, spacing, 
 import BlobCard from '../../components/BlobCard'
 import HeroHeader from '../../components/HeroHeader'
 import { Feather } from '@expo/vector-icons'
+import { useAuthStore } from '../../store'
 
 type Filter = 'todos' | 'pendiente' | 'verificado' | 'rechazado' | 'inactivo'
 const FILTERS: { key: Filter; label: string }[] = [
@@ -19,6 +20,7 @@ const FILTERS: { key: Filter; label: string }[] = [
 ]
 
 export default function DirectoryScreen({ navigation, route }: any) {
+  const isPlatform = useAuthStore(st => st.user?.role) === 'super_admin'
   const [filter, setFilter] = useState<Filter>(route?.params?.filter ?? 'todos')
   const [search, setSearch] = useState('')
   const [refreshing, setRefreshing] = useState(false)
@@ -32,7 +34,7 @@ export default function DirectoryScreen({ navigation, route }: any) {
     queryKey: ['camara-instructors', filter],
     queryFn: async () => {
       let q = db.instructors()
-        .select('id, full_name, neighborhood, dni, avatar_url, verification_status, is_active, created_at, certifications(id, review_status)')
+        .select('id, full_name, neighborhood, dni, avatar_url, verification_status, is_active, created_at, certifications(id, review_status), camara:camaras(name)')
         .order('created_at', { ascending: false })
       if (filter !== 'todos') q = q.eq('verification_status', filter)
       const { data, error } = await q
@@ -97,13 +99,14 @@ export default function DirectoryScreen({ navigation, route }: any) {
           renderItem={({ item }: any) => {
             const st = VERIFICATION_STATUS[item.verification_status] ?? VERIFICATION_STATUS.pendiente
             const pendingCerts = (item.certifications ?? []).filter((c: any) => (c.review_status ?? 'pending') === 'pending').length
-            const meta = [item.neighborhood, item.dni ? `DNI ${item.dni}` : null].filter(Boolean).join(' · ')
+            // La plataforma ve todas las redes: se aclara a cuál pertenece
+            const meta = [isPlatform ? item.camara?.name : null, item.neighborhood, item.dni ? `DNI ${item.dni}` : null].filter(Boolean).join(' · ')
             return (
               <BlobCard style={styles.card} onPress={() => navigation.navigate('VerifyInstructor', { instructorId: item.id })}>
                 <Avatar name={item.full_name} size={40} source={item.avatar_url} />
                 <View style={{ flex: 1, marginLeft: spacing.sm }}>
                   <Text style={styles.name}>{item.full_name}</Text>
-                  {meta ? <Text style={styles.meta}>{meta}</Text> : null}
+                  {meta ? <Text style={styles.meta} numberOfLines={2}>{meta}</Text> : null}
                   {pendingCerts > 0 ? (
                     <Text style={styles.pendingCerts}>{pendingCerts} certificado{pendingCerts > 1 ? 's' : ''} por revisar</Text>
                   ) : null}

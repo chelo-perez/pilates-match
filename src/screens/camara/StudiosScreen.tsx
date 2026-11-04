@@ -17,10 +17,12 @@ import { Feather } from '@expo/vector-icons'
 import { applyPlan, membershipOf, PAID_PLANS, STUDIO_KEYS } from './planUtils'
 import { entity } from '../../lib/entity'
 import { myNetwork } from '../../lib/platform'
+import { useAuthStore } from '../../store'
 
 type Filter = 'todos' | 'miembro' | 'no_miembro'
 
 export default function CamaraStudiosScreen({ navigation, route }: any) {
+  const isPlatform = useAuthStore(st => st.user?.role) === 'super_admin'
   const { toast, showToast, hideToast } = useToast()
   const qc = useQueryClient()
   const [filter, setFilter]   = useState<Filter>(route?.params?.filter ?? 'todos')
@@ -36,7 +38,7 @@ export default function CamaraStudiosScreen({ navigation, route }: any) {
     queryFn: async () => {
       let q = myNetwork(db.studios()
         .select(`
-          id, name, neighborhood, is_member, created_at,
+          id, name, neighborhood, is_member, created_at, camara:camaras(name),
           membership:memberships(status, plan_type, start_date, end_date, matches_used_month, matches_limit, last_reset_date)
         `))
         .order('created_at', { ascending: false })
@@ -171,8 +173,8 @@ export default function CamaraStudiosScreen({ navigation, route }: any) {
                 </View>
                 <View style={styles.info}>
                   <Text style={styles.studioName}>{studio.name}</Text>
-                  <Text style={styles.neighborhood}>
-                    <Feather name="map-pin" size={11} color={colors.light} /> {studio.neighborhood}
+                  <Text style={styles.neighborhood} numberOfLines={2}>
+                    <Feather name="map-pin" size={11} color={colors.light} /> {studio.neighborhood}{isPlatform && studio.camara?.name ? ` · ${studio.camara.name}` : ''}
                   </Text>
                 </View>
                 <View style={{ alignItems: 'flex-end', gap: 4 }}>

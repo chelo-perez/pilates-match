@@ -123,7 +123,7 @@ const s = StyleSheet.create({
   row:        { flexDirection: 'row', justifyContent: 'space-between', paddingVertical: 4 },
   rowL:       { fontFamily: 'Nunito-Regular', fontSize: 13, color: colors.mid },
   rowV:       { fontFamily: 'Nunito-SemiBold', fontSize: 13, color: colors.dark },
-  note:       { ...typography.caption, textAlign: 'center', marginTop: spacing.sm, color: colors.light },
+  note:       { fontFamily: 'Nunito-Regular', fontSize: 12, lineHeight: 17, textAlign: 'center', marginTop: spacing.sm, color: colors.light },
   link:       { fontFamily: 'Nunito-Bold', fontSize: 13, color: colors.sage },
   overlay:    { flex: 1, backgroundColor: colors.overlay, justifyContent: 'center', padding: spacing.lg },
   sheet:      { backgroundColor: colors.cream, borderRadius: 20, padding: spacing.lg },
