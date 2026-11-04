@@ -53,6 +53,7 @@ export default function StudioHomeScreen({ navigation }: any) {
   const planName     = planLabel(membership?.plan_type ?? 'freemium')
   const pendingEvals = pending.length
   const avgScore     = Number(stats?.avg_score ?? 0)
+  const hasActivity  = (stats?.total_evaluations ?? 0) > 0 || pendingEvals > 0
 
   return (
     <View style={{ flex: 1, backgroundColor: colors.cream }}>
@@ -80,55 +81,8 @@ export default function StudioHomeScreen({ navigation }: any) {
           ) : null}
         />
 
-        {/* KPI grid flotante */}
-        <View style={s.kpiGrid}>
-          <BlobCard style={s.kpiCard} delay={0}>
-            <Text style={[s.kpiNum, { color: colors.sage }]}>
-              {avgScore > 0 ? avgScore.toFixed(1) : '—'}
-            </Text>
-            <Text style={s.kpiLbl}>Puntaje que diste</Text>
-          </BlobCard>
-          <BlobCard style={s.kpiCard} delay={2000}>
-            <Text style={s.kpiNum}>{stats?.unique_instructors ?? 0}</Text>
-            <Text style={s.kpiLbl}>Instructores evaluados</Text>
-          </BlobCard>
-          <BlobCard style={s.kpiCard} delay={4000}>
-            <Text style={s.kpiNum}>{stats?.total_evaluations ?? 0}</Text>
-            <Text style={s.kpiLbl}>Evaluaciones</Text>
-          </BlobCard>
-          <BlobCard style={[s.kpiCard, pendingEvals > 0 && s.kpiWarn]} delay={6000}
-            onPress={pendingEvals > 0 ? () => navigation.navigate('PendingEvaluations') : undefined}>
-            <Text style={[s.kpiNum, pendingEvals > 0 && { color: colors.warnTx }]}>{pendingEvals}</Text>
-            <Text style={s.kpiLbl}>Por evaluar</Text>
-          </BlobCard>
-        </View>
-
-        {/* Perfil incompleto */}
-        {(!(studio.budget_regular || studio.budget_replacement) || !studio.equipment?.length) && (
-          <TouchableOpacity
-            style={s.profileBanner}
-            onPress={() => navigation.navigate('StudioProfileEdit')}
-            activeOpacity={0.85}
-          >
-            <Feather name="edit-3" size={14} color={colors.warnTx} />
-            <Text style={s.profileBannerTxt}>Cargá tu equipamiento y presupuesto para ver qué instructores te convienen</Text>
-            <Feather name="chevron-right" size={14} color={colors.warnTx} />
-          </TouchableOpacity>
-        )}
-
-        {/* Membresía */}
-        <TouchableOpacity
-          style={s.membershipBtn}
-          onPress={() => navigation.navigate('Membership')}
-          activeOpacity={0.85}
-        >
-          <Feather name="star" size={14} color={colors.gold} />
-          <Text style={s.membershipBtnTxt}>Plan {planName} · Ver mi plan</Text>
-          <Feather name="chevron-right" size={14} color={colors.gold} />
-        </TouchableOpacity>
-
         {/* Buscar */}
-        <View style={s.searchWrap}>
+        <View style={s.searchHero}>
           <Button
             label="Buscar instructor"
             icon={<Feather name="search" size={18} color={colors.white} />}
@@ -150,17 +104,18 @@ export default function StudioHomeScreen({ navigation }: any) {
           </TouchableOpacity>
         )}
 
-        {/* Banner publicitario */}
-        <View style={s.sponsorBanner}>
-          <View style={s.sponsorLeft}>
-            <Text style={s.sponsorTag}>PUBLICIDAD</Text>
-            <Text style={s.sponsorTitle}>Tu espacio acá</Text>
-            <Text style={s.sponsorSub}>contacto@trabajomasfacil.com</Text>
-          </View>
-          <View style={s.sponsorLogo}>
-            <Feather name="star" size={18} color={colors.sage} />
-          </View>
-        </View>
+        {/* Perfil incompleto */}
+        {(!(studio.budget_regular || studio.budget_replacement) || !studio.equipment?.length) && (
+          <TouchableOpacity
+            style={s.profileBanner}
+            onPress={() => navigation.navigate('StudioProfileEdit')}
+            activeOpacity={0.85}
+          >
+            <Feather name="edit-3" size={14} color={colors.warnTx} />
+            <Text style={s.profileBannerTxt}>Cargá tu equipamiento y presupuesto para ver qué instructores te convienen</Text>
+            <Feather name="chevron-right" size={14} color={colors.warnTx} />
+          </TouchableOpacity>
+        )}
 
         {/* Propuestas recientes */}
         <BlobCard style={s.section} delay={3000}>
@@ -198,6 +153,43 @@ export default function StudioHomeScreen({ navigation }: any) {
             })
           )}
         </BlobCard>
+        {/* Actividad: solo cuando hay algo que mostrar (cuatro ceros no le dicen nada a un estudio nuevo) */}
+        {hasActivity && (<>
+        <Text style={s.blockTitle}>TU ACTIVIDAD</Text>
+        <View style={s.kpiGrid}>
+          <BlobCard style={s.kpiCard} delay={0}>
+            <Text style={[s.kpiNum, { color: colors.sage }]}>
+              {avgScore > 0 ? avgScore.toFixed(1) : '—'}
+            </Text>
+            <Text style={s.kpiLbl}>Puntaje que diste</Text>
+          </BlobCard>
+          <BlobCard style={s.kpiCard} delay={2000}>
+            <Text style={s.kpiNum}>{stats?.unique_instructors ?? 0}</Text>
+            <Text style={s.kpiLbl}>Instructores evaluados</Text>
+          </BlobCard>
+          <BlobCard style={s.kpiCard} delay={4000}>
+            <Text style={s.kpiNum}>{stats?.total_evaluations ?? 0}</Text>
+            <Text style={s.kpiLbl}>Evaluaciones</Text>
+          </BlobCard>
+          <BlobCard style={[s.kpiCard, pendingEvals > 0 && s.kpiWarn]} delay={6000}
+            onPress={pendingEvals > 0 ? () => navigation.navigate('PendingEvaluations') : undefined}>
+            <Text style={[s.kpiNum, pendingEvals > 0 && { color: colors.warnTx }]}>{pendingEvals}</Text>
+            <Text style={s.kpiLbl}>Por evaluar</Text>
+          </BlobCard>
+        </View>
+        </>)}
+
+        {/* Membresía */}
+        <TouchableOpacity
+          style={s.membershipBtn}
+          onPress={() => navigation.navigate('Membership')}
+          activeOpacity={0.85}
+        >
+          <Feather name="star" size={14} color={colors.gold} />
+          <Text style={s.membershipBtnTxt}>Plan {planName} · Ver mi plan</Text>
+          <Feather name="chevron-right" size={14} color={colors.gold} />
+        </TouchableOpacity>
+
       </ScrollView>
     </View>
   )
@@ -209,7 +201,9 @@ const s = StyleSheet.create({
   memberBadge:    { marginTop: 10, alignSelf: 'center', backgroundColor: colors.goldLight, borderRadius: 999, paddingHorizontal: 10, paddingVertical: 3 },
   memberBadgeTxt: { fontFamily: 'Nunito-Bold', fontSize: 10, color: colors.gold },
 
-  kpiGrid:        { flexDirection: 'row', flexWrap: 'wrap', paddingHorizontal: spacing.md, paddingTop: spacing.sm, gap: spacing.sm, marginTop: -12, zIndex: 2, marginBottom: spacing.md },
+  kpiGrid:        { flexDirection: 'row', flexWrap: 'wrap', paddingHorizontal: spacing.md, gap: spacing.sm, marginBottom: spacing.md },
+  blockTitle:     { ...typography.caption, paddingHorizontal: spacing.md, marginBottom: spacing.sm, marginTop: spacing.xs },
+  searchHero:     { paddingHorizontal: spacing.md, marginTop: spacing.sm, marginBottom: spacing.md },
   kpiCard:        { flexBasis: '47%', padding: spacing.md },
   kpiWarn:        { borderLeftWidth: 3, borderLeftColor: colors.warnTx },
   kpiNum:         { fontFamily: 'Nunito-Bold', fontSize: 28, color: colors.dark, marginBottom: 2 },
@@ -217,12 +211,6 @@ const s = StyleSheet.create({
 
   profileBanner:   { flexDirection: 'row', alignItems: 'center', gap: 8, marginHorizontal: spacing.md, marginBottom: spacing.sm, backgroundColor: colors.warnBg, borderTopLeftRadius: 14, borderTopRightRadius: 0, borderBottomLeftRadius: 0, borderBottomRightRadius: 14, padding: spacing.md, borderWidth: 0.5, borderColor: colors.border },
   profileBannerTxt: { fontFamily: 'Nunito-Bold', fontSize: 12, color: colors.warnTx, flex: 1 },
-  sponsorBanner:    { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginHorizontal: spacing.md, marginBottom: spacing.md, backgroundColor: colors.sageLighter, borderTopLeftRadius: 14, borderTopRightRadius: 0, borderBottomLeftRadius: 0, borderBottomRightRadius: 14, paddingHorizontal: spacing.md, paddingVertical: 10, borderWidth: 0.5, borderColor: colors.border },
-  sponsorLeft:      { flex: 1 },
-  sponsorTag:       { ...typography.caption, marginBottom: 2 },
-  sponsorTitle:     { fontFamily: 'Nunito-Bold', fontSize: 13, color: colors.dark },
-  sponsorSub:       { fontFamily: 'Nunito-Regular', fontSize: 11, color: colors.light },
-  sponsorLogo:      { width: 40, height: 40, borderRadius: 20, backgroundColor: colors.sageLight, alignItems: 'center', justifyContent: 'center' },
   membershipBtn:    { flexDirection: 'row', alignItems: 'center', gap: 8, marginHorizontal: spacing.md, marginBottom: spacing.sm, backgroundColor: colors.goldLight, borderTopLeftRadius: 14, borderTopRightRadius: 0, borderBottomLeftRadius: 0, borderBottomRightRadius: 14, padding: 12, borderWidth: 0.5, borderColor: colors.border },
   membershipBtnTxt: { fontFamily: 'Nunito-Bold', fontSize: 12, color: colors.gold, flex: 1 },
   searchWrap:       { paddingHorizontal: spacing.md, marginBottom: spacing.md },

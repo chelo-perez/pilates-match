@@ -16,7 +16,7 @@ const PASS = 'e2e-Test-Password-1'
   const shot = async (p, n) => { await p.waitForTimeout(2500); await p.screenshot({ path: `${OUT}/${n}.png` }); console.log('📸', n) }
   const tap = (p, s, exact = false) => p.getByText(s, { exact }).last().click({ timeout: 8000 })
   const login = async (p, email) => {
-    await tap(p, 'Iniciar sesión con email')
+    await tap(p, 'Continuar con email')
     await p.getByPlaceholder('hola@mipilates.com').fill(email); await p.getByPlaceholder('••••••••').fill(PASS)
     await tap(p, 'Iniciar sesión', true); await p.waitForTimeout(5000)
   }

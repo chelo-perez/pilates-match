@@ -93,6 +93,7 @@ export default function InstructorDashboardScreen({ navigation }: any) {
   const firstName   = instructor.full_name?.split(' ')?.[0] ?? 'Hola'
   const camara      = camaraName ?? 'la Cámara'
   const avgScore    = stats?.avg_score ? Number(stats.avg_score).toFixed(1) : '—'
+  const hasActivity = (activity?.classes ?? 0) > 0 || Number(stats?.total_evaluations ?? 0) > 0
   const rates: any  = Array.isArray(instructor.rates) ? instructor.rates[0] : instructor.rates
   const bannerColors = status === 'rechazado'
     ? { bg: colors.redBg, tx: colors.redTx }
@@ -124,22 +125,6 @@ export default function InstructorDashboardScreen({ navigation }: any) {
           }
         />
 
-        {/* KPIs */}
-        <View style={s.kpiRow}>
-          <BlobCard style={s.kpiCard} delay={0}>
-            <Text style={s.kpiNum}>{activity?.classes ?? 0}</Text>
-            <Text style={s.kpiLbl}>Clases dadas</Text>
-          </BlobCard>
-          <BlobCard style={s.kpiCard} blobColor="rgba(184,150,12,0.16)" blobColor2="rgba(184,150,12,0.10)" delay={2500}>
-            <Text style={s.kpiNum}>{activity?.studios ?? 0}</Text>
-            <Text style={s.kpiLbl}>Estudios</Text>
-          </BlobCard>
-          <BlobCard style={s.kpiCard} delay={5000}>
-            <Text style={s.kpiNum}>{avgScore}</Text>
-            <Text style={s.kpiLbl}>Puntaje</Text>
-          </BlobCard>
-        </View>
-
         {/* Estado de verificación */}
         {!isVerified && (
           <View style={[s.statusBanner, { backgroundColor: bannerColors.bg }]}>
@@ -161,6 +146,16 @@ export default function InstructorDashboardScreen({ navigation }: any) {
           </View>
         )}
 
+        {/* Acción principal: responder propuestas */}
+        <View style={s.ctaWrap}>
+          <Button
+            label={activity?.pending ? `Ver propuestas (${activity.pending})` : 'Ver propuestas'}
+            onPress={() => navigation.navigate('InstructorPropuestas')}
+            icon={<Feather name="arrow-right" size={16} color={colors.white} />}
+            fullWidth
+          />
+        </View>
+
         {/* Tarifas */}
         <BlobCard style={s.section} delay={1500}>
           <View style={s.sectionHeader}>
@@ -180,6 +175,24 @@ export default function InstructorDashboardScreen({ navigation }: any) {
             </View>
           </View>
         </BlobCard>
+
+        {/* Actividad: solo cuando ya hay clases o evaluaciones */}
+        {hasActivity && (
+        <View style={s.kpiRow}>
+          <BlobCard style={s.kpiCard} delay={0}>
+            <Text style={s.kpiNum}>{activity?.classes ?? 0}</Text>
+            <Text style={s.kpiLbl}>Clases dadas</Text>
+          </BlobCard>
+          <BlobCard style={s.kpiCard} blobColor="rgba(184,150,12,0.16)" blobColor2="rgba(184,150,12,0.10)" delay={2500}>
+            <Text style={s.kpiNum}>{activity?.studios ?? 0}</Text>
+            <Text style={s.kpiLbl}>Estudios</Text>
+          </BlobCard>
+          <BlobCard style={s.kpiCard} delay={5000}>
+            <Text style={s.kpiNum}>{avgScore}</Text>
+            <Text style={s.kpiLbl}>Puntaje</Text>
+          </BlobCard>
+        </View>
+        )}
 
         {/* Feedback */}
         <BlobCard style={s.section} delay={5000}>
@@ -206,14 +219,6 @@ export default function InstructorDashboardScreen({ navigation }: any) {
           )}
         </BlobCard>
 
-        <View style={{ paddingHorizontal: spacing.md }}>
-          <Button
-            label={activity?.pending ? `Ver propuestas (${activity.pending})` : 'Ver propuestas'}
-            onPress={() => navigation.navigate('InstructorPropuestas')}
-            icon={<Feather name="arrow-right" size={16} color={colors.white} />}
-            fullWidth
-          />
-        </View>
       </ScrollView>
     </View>
   )
@@ -226,7 +231,8 @@ const s = StyleSheet.create({
   verifiedTag:     { flexDirection: 'row', alignItems: 'center', gap: 4, alignSelf: 'center', marginTop: 12, backgroundColor: 'rgba(184,150,12,0.22)', borderWidth: 1, borderColor: 'rgba(184,150,12,0.38)', borderRadius: radius.full, paddingHorizontal: 10, paddingVertical: 3 },
   verifiedTxt:     { fontFamily: 'Nunito-Bold', fontSize: 10, color: colors.goldLight, letterSpacing: 0.7 },
 
-  kpiRow:          { flexDirection: 'row', gap: spacing.sm, marginHorizontal: spacing.md, marginTop: -12, marginBottom: spacing.md, zIndex: 2 },
+  kpiRow:          { flexDirection: 'row', gap: spacing.sm, marginHorizontal: spacing.md, marginBottom: spacing.md },
+  ctaWrap:         { paddingHorizontal: spacing.md, marginBottom: spacing.md },
   kpiCard:         { flex: 1, padding: spacing.md },
   kpiNum:          { fontFamily: 'Nunito-Bold', fontSize: 24, color: colors.dark, lineHeight: 28 },
   kpiLbl:          { ...typography.caption, marginTop: 3 },

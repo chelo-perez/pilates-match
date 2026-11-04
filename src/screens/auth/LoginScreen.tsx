@@ -11,6 +11,7 @@ import { useToast } from '../../hooks/useToast'
 import { colors, radius, spacing, typography } from '../../components/ui'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import * as WebBrowser from 'expo-web-browser'
+import { Feather } from '@expo/vector-icons'
 import { SvgXml } from 'react-native-svg'
 
 WebBrowser.maybeCompleteAuthSession()
@@ -88,13 +89,12 @@ export default function LoginScreen({ navigation }: any) {
       <View style={s.blob2} />
       <View style={s.blob3} />
 
-      <View style={s.logoWrap}>
-        <Image source={require('../../../assets/logo-white.png')} style={s.logo} resizeMode="contain" />
-      </View>
-
-      <View style={s.taglineWrap}>
-        <Text style={s.tagline}>La comunidad de Pilates</Text>
-        <Text style={s.taglineBold}>de Buenos Aires</Text>
+      {/* Marca + propuesta de valor, agrupadas; las acciones van abajo, al alcance del pulgar */}
+      <View style={s.brand}>
+        <Image source={require('../../../assets/logo-gold.png')} style={s.logo} resizeMode="contain"
+          accessibilityLabel="Trabajo Más Fácil" />
+        <Text style={s.headline}>Estudios e instructores{'\n'}de Pilates, conectados</Text>
+        <Text style={s.subline}>Reemplazos y clases regulares en Buenos Aires, con el aval de la Cámara de Pilates</Text>
       </View>
 
       <View style={s.buttons}>
@@ -122,8 +122,9 @@ export default function LoginScreen({ navigation }: any) {
           </TouchableOpacity>
         )}
 
-        <TouchableOpacity style={s.emailLink} onPress={() => setShowEmail(true)}>
-          <Text style={s.emailLinkTxt}>Iniciar sesión con email →</Text>
+        <TouchableOpacity style={s.emailBtn} onPress={() => setShowEmail(true)} activeOpacity={0.85}>
+          <Feather name="mail" size={18} color={colors.white} />
+          <Text style={s.emailBtnTxt}>Continuar con email</Text>
         </TouchableOpacity>
 
         <TouchableOpacity style={s.registerLink} onPress={() => navigation.navigate('RegisterRole')}>
@@ -131,9 +132,7 @@ export default function LoginScreen({ navigation }: any) {
         </TouchableOpacity>
       </View>
 
-      <Text style={[s.footer, { paddingBottom: insets.bottom + 16 }]}>
-        Con el aval de la Cámara de Pilates de la Ciudad Autónoma de Buenos Aires
-      </Text>
+      <View style={{ height: insets.bottom + 20 }} />
 
       {/* Modal email */}
       <Modal visible={showEmail} transparent animationType="slide" onRequestClose={() => setShowEmail(false)}>
@@ -205,12 +204,10 @@ const s = StyleSheet.create({
   blob2:        { position: 'absolute', width: 200, height: 200, borderRadius: 100, backgroundColor: 'rgba(74,93,78,0.4)', bottom: 100, left: -60 },
   blob3:        { position: 'absolute', width: 150, height: 150, borderRadius: 75, backgroundColor: 'rgba(255,255,255,0.03)', top: '40%', right: -40 },
 
-  logoWrap:     { flex: 1, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 40 },
-  logo:         { width: 260, height: 200 },
-
-  taglineWrap:  { alignItems: 'center', marginBottom: 40 },
-  tagline:      { fontFamily: 'Nunito-Regular', fontSize: 14, color: 'rgba(255,255,255,0.55)', letterSpacing: 0.3 },
-  taglineBold:  { fontFamily: 'Nunito-Bold', fontSize: 14, color: 'rgba(255,255,255,0.75)', letterSpacing: 0.3 },
+  brand:        { flex: 1, width: '100%', alignItems: 'center', justifyContent: 'center', paddingHorizontal: 36, paddingBottom: 24 },
+  logo:         { width: 168, height: 130, marginBottom: 36 },
+  headline:     { fontFamily: 'Nunito-Bold', fontSize: 24, lineHeight: 31, color: colors.white, textAlign: 'center', marginBottom: 12 },
+  subline:      { fontFamily: 'Nunito-Regular', fontSize: 14, lineHeight: 20, color: 'rgba(255,255,255,0.62)', textAlign: 'center', maxWidth: 300 },
 
   buttons:      { width: '100%', paddingHorizontal: 28, gap: 12, marginBottom: 8 },
 
@@ -220,14 +217,13 @@ const s = StyleSheet.create({
   appleBtn:     { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 12, backgroundColor: 'rgba(255,255,255,0.12)', ...radius.leaf, paddingVertical: 16, borderWidth: 1, borderColor: 'rgba(255,255,255,0.2)' },
   appleTxt:     { fontFamily: 'Nunito-Bold', fontSize: 15, color: colors.white },
 
-  emailLink:    { alignItems: 'center', paddingVertical: 6 },
-  emailLinkTxt: { fontFamily: 'Nunito-SemiBold', fontSize: 14, color: 'rgba(255,255,255,0.7)', borderBottomWidth: 0.5, borderBottomColor: 'rgba(255,255,255,0.35)', paddingBottom: 2 },
+  emailBtn:     { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 10, ...radius.leaf, paddingVertical: 15, borderWidth: 1, borderColor: 'rgba(255,255,255,0.28)', backgroundColor: 'rgba(255,255,255,0.06)' },
+  emailBtnTxt:  { fontFamily: 'Nunito-Bold', fontSize: 15, color: colors.white },
 
-  registerLink: { alignItems: 'center', paddingVertical: 6 },
+  registerLink: { alignItems: 'center', paddingVertical: 10, marginTop: 4 },
   registerTxt:  { fontFamily: 'Nunito-Regular', fontSize: 14, color: 'rgba(255,255,255,0.6)' },
   registerBold: { fontFamily: 'Nunito-Bold', color: colors.goldBright },
 
-  footer:       { fontFamily: 'Nunito-Regular', fontSize: 10, color: 'rgba(255,255,255,0.4)', textAlign: 'center', paddingHorizontal: 40, letterSpacing: 0.3 },
 
   // Modal email
   modalOverlay: { flex: 1, backgroundColor: colors.overlay, justifyContent: 'flex-end' },

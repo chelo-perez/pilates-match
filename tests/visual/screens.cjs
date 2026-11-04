@@ -16,7 +16,7 @@ const fs = require('fs'); fs.mkdirSync(OUT, { recursive: true })
   const click = async (text) => { await p.getByText(text, { exact: false }).first().click({ timeout: 8000 }) }
 
   await p.goto(BASE, { waitUntil: 'networkidle' }); await p.waitForTimeout(3000)
-  await click('Iniciar sesión con email')
+  await click('Continuar con email')
   await p.waitForTimeout(800)
   await shot('login-email')
   await p.getByPlaceholder('hola@mipilates.com').fill(EMAIL)
