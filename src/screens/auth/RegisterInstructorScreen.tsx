@@ -11,9 +11,9 @@ import { supabase } from '../../lib/supabase'
 import { instructorAPI } from '../../lib/api'
 import { humanizeError } from '../../lib/errors'
 import { startRegistration, finishRegistration, abandonRegistration } from '../../lib/auth'
-import { BARRIOS_CABA } from '../../constants/barrios'
+import BarrioSelect from '../../components/BarrioSelect'
 import { VERIFICATION_STATUS } from '../../constants/labels'
-import { Button, Chip, Input, Card, Avatar, Badge, colors, spacing, radius, typography } from '../../components/ui'
+import { Button, Input, Card, Avatar, Badge, colors, spacing, radius, typography } from '../../components/ui'
 import Toast from '../../components/Toast'
 import { useToast } from '../../hooks/useToast'
 
@@ -274,16 +274,9 @@ export default function RegisterInstructorScreen({ navigation }: Props) {
               )}
             />
 
-            <Text style={styles.fieldLabel}>BARRIO DONDE VIVÍS</Text>
-            <View style={styles.chipGrid}>
-              {BARRIOS_CABA.map(n => (
-                <Chip key={n} label={n} selected={neighborhood === n}
-                  onPress={() => personal.setValue('neighborhood', n, { shouldValidate: true })} />
-              ))}
-            </View>
-            {personal.formState.errors.neighborhood && (
-              <Text style={styles.errorText}>{personal.formState.errors.neighborhood.message}</Text>
-            )}
+            <BarrioSelect label="BARRIO DONDE VIVÍS" placeholder="Elegí tu barrio" value={neighborhood}
+              onChange={n => personal.setValue('neighborhood', n, { shouldValidate: true })}
+              error={personal.formState.errors.neighborhood?.message} />
 
             <Button label="Continuar →" size="lg" fullWidth
               onPress={personal.handleSubmit(data => {

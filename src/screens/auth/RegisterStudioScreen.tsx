@@ -10,8 +10,8 @@ import { supabase } from '../../lib/supabase'
 import { humanizeError } from '../../lib/errors'
 import { toLocalISODate } from '../../lib/dates'
 import { startRegistration, finishRegistration, abandonRegistration } from '../../lib/auth'
-import { BARRIOS_CABA } from '../../constants/barrios'
-import { Button, Chip, Input, Badge, colors, spacing, radius, typography } from '../../components/ui'
+import BarrioSelect from '../../components/BarrioSelect'
+import { Button, Input, Badge, colors, spacing, radius, typography } from '../../components/ui'
 import Toast from '../../components/Toast'
 import { useToast } from '../../hooks/useToast'
 
@@ -143,14 +143,9 @@ export default function RegisterStudioScreen({ navigation }: Props) {
                   value={value} onChangeText={onChange} error={errors.studioName?.message} />
               )}
             />
-            <Text style={styles.fieldLabel}>BARRIO</Text>
-            <View style={styles.chipGrid}>
-              {BARRIOS_CABA.map(n => (
-                <Chip key={n} label={n} selected={neighborhood === n}
-                  onPress={() => setValue('neighborhood', n, { shouldValidate: true })} />
-              ))}
-            </View>
-            {errors.neighborhood ? <Text style={styles.errorText}>{errors.neighborhood.message}</Text> : null}
+            <BarrioSelect label="BARRIO" value={neighborhood}
+              onChange={n => setValue('neighborhood', n, { shouldValidate: true })}
+              error={errors.neighborhood?.message} />
             <Controller control={control} name="phone"
               render={({ field: { onChange, value } }) => (
                 <Input label="TELÉFONO (OPCIONAL)" placeholder="11 4444-5555" containerStyle={{ marginTop: spacing.md }}

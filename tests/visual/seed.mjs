@@ -7,6 +7,7 @@ const KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZi
 export const PASSWORD = 'e2e-Test-Password-1'
 export const STUDIO_EMAIL = 'visual-estudio@e2e.pilatesmatch.test'
 export const INSTRUCTOR_EMAIL = 'visual-instructora@e2e.pilatesmatch.test'
+export const STUDIO2_EMAIL = 'visual-estudio2@e2e.pilatesmatch.test'
 const client = () => createClient(URL, KEY, { auth: { persistSession: false, autoRefreshToken: false } })
 const must = (r, what) => { if (r.error) throw new Error(`${what}: ${r.error.message}`); return r.data }
 
@@ -44,10 +45,20 @@ const studio = must(await st.c.from('studios').insert({
   bio: 'Estudio boutique con 6 reformers.',
 }).select('id').single(), 'estudio')
 must(await st.c.from('memberships').insert({ studio_id: studio.id, status: 'activa', plan_type: 'freemium', matches_limit: 1, matches_used_month: 0, end_date: '2036-01-01' }), 'membresía')
+// Clase de ayer, aceptada: habilita "Evaluar" en los dos lados y agota el Freemium (1/mes)
+const d = new Date(Date.now() - 864e5)
+const ayer = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
 must(await st.c.from('matches').insert({
   studio_id: studio.id, instructor_id: instructor.id, class_type: 'reemplazo',
-  class_date: new Date(Date.now() + 3 * 864e5).toISOString().slice(0, 10), start_time: '18:00', end_time: '19:00',
-  note_studio: 'Reemplazo de la clase de reformer intermedio.',
+  class_date: ayer, start_time: '18:00', end_time: '19:00', status: 'aceptado',
+  note_studio: 'Reemplazo de la clase de reformer intermedio.', responded_at: new Date().toISOString(),
 }), 'match')
+
+// Segundo estudio, sin propuestas: para ver el formulario de pedir clase
+const st2 = await signUp(STUDIO2_EMAIL, 'estudio', 'Estudio Pilates Sur')
+const studio2 = must(await st2.c.from('studios').insert({
+  user_id: st2.user.id, name: 'Estudio Pilates Sur', neighborhood: 'Belgrano', equipment: ['reformer'], budget_regular: 20000, budget_replacement: 25000,
+}).select('id').single(), 'estudio 2')
+must(await st2.c.from('memberships').insert({ studio_id: studio2.id, status: 'activa', plan_type: 'freemium', matches_limit: 1, matches_used_month: 0, end_date: '2036-01-01' }), 'membresía 2')
 
 console.log('listo')

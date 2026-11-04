@@ -10,9 +10,9 @@ import { supabase } from '../../lib/supabase'
 import { humanizeError } from '../../lib/errors'
 import { syncAuthUser, signOutNow } from '../../lib/auth'
 import { toLocalISODate } from '../../lib/dates'
-import { BARRIOS_CABA } from '../../constants/barrios'
+import BarrioSelect from '../../components/BarrioSelect'
 import { useAuthStore } from '../../store'
-import { Button, Chip, Input, colors, radius, spacing, typography } from '../../components/ui'
+import { Button, Input, colors, radius, spacing, typography } from '../../components/ui'
 import Toast from '../../components/Toast'
 import { useToast } from '../../hooks/useToast'
 
@@ -172,13 +172,8 @@ export default function SelectRoleScreen() {
               autoCapitalize="words"
               error={errors.name}
             />
-            <Text style={s.fieldLabel}>{role === 'estudio' ? 'BARRIO DEL ESTUDIO' : 'BARRIO DONDE VIVÍS'}</Text>
-            <View style={s.chipGrid}>
-              {BARRIOS_CABA.map(b => (
-                <Chip key={b} label={b} selected={barrio === b} onPress={() => setBarrio(b)} />
-              ))}
-            </View>
-            {errors.barrio ? <Text style={s.errorText}>{errors.barrio}</Text> : null}
+            <BarrioSelect label={role === 'estudio' ? 'BARRIO DEL ESTUDIO' : 'BARRIO DONDE VIVÍS'}
+              value={barrio} onChange={setBarrio} error={errors.barrio} />
 
             <Button label="Crear perfil" onPress={submit} isLoading={saving} size="lg" fullWidth style={{ marginTop: spacing.lg }} />
             <Button label="← Elegir otra opción" variant="ghost" onPress={() => setRole(null)} disabled={saving} fullWidth style={{ marginTop: spacing.sm }} />

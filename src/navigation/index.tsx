@@ -12,7 +12,10 @@ import { View } from 'react-native'
 import { NavigationContainer, createNavigationContainerRef } from '@react-navigation/native'
 import { createNativeStackNavigator } from '@react-navigation/native-stack'
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs'
+import { useQuery } from '@tanstack/react-query'
 import { useAuthStore } from '../store'
+import { supabase } from '../lib/supabase'
+import { useMyInstructor } from '../hooks'
 import { syncAuthUser, signOutNow } from '../lib/auth'
 import { listenForNotifications } from '../lib/notifications'
 import LottieTab from '../components/LottieTab'
@@ -103,14 +106,42 @@ const tabScreenOptions = (tabStyle: any) => ({
 })
 
 // ── INSTRUCTOR TABS ──────────────────────────────────────────
+// Cantidad de propuestas pendientes vigentes (badge de la pestaña Propuestas).
+// La key empieza con 'instructor-matches', así se refresca cuando el instructor responde.
+function usePendingProposalsCount() {
+  const { data: instructor } = useMyInstructor()
+  const id = instructor?.id
+  const { data } = useQuery({
+    queryKey: ['instructor-matches', id, 'pending-count'],
+    queryFn: async () => {
+      const { count, error } = await supabase
+        .from('matches')
+        .select('id', { count: 'exact', head: true })
+        .eq('instructor_id', id!)
+        .eq('status', 'pendiente')
+        .or(`expires_at.is.null,expires_at.gt."${new Date().toISOString()}"`)
+      if (error) throw error
+      return count ?? 0
+    },
+    enabled: !!id,
+    refetchInterval: 60_000,
+  })
+  return data ?? 0
+}
+
 function InstructorTabs() {
   const tabStyle = useTabStyle()
+  const pending = usePendingProposalsCount()
   return (
     <Tab.Navigator screenOptions={tabScreenOptions(tabStyle)}>
       <Tab.Screen name="InstructorInicio" component={InstructorDashboardScreen}
         options={{ tabBarLabel: 'Inicio', tabBarIcon: lottieIcon(ICONS.home) }} />
       <Tab.Screen name="InstructorPropuestas" component={InstructorMatchesScreen}
-        options={{ tabBarLabel: 'Propuestas', tabBarIcon: lottieIcon(ICONS.inbox) }} />
+        options={{
+          tabBarLabel: 'Propuestas', tabBarIcon: lottieIcon(ICONS.inbox),
+          tabBarBadge: pending > 0 ? pending : undefined,
+          tabBarBadgeStyle: { backgroundColor: colors.redTx, color: colors.white, fontFamily: 'Nunito-Bold', fontSize: 10 },
+        }} />
       <Tab.Screen name="InstructorHorarios" component={InstructorAvailabilityScreen}
         options={{ tabBarLabel: 'Horarios', tabBarIcon: lottieIcon(ICONS.calendar) }} />
       <Tab.Screen name="InstructorTarifas" component={InstructorRatesScreen}
