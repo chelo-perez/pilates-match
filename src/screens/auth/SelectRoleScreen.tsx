@@ -11,6 +11,7 @@ import { humanizeError } from '../../lib/errors'
 import { syncAuthUser, signOutNow } from '../../lib/auth'
 import { toLocalISODate } from '../../lib/dates'
 import BarrioSelect from '../../components/BarrioSelect'
+import CamaraSelect from '../../components/CamaraSelect'
 import { useAuthStore } from '../../store'
 import { Button, Input, colors, radius, spacing, typography } from '../../components/ui'
 import Toast from '../../components/Toast'
@@ -52,6 +53,7 @@ export default function SelectRoleScreen() {
   const [role, setRole] = useState<Role | null>(null)
   const [name, setName] = useState('')
   const [barrio, setBarrio] = useState('')
+  const [camaraId, setCamaraId] = useState<string | null>(null)
   const [errors, setErrors] = useState<{ name?: string; barrio?: string }>({})
   const [saving, setSaving] = useState(false)
 
@@ -87,6 +89,7 @@ export default function SelectRoleScreen() {
           full_name: name.trim(),
           email: authUser.email,
           neighborhood: barrio,
+          camara_id: camaraId,
           verification_status: 'pendiente',
           is_active: true,
         })
@@ -95,6 +98,7 @@ export default function SelectRoleScreen() {
           user_id: authUser.id,
           name: name.trim(),
           neighborhood: barrio,
+          camara_id: camaraId,
           owner_name: metaName || null,
           owner_email: authUser.email,
         })
@@ -172,6 +176,7 @@ export default function SelectRoleScreen() {
               autoCapitalize="words"
               error={errors.name}
             />
+            <CamaraSelect kind={role} value={camaraId} onChange={setCamaraId} />
             <BarrioSelect label={role === 'estudio' ? 'BARRIO DEL ESTUDIO' : 'BARRIO DONDE VIVÍS'}
               value={barrio} onChange={setBarrio} error={errors.barrio} />
 

@@ -87,10 +87,10 @@ Deno.serve(async (req) => {
     } else if (type === 'subscription_authorized_payment') {
       const ap = await mp(`/authorized_payments/${rawId}`)
       if (ap?.preapproval_id) {
-        const { data: sub } = await admin.from('subscriptions').select('studio_id, plan_type').eq('id', ap.preapproval_id).maybeSingle()
+        const { data: sub } = await admin.from('subscriptions').select('studio_id, camara_id, plan_type').eq('id', ap.preapproval_id).maybeSingle()
         if (sub) {
           await admin.from('payments').upsert({
-            id: `ap_${rawId}`, subscription_id: ap.preapproval_id, studio_id: sub.studio_id, plan_type: sub.plan_type,
+            id: `ap_${rawId}`, subscription_id: ap.preapproval_id, studio_id: sub.studio_id, camara_id: sub.camara_id, plan_type: sub.plan_type,
             amount_ars: ap.transaction_amount, status: ap.payment?.status ?? ap.status ?? 'unknown',
             paid_at: ap.debit_date ?? ap.date_created ?? null,
           })

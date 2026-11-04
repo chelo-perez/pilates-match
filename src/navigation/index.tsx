@@ -22,6 +22,9 @@ import { listenForNotifications } from '../lib/notifications'
 import { openNotificationTarget } from '../lib/notificationTarget'
 import { queryClient } from '../lib/queryClient'
 import NotificationsScreen from '../screens/shared/NotificationsScreen'
+import PlatformCamarasScreen from '../screens/platform/CamarasScreen'
+import PlatformCamaraEditScreen from '../screens/platform/CamaraEditScreen'
+import PlatformSettlementsScreen from '../screens/platform/SettlementsScreen'
 import LottieTab from '../components/LottieTab'
 import { ErrorState, LoadingScreen, Button, colors, spacing } from '../components/ui'
 
@@ -196,6 +199,23 @@ function CamaraTabs() {
   )
 }
 
+// ── PLATAFORMA (dueño: super_admin) ───────────────────────────
+function PlatformTabs() {
+  const tabStyle = useTabStyle()
+  return (
+    <Tab.Navigator screenOptions={tabScreenOptions(tabStyle)}>
+      <Tab.Screen name="PlataformaCamaras" component={PlatformCamarasScreen}
+        options={{ tabBarLabel: 'Cámaras', tabBarIcon: lottieIcon(ICONS.home) }} />
+      <Tab.Screen name="Liquidaciones" component={PlatformSettlementsScreen}
+        options={{ tabBarLabel: 'Liquidaciones', tabBarIcon: lottieIcon(ICONS.reports) }} />
+      <Tab.Screen name="Directorio" component={CamaraDirectoryScreen}
+        options={{ tabBarLabel: 'Instructores', tabBarIcon: lottieIcon(ICONS.users) }} />
+      <Tab.Screen name="Estudios" component={CamaraStudiosScreen}
+        options={{ tabBarLabel: 'Estudios', tabBarIcon: lottieIcon(ICONS.history) }} />
+    </Tab.Navigator>
+  )
+}
+
 // ── Sesión sin perfil (sin red al abrir) ──────────────────────
 function ProfileErrorScreen() {
   const session = useAuthStore((s) => s.session)
@@ -278,8 +298,19 @@ export default function RootNavigator() {
         <Stack.Screen name="Notifications" component={NotificationsScreen} />
       </>
     )
+  } else if (user.role === 'super_admin') {
+    // Dueño de la plataforma: Cámaras, liquidaciones y la red completa
+    screens = (
+      <>
+        <Stack.Screen name="PlatformTabs" component={PlatformTabs} />
+        <Stack.Screen name="PlatformCamaraEdit" component={PlatformCamaraEditScreen} />
+        <Stack.Screen name="VerifyInstructor" component={VerifyInstructorScreen} />
+        <Stack.Screen name="StudioDetail" component={StudioDetailScreen} />
+        <Stack.Screen name="Notifications" component={NotificationsScreen} />
+      </>
+    )
   } else {
-    // camara_admin y super_admin (is_admin en la base) usan el panel de la Cámara
+    // Admin de una Cámara: panel de su red
     screens = (
       <>
         <Stack.Screen name="CamaraTabs" component={CamaraTabs} />

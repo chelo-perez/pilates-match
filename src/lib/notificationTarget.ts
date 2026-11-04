@@ -9,8 +9,13 @@ export function openNotificationTarget(nav: any, role: string | undefined, data:
   } else if (role === 'estudio') {
     if (screen === 'historial') nav.navigate('EstudioHome', { screen: 'HistoryList' })
     else if (screen === 'inicio') nav.navigate('EstudioHome', { screen: 'EstudioInicio' })
-  } else if (role === 'camara_admin' || role === 'super_admin') {
-    if (screen === 'verificar' && data?.instructor_id) nav.navigate('VerifyInstructor', { instructorId: data.instructor_id })
+  } else if (role === 'super_admin') {
+    if (screen === 'liquidaciones') nav.navigate('PlatformTabs', { screen: 'Liquidaciones' })
+    else if (screen === 'verificar' && data?.instructor_id) nav.navigate('VerifyInstructor', { instructorId: data.instructor_id })
+    else nav.navigate('PlatformTabs', { screen: 'PlataformaCamaras' })
+  } else if (role === 'camara_admin') {
+    if (screen === 'liquidaciones') nav.navigate('CamaraTabs', { screen: 'Reportes' })
+    else if (screen === 'verificar' && data?.instructor_id) nav.navigate('VerifyInstructor', { instructorId: data.instructor_id })
     else if (screen === 'verificar') nav.navigate('CamaraTabs', { screen: 'Directorio', params: { filter: 'pendiente' } })
     else if (screen === 'inicio') nav.navigate('CamaraTabs', { screen: 'CamaraInicio' })
   }

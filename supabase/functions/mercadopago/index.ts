@@ -1,8 +1,8 @@
 // Edge Function: el estudio se suscribe o cancela su plan con Mercado Pago.
 //   POST { action: 'subscribe', plan: 'starter'|'premium', payer_email }  -> { init_point }
 //   POST { action: 'cancel' }                                            -> { ok }
-// El precio sale de plan_prices (lo carga la Cámara); nunca del pedido de la app.
-// Secretos: MP_ACCESS_TOKEN (cuenta de vendedor de la Cámara).
+// El precio depende de la Cámara del estudio. Cobra la cuenta de Mercado Pago de la plataforma.
+// Secretos: MP_ACCESS_TOKEN.
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.45.4'
 
 const MP = 'https://api.mercadopago.com'
@@ -26,7 +26,7 @@ Deno.serve(async (req) => {
     const { data: { user } } = await admin.auth.getUser(jwt)
     if (!user) return json({ error: 'Sesión vencida. Volvé a entrar.' }, 401)
 
-    const { data: studio } = await admin.from('studios').select('id, name').eq('user_id', user.id).maybeSingle()
+    const { data: studio } = await admin.from('studios').select('id, name, camara_id').eq('user_id', user.id).maybeSingle()
     if (!studio) return json({ error: 'Solo los estudios pueden suscribirse.' }, 403)
 
     const body = await req.json().catch(() => ({}))
@@ -51,8 +51,9 @@ Deno.serve(async (req) => {
     if (!LABEL[plan]) return json({ error: 'Ese plan no se puede contratar online.' }, 400)
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return json({ error: 'Revisá el email de Mercado Pago.' }, 400)
 
-    const { data: price } = await admin.from('plan_prices').select('price_ars, active').eq('plan_type', plan).maybeSingle()
-    if (!price?.active) return json({ error: 'La Cámara todavía no habilitó este plan.' }, 409)
+    const { data: price } = await admin.from('plan_prices').select('price_ars, active')
+      .eq('camara_id', studio.camara_id).eq('plan_type', plan).maybeSingle()
+    if (!price?.active) return json({ error: 'Este plan todavía no está disponible.' }, 409)
 
     const r = await mp('/preapproval', {
       method: 'POST',
@@ -72,7 +73,7 @@ Deno.serve(async (req) => {
     }
 
     await admin.from('subscriptions').upsert({
-      id: pre.id, studio_id: studio.id, plan_type: plan, status: pre.status ?? 'pending',
+      id: pre.id, studio_id: studio.id, camara_id: studio.camara_id, plan_type: plan, status: pre.status ?? 'pending',
       amount_ars: price.price_ars, payer_email: email, init_point: pre.init_point,
     })
     return json({ init_point: pre.init_point })

@@ -1,138 +1,148 @@
-// Reportes de la Cámara: precios de los planes que se pagan con Mercado Pago y últimos cobros.
+// Reportes de la Cámara: lo que pagaron sus estudios, su parte y las liquidaciones.
+// La plataforma cobra los abonos y cada mes le paga a la Cámara su porcentaje:
+// la Cámara carga acá el número de su factura y después ve el pago.
 import React, { useState } from 'react'
-import { View, Text, StyleSheet, TouchableOpacity, Switch, Alert } from 'react-native'
+import { View, Text, StyleSheet, TouchableOpacity, Modal, Alert } from 'react-native'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
-import { Feather } from '@expo/vector-icons'
 import { supabase } from '../../lib/supabase'
 import { errorText } from '../../lib/errors'
-import { formatARS, PaidPlan, usePlanPrices } from '../../lib/payments'
+import { formatARS, usePlanPrices } from '../../lib/payments'
+import { monthLabel, rpc, SETTLEMENT_STATUS, Settlement, useCamara, useSettlements } from '../../lib/platform'
+import { useAuthStore } from '../../store'
 import { Button, Input, colors, spacing, radius, typography } from '../../components/ui'
 
-const PLANS: { key: PaidPlan; label: string; desc: string }[] = [
-  { key: 'starter', label: 'Starter', desc: '5 propuestas por mes' },
-  { key: 'premium', label: 'Premium', desc: 'Propuestas sin límite' },
-]
-const OK = new Set(['approved', 'processed', 'authorized'])
+const PLAN_LABEL: Record<string, string> = { starter: 'Starter', premium: 'Premium' }
+const OK = new Set(['approved', 'processed'])
 
 export default function PaymentsSection() {
   const qc = useQueryClient()
-  const { data: prices = [] } = usePlanPrices()
-  const [editing, setEditing] = useState<PaidPlan | null>(null)
-  const [value, setValue] = useState('')
-  const [active, setActive] = useState(true)
+  const camaraId = useAuthStore(s => s.user?.camara_id) as string | undefined
+  const { data: camara } = useCamara(camaraId)
+  const { data: prices = [] } = usePlanPrices(camaraId)
+  const { data: settlements = [] } = useSettlements()
+  const [invoiceFor, setInvoiceFor] = useState<Settlement | null>(null)
+  const [invoice, setInvoice] = useState('')
   const [saving, setSaving] = useState(false)
 
-  const { data: payments = [] } = useQuery({
-    queryKey: ['camara-payments'],
+  // Cobros del mes en curso (la liquidación del mes se arma cuando termina)
+  const { data: collected = 0 } = useQuery({
+    queryKey: ['camara-collected-month'],
     queryFn: async () => {
-      const { data, error } = await supabase.from('payments')
-        .select('id, amount_ars, status, paid_at, created_at, plan_type, studio:studios(name)')
-        .order('created_at', { ascending: false }).limit(10)
-      if (error) return []
-      return data ?? []
+      const start = new Date(); start.setDate(1); start.setHours(0, 0, 0, 0)
+      const { data, error } = await supabase.from('payments').select('amount_ars, status').gte('paid_at', start.toISOString())
+      if (error) return 0
+      return (data ?? []).filter((p: any) => OK.has(p.status)).reduce((s: number, p: any) => s + Number(p.amount_ars ?? 0), 0)
     },
   })
-  const { data: activeSubs = 0 } = useQuery({
-    queryKey: ['camara-subscriptions-count'],
-    queryFn: async () => {
-      const { count } = await supabase.from('subscriptions').select('id', { count: 'exact', head: true }).eq('status', 'authorized')
-      return count ?? 0
-    },
-  })
+  const pct = Number(camara?.revenue_share_pct ?? 0)
+  const thisMonth = new Date(); thisMonth.setDate(1)
+  const closed = (s: Settlement) => new Date(s.period + 'T00:00:00') < new Date(thisMonth.getFullYear(), thisMonth.getMonth(), 1)
 
-  const monthStart = new Date(); monthStart.setDate(1); monthStart.setHours(0, 0, 0, 0)
-  const collected = payments
-    .filter((p: any) => OK.has(p.status) && new Date(p.paid_at ?? p.created_at) >= monthStart)
-    .reduce((s: number, p: any) => s + Number(p.amount_ars ?? 0), 0)
-
-  const open = (k: PaidPlan) => {
-    const cur = prices.find(p => p.plan_type === k)
-    setValue(cur ? String(cur.price_ars) : ''); setActive(cur?.active ?? true); setEditing(k)
-  }
-  const save = async () => {
-    const n = parseInt(value.replace(/\D/g, ''), 10)
-    if (!n) { Alert.alert('Ingresá un precio', 'El precio mensual tiene que ser mayor a cero.'); return }
+  const sendInvoice = async () => {
+    if (!invoiceFor) return
     try {
       setSaving(true)
-      const { error } = await supabase.from('plan_prices')
-        .upsert({ plan_type: editing, price_ars: n, active, updated_at: new Date().toISOString() })
-      if (error) throw error
-      qc.invalidateQueries({ queryKey: ['plan-prices'] })
-      setEditing(null)
-    } catch (e) { Alert.alert('No pudimos guardar el precio', errorText(e)) }
+      await rpc('submit_settlement_invoice', { p_id: invoiceFor.id, p_invoice: invoice })
+      qc.invalidateQueries({ queryKey: ['settlements'] })
+      setInvoiceFor(null)
+    } catch (e) { Alert.alert('No pudimos cargar la factura', errorText(e)) }
     finally { setSaving(false) }
   }
 
   return (
     <View>
       <View style={s.kpis}>
-        <View style={s.kpi}><Text style={s.kpiNum}>{collected ? formatARS(collected) : '—'}</Text><Text style={s.kpiLbl}>Cobrado este mes{'\n'}con Mercado Pago</Text></View>
-        <View style={s.kpi}><Text style={s.kpiNum}>{activeSubs}</Text><Text style={s.kpiLbl}>Suscripciones{'\n'}con débito activo</Text></View>
+        <View style={s.kpi}>
+          <Text style={s.kpiNum}>{collected ? formatARS(collected) : '—'}</Text>
+          <Text style={s.kpiLbl}>Abonos cobrados{'\n'}este mes</Text>
+        </View>
+        <View style={s.kpi}>
+          <Text style={s.kpiNum}>{collected && pct ? formatARS(collected * pct / 100) : '—'}</Text>
+          <Text style={s.kpiLbl}>Tu parte{pct ? ` (${pct.toLocaleString('es-AR')}%)` : ''}{'\n'}hasta hoy</Text>
+        </View>
       </View>
 
       <View style={s.card}>
-        <Text style={s.caption}>PRECIOS DE LOS PLANES</Text>
-        <Text style={s.hint}>Los estudios los pagan por mes con Mercado Pago. Un cambio de precio aplica a las suscripciones nuevas.</Text>
-        {PLANS.map(p => {
-          const cur = prices.find(x => x.plan_type === p.key)
-          if (editing === p.key) return (
-            <View key={p.key} style={s.edit}>
-              <Text style={s.planName}>{p.label}</Text>
-              <Input label="PRECIO POR MES (ARS)" value={value} onChangeText={setValue} keyboardType="number-pad" placeholder="Ej: 15000" />
-              <View style={s.switchRow}>
-                <Text style={s.switchTxt}>Se puede contratar desde la app</Text>
-                <Switch value={active} onValueChange={setActive} trackColor={{ true: colors.sage, false: colors.border }} thumbColor={colors.white} />
+        <Text style={s.caption}>LIQUIDACIONES</Text>
+        <Text style={s.hint}>
+          Al cerrar cada mes calculamos tu parte. Emitís la factura por ese monto, cargás el número acá y te transferimos.
+        </Text>
+        {settlements.length === 0 ? (
+          <Text style={s.empty}>Todavía no hay meses cerrados.</Text>
+        ) : settlements.map(st => {
+          const badge = SETTLEMENT_STATUS[st.status]
+          return (
+            <View key={st.id} style={s.row}>
+              <View style={{ flex: 1 }}>
+                <Text style={s.name}>{monthLabel(st.period)}</Text>
+                <Text style={s.desc}>
+                  Cobrado {formatARS(Number(st.collected_ars))} · {Number(st.share_pct).toLocaleString('es-AR')}%
+                  {st.invoice_number ? ` · Factura ${st.invoice_number}` : ''}
+                </Text>
+                <View style={[s.badge, { backgroundColor: badge.bg }]}><Text style={[s.badgeTxt, { color: badge.tx }]}>{badge.label}</Text></View>
               </View>
-              <View style={{ flexDirection: 'row', gap: spacing.sm }}>
-                <Button label="Cancelar" variant="secondary" onPress={() => setEditing(null)} style={{ flex: 1 }} />
-                <Button label="Guardar" onPress={save} isLoading={saving} style={{ flex: 1 }} />
+              <View style={{ alignItems: 'flex-end', gap: 6 }}>
+                <Text style={s.amount}>{formatARS(Number(st.share_ars))}</Text>
+                {st.status === 'pendiente' && closed(st) && Number(st.share_ars) > 0 ? (
+                  <TouchableOpacity onPress={() => { setInvoice(''); setInvoiceFor(st) }}>
+                    <Text style={s.link}>Cargar factura</Text>
+                  </TouchableOpacity>
+                ) : null}
               </View>
             </View>
-          )
-          return (
-            <TouchableOpacity key={p.key} style={s.row} onPress={() => open(p.key)}>
-              <View style={{ flex: 1 }}>
-                <Text style={s.planName}>{p.label}</Text>
-                <Text style={s.planDesc}>{p.desc}{cur && !cur.active ? ' · pausado' : ''}</Text>
-              </View>
-              <Text style={[s.price, !cur && { color: colors.light }]}>{cur ? formatARS(cur.price_ars) : 'Cargar precio'}</Text>
-              <Feather name="edit-2" size={14} color={colors.sageMid} />
-            </TouchableOpacity>
           )
         })}
       </View>
 
-      {payments.length > 0 && (
+      {prices.some(p => p.active) && (
         <View style={s.card}>
-          <Text style={s.caption}>ÚLTIMOS COBROS</Text>
-          {payments.map((p: any) => (
-            <View key={p.id} style={s.row}>
-              <View style={{ flex: 1 }}>
-                <Text style={s.planName} numberOfLines={1}>{p.studio?.name ?? 'Estudio'}</Text>
-                <Text style={s.planDesc}>{new Date(p.paid_at ?? p.created_at).toLocaleDateString('es-AR')} · {OK.has(p.status) ? 'Cobrado' : p.status === 'rejected' ? 'Rechazado' : 'Pendiente'}</Text>
-              </View>
-              <Text style={[s.price, !OK.has(p.status) && { color: colors.light }]}>{formatARS(Number(p.amount_ars ?? 0))}</Text>
+          <Text style={s.caption}>PRECIOS PARA TUS ESTUDIOS</Text>
+          {prices.filter(p => p.active).map(p => (
+            <View key={p.plan_type} style={s.row}>
+              <Text style={[s.name, { flex: 1 }]}>{PLAN_LABEL[p.plan_type] ?? p.plan_type}</Text>
+              <Text style={s.amount}>{formatARS(p.price_ars)}<Text style={s.desc}> /mes</Text></Text>
             </View>
           ))}
         </View>
       )}
+
+      <Modal visible={!!invoiceFor} transparent animationType="fade" onRequestClose={() => setInvoiceFor(null)}>
+        <View style={s.overlay}>
+          <View style={s.sheet}>
+            <Text style={s.sheetTitle}>Factura de {invoiceFor ? monthLabel(invoiceFor.period) : ''}</Text>
+            <Text style={s.sheetSub}>
+              Emitila por {invoiceFor ? formatARS(Number(invoiceFor.share_ars)) : ''} a nombre de la plataforma y cargá el número.
+            </Text>
+            <Input label="NÚMERO DE FACTURA" value={invoice} onChangeText={setInvoice} placeholder="Ej: 0001-00001234" autoCapitalize="characters" />
+            <Button label="Enviar" onPress={sendInvoice} isLoading={saving} fullWidth size="lg" />
+            <TouchableOpacity onPress={() => setInvoiceFor(null)} style={{ alignItems: 'center', paddingVertical: spacing.md }}>
+              <Text style={s.link}>Cancelar</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
     </View>
   )
 }
 
 const s = StyleSheet.create({
-  kpis:     { flexDirection: 'row', gap: spacing.sm, marginBottom: spacing.sm },
-  kpi:      { flex: 1, backgroundColor: colors.white, ...radius.leaf, padding: spacing.md, borderWidth: 0.5, borderColor: colors.borderLight },
-  kpiNum:   { fontFamily: 'Nunito-Bold', fontSize: 22, color: colors.gold },
-  kpiLbl:   { fontFamily: 'Nunito-SemiBold', fontSize: 11, lineHeight: 14, color: colors.mid, marginTop: 4 },
-  card:     { backgroundColor: colors.white, ...radius.leaf, padding: spacing.md, borderWidth: 0.5, borderColor: colors.borderLight, marginBottom: spacing.sm },
-  caption:  { ...typography.caption },
-  hint:     { fontFamily: 'Nunito-Regular', fontSize: 12, color: colors.mid, lineHeight: 17, marginTop: 4, marginBottom: spacing.sm },
-  row:      { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, paddingVertical: spacing.sm, borderTopWidth: 0.5, borderTopColor: colors.borderLight },
-  edit:     { paddingVertical: spacing.sm, borderTopWidth: 0.5, borderTopColor: colors.borderLight },
-  planName: { fontFamily: 'Nunito-Bold', fontSize: 14, color: colors.dark, marginBottom: 2 },
-  planDesc: { fontFamily: 'Nunito-Regular', fontSize: 12, color: colors.mid },
-  price:    { fontFamily: 'Nunito-Bold', fontSize: 15, color: colors.sage },
-  switchRow:{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: spacing.md },
-  switchTxt:{ fontFamily: 'Nunito-Regular', fontSize: 13, color: colors.dark },
+  kpis:       { flexDirection: 'row', gap: spacing.sm, marginBottom: spacing.sm },
+  kpi:        { flex: 1, backgroundColor: colors.white, ...radius.leaf, padding: spacing.md, borderWidth: 0.5, borderColor: colors.borderLight },
+  kpiNum:     { fontFamily: 'Nunito-Bold', fontSize: 22, color: colors.gold },
+  kpiLbl:     { fontFamily: 'Nunito-SemiBold', fontSize: 11, lineHeight: 14, color: colors.mid, marginTop: 4 },
+  card:       { backgroundColor: colors.white, ...radius.leaf, padding: spacing.md, borderWidth: 0.5, borderColor: colors.borderLight, marginBottom: spacing.sm },
+  caption:    { ...typography.caption },
+  hint:       { fontFamily: 'Nunito-Regular', fontSize: 12, color: colors.mid, lineHeight: 17, marginTop: 4, marginBottom: spacing.sm },
+  empty:      { fontFamily: 'Nunito-Regular', fontSize: 13, color: colors.light, paddingVertical: spacing.sm },
+  row:        { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, paddingVertical: spacing.sm, borderTopWidth: 0.5, borderTopColor: colors.borderLight },
+  name:       { fontFamily: 'Nunito-Bold', fontSize: 14, color: colors.dark, marginBottom: 2 },
+  desc:       { fontFamily: 'Nunito-Regular', fontSize: 12, color: colors.mid },
+  amount:     { fontFamily: 'Nunito-Bold', fontSize: 15, color: colors.sage },
+  badge:      { alignSelf: 'flex-start', borderRadius: 999, paddingHorizontal: 8, paddingVertical: 2, marginTop: 6 },
+  badgeTxt:   { fontFamily: 'Nunito-Bold', fontSize: 10 },
+  link:       { fontFamily: 'Nunito-Bold', fontSize: 13, color: colors.sage },
+  overlay:    { flex: 1, backgroundColor: colors.overlay, justifyContent: 'center', padding: spacing.lg },
+  sheet:      { backgroundColor: colors.cream, borderRadius: 20, padding: spacing.lg },
+  sheetTitle: { fontFamily: 'Nunito-Bold', fontSize: 18, color: colors.dark, marginBottom: 6 },
+  sheetSub:   { fontFamily: 'Nunito-Regular', fontSize: 13, color: colors.mid, lineHeight: 19, marginBottom: spacing.md },
 })

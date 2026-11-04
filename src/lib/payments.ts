@@ -7,16 +7,19 @@ import { supabase } from './supabase'
 import { UserError } from './errors'
 
 export type PaidPlan = 'starter' | 'premium'
-export interface PlanPrice { plan_type: PaidPlan; price_ars: number; active: boolean }
+export interface PlanPrice { camara_id: string; plan_type: PaidPlan; price_ars: number; active: boolean }
 
-export const usePlanPrices = () =>
+/** Precios de los planes pagos de una Cámara (cada red tiene los suyos) */
+export const usePlanPrices = (camaraId: string | null | undefined) =>
   useQuery({
-    queryKey: ['plan-prices'],
+    queryKey: ['plan-prices', camaraId],
     queryFn: async (): Promise<PlanPrice[]> => {
-      const { data, error } = await supabase.from('plan_prices').select('plan_type, price_ars, active')
+      const { data, error } = await supabase.from('plan_prices')
+        .select('camara_id, plan_type, price_ars, active').eq('camara_id', camaraId!)
       if (error) return [] // tabla todavía no creada: sin pagos online
       return (data ?? []) as PlanPrice[]
     },
+    enabled: !!camaraId,
   })
 
 /** Última suscripción vigente (autorizada o pausada) del estudio, o null */

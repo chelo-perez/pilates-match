@@ -11,6 +11,7 @@ import { humanizeError } from '../../lib/errors'
 import { toLocalISODate } from '../../lib/dates'
 import { startRegistration, finishRegistration, abandonRegistration } from '../../lib/auth'
 import BarrioSelect from '../../components/BarrioSelect'
+import CamaraSelect from '../../components/CamaraSelect'
 import { Button, Input, Badge, colors, spacing, radius, typography } from '../../components/ui'
 import Toast from '../../components/Toast'
 import { useToast } from '../../hooks/useToast'
@@ -40,6 +41,7 @@ export default function RegisterStudioScreen({ navigation }: Props) {
   const [loading, setLoading] = useState(false)
   const [step, setStep] = useState(1)
   const [codeStatus, setCodeStatus] = useState<'idle' | 'checking' | 'free' | 'taken'>('idle')
+  const [camaraId, setCamaraId] = useState<string | null>(null)
 
   const { control, handleSubmit, watch, setValue, trigger, formState: { errors } } = useForm<Form>({
     resolver: zodResolver(schema),
@@ -88,6 +90,7 @@ export default function RegisterStudioScreen({ navigation }: Props) {
         neighborhood: data.neighborhood,
         phone: data.phone?.trim() || null,
         camara_code: data.camaraCode?.trim() || null,
+        camara_id: camaraId,
         owner_email: data.email.trim().toLowerCase(),
       })
       if (studioError && !(studioError.code === '23505' && !(studioError.message ?? '').includes('camara_code'))) {
@@ -137,6 +140,7 @@ export default function RegisterStudioScreen({ navigation }: Props) {
 
         {step === 1 && (
           <>
+            <CamaraSelect kind="estudio" value={camaraId} onChange={setCamaraId} />
             <Controller control={control} name="studioName"
               render={({ field: { onChange, value } }) => (
                 <Input label="NOMBRE DEL ESTUDIO" placeholder="Studio Zen Palermo" autoCapitalize="words"

@@ -12,6 +12,7 @@ import { instructorAPI } from '../../lib/api'
 import { humanizeError } from '../../lib/errors'
 import { startRegistration, finishRegistration, abandonRegistration } from '../../lib/auth'
 import BarrioSelect from '../../components/BarrioSelect'
+import CamaraSelect from '../../components/CamaraSelect'
 import { VERIFICATION_STATUS } from '../../constants/labels'
 import { Button, Input, Card, Avatar, Badge, colors, spacing, radius, typography } from '../../components/ui'
 import Toast from '../../components/Toast'
@@ -51,6 +52,7 @@ export default function RegisterInstructorScreen({ navigation }: Props) {
   const insets = useSafeAreaInsets()
   const [loading, setLoading]                 = useState(false)
   const [step, setStep]                       = useState(1)
+  const [camaraId, setCamaraId]               = useState<string | null>(null)
   const [searchQuery, setSearchQuery]         = useState('')
   const [searchResults, setSearchResults]     = useState<any[] | null>(null)
   const [searching, setSearching]             = useState(false)
@@ -139,6 +141,7 @@ export default function RegisterInstructorScreen({ navigation }: Props) {
             phone:        personalData.phone.trim(),
             email:        data.email.trim().toLowerCase(),
             neighborhood: personalData.neighborhood,
+            camara_id:    camaraId,
             verification_status: 'pendiente',
             is_active:    true,
           })
@@ -274,6 +277,7 @@ export default function RegisterInstructorScreen({ navigation }: Props) {
               )}
             />
 
+            {!selectedProfile && <CamaraSelect kind="instructor" value={camaraId} onChange={setCamaraId} />}
             <BarrioSelect label="BARRIO DONDE VIVÍS" placeholder="Elegí tu barrio" value={neighborhood}
               onChange={n => personal.setValue('neighborhood', n, { shouldValidate: true })}
               error={personal.formState.errors.neighborhood?.message} />

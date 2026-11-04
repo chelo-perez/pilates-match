@@ -32,7 +32,7 @@ export default function MembershipScreen({ navigation }: any) {
   const { data: studio, isLoading } = useMyStudio()
   const { data: membership, isLoading: memLoading, isError, refetch } = useStudioMembership(studio?.id)
   const { data: contact } = useCamaraContact((studio as any)?.camara_id)
-  const { data: prices = [] } = usePlanPrices()
+  const { data: prices = [] } = usePlanPrices((studio as any)?.camara_id)
   const { data: sub } = useStudioSubscription(studio?.id)
   const session = useAuthStore(st => st.session)
   const qc = useQueryClient()

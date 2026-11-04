@@ -15,9 +15,9 @@ import { contactCamaraForPlan, limitText, nextResetLabel, useCamaraContact, useS
 type Props = NativeStackScreenProps<any, 'MembershipPaywall'>
 
 export default function MembershipPaywallScreen({ navigation }: Props) {
-  const { data: prices = [] } = usePlanPrices()
-  const online = prices.some(p => p.active)
   const { data: studio } = useMyStudio()
+  const { data: prices = [] } = usePlanPrices((studio as any)?.camara_id)
+  const online = prices.some(p => p.active)
   const { data: membership, isLoading } = useStudioMembership(studio?.id)
   const { data: contact } = useCamaraContact((studio as any)?.camara_id)
 
