@@ -1,4 +1,3 @@
--- PENDIENTE: no aplicada todavía.
 -- =====================================================================
 -- Varias Cámaras (sectores) + cobros con Mercado Pago + liquidaciones — 2026-11-05
 --
