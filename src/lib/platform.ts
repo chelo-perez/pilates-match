@@ -3,6 +3,17 @@
 import { useQuery } from '@tanstack/react-query'
 import { supabase } from './supabase'
 import { colors } from '../components/ui'
+import { useAuthStore } from '../store'
+
+/**
+ * Limita una consulta a la red de quien la hace. Los perfiles de estudio son de lectura
+ * pública (los instructores ven a quién trabajan), así que el panel de una entidad tiene
+ * que filtrar por su red; la plataforma ve todas.
+ */
+export function myNetwork<Q>(q: Q): Q {
+  const u: any = useAuthStore.getState().user
+  return u?.role === 'camara_admin' ? (q as any).eq('camara_id', u.camara_id ?? '00000000-0000-0000-0000-000000000000') : q
+}
 
 export interface Camara {
   id: string; name: string; slug: string; sector: string; business_label: string; instructor_label: string

@@ -208,7 +208,7 @@ export default function VerifyInstructorScreen({ navigation, route }: any) {
   const verifyHint  = certs.length === 0
     ? 'El instructor todavía no cargó certificados. Podés pedirle que los suba.'
     : pendingCerts > 0
-      ? `Revisá los ${pendingCerts} certificado${pendingCerts > 1 ? 's' : ''} pendiente${pendingCerts > 1 ? 's' : ''} antes de verificar.`
+      ? (pendingCerts > 1 ? `Revisá los ${pendingCerts} certificados pendientes antes de verificar.` : 'Revisá el certificado pendiente antes de verificar.')
       : approvedCerts === 0
         ? 'Para verificar tiene que haber al menos un certificado aprobado.'
         : null
@@ -413,11 +413,11 @@ export default function VerifyInstructorScreen({ navigation, route }: any) {
             />
             {verifyHint ? <Text style={s.hint}>{verifyHint}</Text> : null}
             <View style={s.actions}>
-              <Button label="Pedir corrección" variant="secondary" style={{ flex: 1 }}
+              <Button label="Pedir corrección" variant="secondary" fullWidth
                 onPress={() => openModal('request_fix')}
                 icon={<Feather name="edit-3" size={14} color={colors.sage} />} />
               {status !== 'rechazado' ? (
-                <Button label="Rechazar" variant="danger" style={{ flex: 1 }}
+                <Button label="Rechazar" variant="danger" fullWidth
                   onPress={() => openModal('reject')}
                   icon={<Feather name="x" size={14} color={colors.redTx} />} />
               ) : null}
@@ -517,7 +517,7 @@ const s = StyleSheet.create({
   notesList:      { borderTopWidth: 0.5, borderColor: colors.borderLight, marginTop: spacing.sm, paddingTop: spacing.sm, gap: 4 },
   noteItem:       { fontFamily: 'Nunito-Regular', fontSize: 11, color: colors.mid },
 
-  actions:        { flexDirection: 'row', gap: spacing.sm, marginTop: spacing.sm },
+  actions:        { gap: spacing.sm, marginTop: spacing.sm },
   hint:           { fontFamily: 'Nunito-Regular', fontSize: 12, color: colors.mid, textAlign: 'center', marginTop: spacing.xs },
   emptyTxt:       { fontFamily: 'Nunito-Regular', fontSize: 13, color: colors.light, marginBottom: spacing.md },
 

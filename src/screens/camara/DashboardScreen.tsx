@@ -9,17 +9,17 @@ import { Feather } from '@expo/vector-icons'
 import HeroHeader from '../../components/HeroHeader'
 import NotificationBell from '../../components/NotificationBell'
 import { entity } from '../../lib/entity'
+import { myNetwork } from '../../lib/platform'
 
 export default function CamaraDashboardScreen({ navigation }: any) {
   const user = useAuthStore(s => s.user)
 
-  // Sin filtrar por camara_id: los registros nuevos llegan con camara_id null
   const { data: stats, isLoading, isError, refetch } = useQuery({
     queryKey: ['camara-stats'],
     queryFn: async () => {
       const [instructors, studios] = await Promise.all([
         supabase.from('instructors').select('id, verification_status'),
-        supabase.from('studios').select('id, is_member'),
+        myNetwork(supabase.from('studios').select('id, is_member')),
       ])
       if (instructors.error) throw instructors.error
       if (studios.error) throw studios.error

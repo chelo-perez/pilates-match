@@ -9,6 +9,7 @@ import HeroHeader, { HeaderPills } from '../../components/HeroHeader'
 import { Feather } from '@expo/vector-icons'
 import PaymentsSection from './PaymentsSection'
 import { entity } from '../../lib/entity'
+import { myNetwork } from '../../lib/platform'
 
 type Period = 'month' | 'quarter' | 'year'
 const PERIODS: { key: Period; label: string }[] = [
@@ -45,12 +46,11 @@ export default function ReportsScreen() {
       else                           start = new Date(now.getFullYear(), 0, 1)
       const startIso = start.toISOString()
 
-      // Sin filtrar por camara_id: los registros nuevos llegan con camara_id null
-      const results = await Promise.all([
+          const results = await Promise.all([
         supabase.from('matches').select('status, class_type, created_at').gte('created_at', startIso),
         supabase.from('evaluations').select('instructor_id, average_score, score_technique, created_at').gte('created_at', startIso),
         supabase.from('instructors').select('id, full_name, verification_status, is_active, created_at'),
-        supabase.from('studios').select('id, is_member, created_at'),
+        myNetwork(supabase.from('studios').select('id, is_member, created_at')),
         supabase.from('memberships').select('studio_id, plan_type, status, end_date, price_ars, monthly_price_ars'),
         supabase.from('evaluations').select('instructor_id, average_score'),
       ])

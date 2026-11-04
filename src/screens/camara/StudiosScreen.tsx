@@ -16,6 +16,7 @@ import { useToast } from '../../hooks/useToast'
 import { Feather } from '@expo/vector-icons'
 import { applyPlan, membershipOf, PAID_PLANS, STUDIO_KEYS } from './planUtils'
 import { entity } from '../../lib/entity'
+import { myNetwork } from '../../lib/platform'
 
 type Filter = 'todos' | 'miembro' | 'no_miembro'
 
@@ -33,11 +34,11 @@ export default function CamaraStudiosScreen({ navigation, route }: any) {
   const { data: studios = [], isLoading, isError, refetch } = useQuery({
     queryKey: ['camara-studios-full', filter],
     queryFn: async () => {
-      let q = db.studios()
+      let q = myNetwork(db.studios()
         .select(`
           id, name, neighborhood, is_member, created_at,
           membership:memberships(status, plan_type, start_date, end_date, matches_used_month, matches_limit, last_reset_date)
-        `)
+        `))
         .order('created_at', { ascending: false })
 
       if (filter === 'miembro')    q = q.eq('is_member', true)

@@ -14,6 +14,7 @@ import Toast from '../../components/Toast'
 import { useToast } from '../../hooks/useToast'
 import { applyPlan, membershipOf, planDurationLabel, PlanKey, STUDIO_KEYS } from './planUtils'
 import { entity } from '../../lib/entity'
+import { SPECIALTY_LABELS } from '../../constants/labels'
 
 // Estilo visual por plan (la definición de límites vive en constants/plans)
 const PLAN_STYLE: Record<string, { desc: string; color: string; bg: string }> = {
@@ -200,7 +201,7 @@ export default function StudioDetailScreen({ navigation, route }: any) {
               <Text style={s.rowLabel}>Equipamiento</Text>
               <View style={{ flex: 1, flexDirection: 'row', flexWrap: 'wrap', gap: 4 }}>
                 {studio.equipment.map((e: string) => (
-                  <View key={e} style={s.chip}><Text style={s.chipTxt}>{e}</Text></View>
+                  <View key={e} style={s.chip}><Text style={s.chipTxt}>{SPECIALTY_LABELS[e] ?? e}</Text></View>
                 ))}
               </View>
             </View>
