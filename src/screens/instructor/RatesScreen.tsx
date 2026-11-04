@@ -131,9 +131,9 @@ export default function InstructorRatesScreen() {
         <Text style={s.intro}>Definí el valor mínimo que aceptás por clase. Los estudios no ven el número: solo si entra en su presupuesto.</Text>
 
         <RateSection title="Clase regular" badge="Regular" value={rateRegular} setValue={fn => setRateRegular(v => clamp(fn(v), regular))}
-          range={regular} accent="74,93,78" textColor={colors.sage} bg={colors.sageLight} />
+          range={regular} accent="44,101,102" textColor={colors.sage} bg={colors.sageLight} />
         <RateSection title="Reemplazo" badge="Reemplazo" value={rateReplacement} setValue={fn => setRateReplacement(v => clamp(fn(v), replacement))}
-          range={replacement} accent="184,150,12" textColor={colors.gold} bg={colors.goldLight} />
+          range={replacement} accent="17,133,123" textColor={colors.gold} bg={colors.goldLight} />
 
         <View style={[s.diffBox, !isValid && { backgroundColor: colors.redBg }]}>
           <Text style={[s.diffTxt, !isValid && { color: colors.redTx }]}>

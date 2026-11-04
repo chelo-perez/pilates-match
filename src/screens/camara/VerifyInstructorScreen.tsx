@@ -278,7 +278,7 @@ export default function VerifyInstructorScreen({ navigation, route }: any) {
         </BlobCard>
 
         {rates ? (
-          <BlobCard style={s.card} delay={600} blobColor="rgba(184,150,12,0.10)" blobColor2="rgba(184,150,12,0.06)">
+          <BlobCard style={s.card} delay={600} blobColor="rgba(42,151,142,0.10)" blobColor2="rgba(42,151,142,0.06)">
             <Text style={s.sectionTitle}>TARIFAS POR CLASE</Text>
             <View style={{ flexDirection: 'row', gap: spacing.sm }}>
               <View style={[s.rateBox, { backgroundColor: colors.sageLight }]}>
@@ -314,7 +314,7 @@ export default function VerifyInstructorScreen({ navigation, route }: any) {
           const busy = certMutation.isPending && certMutation.variables?.certId === cert.id
           return (
             <BlobCard key={cert.id} style={s.certCard} delay={idx * 500}
-              blobColor={st === 'approved' ? 'rgba(46,107,26,0.10)' : st === 'rejected' ? 'rgba(139,31,31,0.08)' : 'rgba(74,93,78,0.08)'}
+              blobColor={st === 'approved' ? 'rgba(46,107,26,0.10)' : st === 'rejected' ? 'rgba(139,31,31,0.08)' : 'rgba(44,101,102,0.08)'}
             >
               {st === 'rejected' && cert.review_note ? (
                 <View style={[s.banner, { backgroundColor: colors.redBg }]}>

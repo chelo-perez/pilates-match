@@ -10,7 +10,7 @@
     "splash": {
       "image": "./assets/splash-icon.png",
       "resizeMode": "contain",
-      "backgroundColor": "#1E2E22"
+      "backgroundColor": "#163235"
     },
     "assetBundlePatterns": [
       "**/*"
@@ -27,7 +27,7 @@
     "android": {
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
-        "backgroundColor": "#2D3F31"
+        "backgroundColor": "#163235"
       },
       "package": "com.pilates.match",
       "permissions": [
@@ -44,8 +44,8 @@
       [
         "expo-notifications",
         {
-          "icon": "./assets/icon.png",
-          "color": "#4A5D4E",
+          "icon": "./assets/notification-icon.png",
+          "color": "#2C6566",
           "sounds": []
         }
       ],
@@ -64,7 +64,7 @@
           "image": "./assets/splash-icon.png",
           "imageWidth": 242,
           "resizeMode": "contain",
-          "backgroundColor": "#1E2E22"
+          "backgroundColor": "#163235"
         }
       ]
     ],

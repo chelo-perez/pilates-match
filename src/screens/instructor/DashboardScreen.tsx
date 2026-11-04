@@ -170,7 +170,7 @@ export default function InstructorDashboardScreen({ navigation }: any) {
               <Text style={s.rateVal}>{fmtMoney(rates?.rate_regular)}</Text>
             </View>
             <View style={[s.rateCard, { backgroundColor: colors.goldLight }]}>
-              <Text style={[s.rateLabel, { color: colors.warnTx }]}>Reemplazo</Text>
+              <Text style={[s.rateLabel, { color: colors.gold }]}>Reemplazo</Text>
               <Text style={[s.rateVal, { color: colors.gold }]}>{fmtMoney(rates?.rate_replacement)}</Text>
             </View>
           </View>
@@ -183,7 +183,7 @@ export default function InstructorDashboardScreen({ navigation }: any) {
             <Text style={s.kpiNum}>{activity?.classes ?? 0}</Text>
             <Text style={s.kpiLbl}>Clases dadas</Text>
           </BlobCard>
-          <BlobCard style={s.kpiCard} blobColor="rgba(184,150,12,0.16)" blobColor2="rgba(184,150,12,0.10)" delay={2500}>
+          <BlobCard style={s.kpiCard} blobColor="rgba(42,151,142,0.16)" blobColor2="rgba(42,151,142,0.10)" delay={2500}>
             <Text style={s.kpiNum}>{activity?.studios ?? 0}</Text>
             <Text style={s.kpiLbl}>Estudios</Text>
           </BlobCard>
@@ -228,7 +228,7 @@ const s = StyleSheet.create({
   container:       { flex: 1, backgroundColor: colors.cream },
   content:         { paddingBottom: 100 },
 
-  verifiedTag:     { flexDirection: 'row', alignItems: 'center', gap: 4, alignSelf: 'center', marginTop: 12, backgroundColor: 'rgba(184,150,12,0.22)', borderWidth: 1, borderColor: 'rgba(184,150,12,0.38)', borderRadius: radius.full, paddingHorizontal: 10, paddingVertical: 3 },
+  verifiedTag:     { flexDirection: 'row', alignItems: 'center', gap: 4, alignSelf: 'center', marginTop: 12, backgroundColor: 'rgba(42,151,142,0.22)', borderWidth: 1, borderColor: 'rgba(42,151,142,0.38)', borderRadius: radius.full, paddingHorizontal: 10, paddingVertical: 3 },
   verifiedTxt:     { fontFamily: 'Nunito-Bold', fontSize: 10, color: colors.goldLight, letterSpacing: 0.7 },
 
   kpiRow:          { flexDirection: 'row', gap: spacing.sm, marginHorizontal: spacing.md, marginBottom: spacing.md },

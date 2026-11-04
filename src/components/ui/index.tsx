@@ -1,4 +1,4 @@
-// src/components/ui/index.tsx — Design system de Trabajo Más Fácil (Nunito, verde salvia, formas "hoja")
+// src/components/ui/index.tsx — Design system de Trabajo Más Fácil (Nunito, verde agua, formas "hoja")
 
 import React from 'react'
 import {
@@ -9,33 +9,36 @@ import { Feather } from '@expo/vector-icons'
 
 // ── Tokens de marca ───────────────────────────────────────────
 export const colors = {
-  sage:        '#4A5D4E',
-  sageMid:     '#6B7E6F',
-  sageLight:   '#EAEFEA',
-  sageLighter: '#F2F5F2',
-  // Verdes oscuros (encabezados, splash, login)
-  forest:      '#3D5440',
-  forestDark:  '#2D3F31',
-  forestDeep:  '#1E2E22',
-  mint:        '#D8E2D8',   // bordes suaves de tarjetas
-  cream:       '#F9F9F6',
+  // Paleta "Verde agua": petróleo + aguamarina. Los nombres (sage, forest, gold…) se mantienen
+  // por compatibilidad; los valores son los de la paleta nueva.
+  sage:        '#2C6566',   // verde agua principal
+  sageMid:     '#5E8A89',
+  sageLight:   '#E5EEED',   // clase regular: verde agua grisáceo
+  sageLighter: '#EFF6F5',
+  // Petróleos (encabezados, splash, login)
+  forest:      '#235657',
+  forestDark:  '#1C4244',
+  forestDeep:  '#163235',
+  mint:        '#D5E8E5',   // bordes suaves de tarjetas
+  cream:       '#F4F7F7',
   white:       '#FFFFFF',
   black:       '#000000',
-  dark:        '#1A1A1A',
-  mid:         '#5C5C5C',
-  light:       '#9A9A9A',
-  border:      '#E2E2DE',
-  borderLight: '#EFEFEB',
-  gold:        '#B8960C',
-  goldLight:   '#FBF6E3',
-  goldBright:  '#FFD060',   // acento sobre fondo oscuro
+  dark:        '#172322',
+  mid:         '#566362',
+  light:       '#93A09F',
+  border:      '#DDE5E4',
+  borderLight: '#EBF1F0',
+  // Acento aguamarina (antes dorado): 'gold' es la versión para fondo claro
+  gold:        '#11857B',
+  goldLight:   '#D0F1EC',   // reemplazo: aguamarina vivo
+  goldBright:  '#8FD6CF',   // acento sobre fondo oscuro
   // Semánticos
   okBg:        '#E8F5E0',  okTx:   '#2E6B1A',
   warnBg:      '#FEF3DC',  warnTx: '#7A5000',
   redBg:       '#FDECEC',  redTx:  '#8B1F1F',  redBorder: '#F5C5C5',
   blueBg:      '#E8F1FD',  blueTx: '#1A4FA0',
   // Toast (fondo oscuro + ícono)
-  toastOkBg:   '#1A2E1C',  toastOkIcon:   '#6FCF7A',
+  toastOkBg:   '#163235',  toastOkIcon:   '#6FCF7A',
   toastErrBg:  '#2E1A1A',  toastErrIcon:  '#F87171',
   toastWarnBg: '#2E2510',  toastWarnIcon: '#FBBF24',
   overlay:     'rgba(0,0,0,0.6)',
@@ -44,7 +47,7 @@ export const colors = {
   lavender:    '#B0A8D0',
   lavLight:    '#F0EEF8',
   lavDark:     '#5C5490',
-  goldLight2:  '#F9F6E5',
+  goldLight2:  '#E9F6F4',
   border2:     '#DDDDDD',
   borderLight2:'#EEEEEE',
 }

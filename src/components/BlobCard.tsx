@@ -17,8 +17,8 @@ interface BlobCardProps {
 
 export default function BlobCard({
   children, style, onPress,
-  blobColor  = 'rgba(74,93,78,0.07)',
-  blobColor2 = 'rgba(74,93,78,0.04)',
+  blobColor  = 'rgba(44,101,102,0.07)',
+  blobColor2 = 'rgba(44,101,102,0.04)',
   delay = 0,
 }: BlobCardProps) {
   const anim1 = useRef(new Animated.Value(0)).current

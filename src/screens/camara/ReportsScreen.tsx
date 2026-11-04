@@ -200,7 +200,7 @@ export default function ReportsScreen() {
           {/* Conversión */}
           {stats.totalStudios > 0 && (
             <BlobCard style={[s.rankCard, { marginBottom: spacing.md }]} delay={300}
-              blobColor="rgba(184,150,12,0.10)" blobColor2="rgba(184,150,12,0.06)">
+              blobColor="rgba(42,151,142,0.10)" blobColor2="rgba(42,151,142,0.06)">
               <Text style={s.rankTitle}>Estudios socios de la Cámara</Text>
               <View style={s.convRow}>
                 <Text style={s.convPct}>{Math.round((stats.members / stats.totalStudios) * 100)}%</Text>
@@ -224,7 +224,7 @@ export default function ReportsScreen() {
           {/* Distribución de planes */}
           {Object.keys(stats.planCounts).length > 0 && (
             <BlobCard style={s.rankCard} delay={400}
-              blobColor="rgba(184,150,12,0.10)" blobColor2="rgba(184,150,12,0.06)">
+              blobColor="rgba(42,151,142,0.10)" blobColor2="rgba(42,151,142,0.06)">
               <Text style={s.rankTitle}>Distribución de planes</Text>
               {[
                 { key: 'premium',  label: 'Premium',      color: colors.gold },

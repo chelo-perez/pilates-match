@@ -1,12 +1,13 @@
 import React, { useState } from 'react'
 import {
-  View, Text, Image, StyleSheet, TouchableOpacity,
+  View, Text, StyleSheet, TouchableOpacity,
   ActivityIndicator, Modal, TextInput, KeyboardAvoidingView, Platform,
 } from 'react-native'
 import { supabase } from '../../lib/supabase'
 import { humanizeError } from '../../lib/errors'
 import { authRedirectUrl, handleAuthRedirect } from '../../lib/auth'
 import Toast from '../../components/Toast'
+import BrandLogo from '../../components/BrandLogo'
 import { useToast } from '../../hooks/useToast'
 import { colors, radius, spacing, typography } from '../../components/ui'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
@@ -91,8 +92,7 @@ export default function LoginScreen({ navigation }: any) {
 
       {/* Marca + propuesta de valor, agrupadas; las acciones van abajo, al alcance del pulgar */}
       <View style={s.brand}>
-        <Image source={require('../../../assets/logo-gold.png')} style={s.logo} resizeMode="contain"
-          accessibilityLabel="Trabajo Más Fácil" />
+        <BrandLogo width={168} style={s.logo} />
         <Text style={s.headline}>Estudios e instructores{'\n'}de Pilates, conectados</Text>
         <Text style={s.subline}>Reemplazos y clases regulares en Buenos Aires, con el aval de la Cámara de Pilates</Text>
       </View>
@@ -200,12 +200,12 @@ const s = StyleSheet.create({
   root:         { flex: 1, backgroundColor: colors.forestDeep, alignItems: 'center', justifyContent: 'space-between' },
 
   // Blobs decorativos
-  blob1:        { position: 'absolute', width: 300, height: 300, borderRadius: 150, backgroundColor: 'rgba(255,208,96,0.06)', top: -80, right: -80 },
-  blob2:        { position: 'absolute', width: 200, height: 200, borderRadius: 100, backgroundColor: 'rgba(74,93,78,0.4)', bottom: 100, left: -60 },
+  blob1:        { position: 'absolute', width: 300, height: 300, borderRadius: 150, backgroundColor: 'rgba(143,214,207,0.06)', top: -80, right: -80 },
+  blob2:        { position: 'absolute', width: 200, height: 200, borderRadius: 100, backgroundColor: 'rgba(44,101,102,0.4)', bottom: 100, left: -60 },
   blob3:        { position: 'absolute', width: 150, height: 150, borderRadius: 75, backgroundColor: 'rgba(255,255,255,0.03)', top: '40%', right: -40 },
 
   brand:        { flex: 1, width: '100%', alignItems: 'center', justifyContent: 'center', paddingHorizontal: 36, paddingBottom: 24 },
-  logo:         { width: 168, height: 130, marginBottom: 36 },
+  logo:         { marginBottom: 36 },
   headline:     { fontFamily: 'Nunito-Bold', fontSize: 24, lineHeight: 31, color: colors.white, textAlign: 'center', marginBottom: 12 },
   subline:      { fontFamily: 'Nunito-Regular', fontSize: 14, lineHeight: 20, color: 'rgba(255,255,255,0.62)', textAlign: 'center', maxWidth: 300 },
 
