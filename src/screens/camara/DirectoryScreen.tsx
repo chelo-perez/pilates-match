@@ -52,7 +52,7 @@ export default function DirectoryScreen({ navigation, route }: any) {
   return (
     <View style={{ flex: 1, backgroundColor: colors.cream }}>
       <HeroHeader
-        title="Directorio"
+        title="Instructores"
         subtitle={`${allInstructors.length} instructor${allInstructors.length === 1 ? '' : 'es'}`}
         bottomElement={
           <View style={styles.searchBox}>

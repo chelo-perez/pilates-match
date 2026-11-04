@@ -244,7 +244,7 @@ export default function VerifyInstructorScreen({ navigation, route }: any) {
         title={instructor.full_name}
         subtitle={[instructor.neighborhood, instructor.dni ? `DNI ${instructor.dni}` : null].filter(Boolean).join(' · ') || undefined}
         onBack={goBack}
-        backLabel="Directorio"
+        backLabel="Instructores"
         rightElement={
           <View style={[s.statusBadge, { backgroundColor: badgeColors.bg }]}>
             <Text style={[s.statusBadgeTxt, { color: badgeColors.tx }]}>

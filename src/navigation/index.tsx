@@ -185,7 +185,7 @@ function CamaraTabs() {
       <Tab.Screen name="CamaraInicio" component={CamaraDashboardScreen}
         options={{ tabBarLabel: 'Inicio', tabBarIcon: lottieIcon(ICONS.home) }} />
       <Tab.Screen name="Directorio" component={CamaraDirectoryScreen}
-        options={{ tabBarLabel: 'Directorio', tabBarIcon: lottieIcon(ICONS.users) }} />
+        options={{ tabBarLabel: 'Instructores', tabBarIcon: lottieIcon(ICONS.users) }} />
       <Tab.Screen name="Estudios" component={CamaraStudiosScreen}
         options={{ tabBarLabel: 'Estudios', tabBarIcon: lottieIcon(ICONS.history) }} />
       <Tab.Screen name="Tarifas" component={CamaraRateRangesScreen}
