@@ -1,4 +1,3 @@
--- PENDIENTE: no aplicada todavía.
 -- =====================================================================
 -- Privacidad de estudios entre redes — 2026-11-05
 -- Antes cualquier cuenta podía leer todos los estudios (studio_public_read = true),
