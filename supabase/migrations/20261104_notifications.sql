@@ -1,4 +1,3 @@
--- PENDIENTE: no aplicada todavía.
 -- =====================================================================
 -- Notificaciones push para los tres perfiles (2026-11-04)
 --
