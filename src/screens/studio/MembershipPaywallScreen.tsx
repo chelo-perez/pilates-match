@@ -9,11 +9,14 @@ import { Feather } from '@expo/vector-icons'
 import BlobCard from '../../components/BlobCard'
 import HeroHeader from '../../components/HeroHeader'
 import type { NativeStackScreenProps } from '@react-navigation/native-stack'
+import { usePlanPrices } from '../../lib/payments'
 import { contactCamaraForPlan, limitText, nextResetLabel, useCamaraContact, useStudioMembership } from './studioQueries'
 
 type Props = NativeStackScreenProps<any, 'MembershipPaywall'>
 
 export default function MembershipPaywallScreen({ navigation }: Props) {
+  const { data: prices = [] } = usePlanPrices()
+  const online = prices.some(p => p.active)
   const { data: studio } = useMyStudio()
   const { data: membership, isLoading } = useStudioMembership(studio?.id)
   const { data: contact } = useCamaraContact((studio as any)?.camara_id)
@@ -67,13 +70,15 @@ export default function MembershipPaywallScreen({ navigation }: Props) {
         <View style={styles.infoBox}>
           <Feather name="info" size={14} color={colors.sage} />
           <Text style={styles.infoText}>
-            El cambio de plan y el pago se coordinan directamente con la Cámara. Cuando lo actualice, vas a poder seguir enviando propuestas.
+            {online
+              ? 'Podés pasar a un plan pago ahora mismo con Mercado Pago, y seguir enviando propuestas apenas se acredite el pago.'
+              : 'El cambio de plan y el pago se coordinan directamente con la Cámara. Cuando lo actualice, vas a poder seguir enviando propuestas.'}
           </Text>
         </View>
 
         <Button
-          label="Pedile a la Cámara que actualice tu plan"
-          onPress={() => contactCamaraForPlan(contact, studio?.name)}
+          label={online ? 'Ver planes y pagar' : 'Pedile a la Cámara que actualice tu plan'}
+          onPress={() => online ? navigation.navigate('Membership' as any) : contactCamaraForPlan(contact, studio?.name)}
           fullWidth
           size="lg"
         />

@@ -1,4 +1,3 @@
--- PENDIENTE: no aplicada todavía.
 -- =====================================================================
 -- Centro de notificaciones (campanita) — 2026-11-04
 -- Cada aviso que manda send_push queda guardado para el usuario, llegue o

@@ -1,5 +1,10 @@
-import React from 'react'
-import { View, Text, StyleSheet, ScrollView } from 'react-native'
+import React, { useState } from 'react'
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Modal, Alert, ActivityIndicator } from 'react-native'
+import { useQueryClient } from '@tanstack/react-query'
+import { useAuthStore } from '../../store'
+import { cancelSubscription, formatARS, PaidPlan, startSubscription, usePlanPrices, useStudioSubscription } from '../../lib/payments'
+import { errorText } from '../../lib/errors'
+import { Input } from '../../components/ui'
 import { useMyStudio } from '../../hooks'
 import { Button, ErrorState, LoadingScreen, colors, spacing, typography } from '../../components/ui'
 import { PLANS, usedThisMonth } from '../../constants/plans'
@@ -27,6 +32,47 @@ export default function MembershipScreen({ navigation }: any) {
   const { data: studio, isLoading } = useMyStudio()
   const { data: membership, isLoading: memLoading, isError, refetch } = useStudioMembership(studio?.id)
   const { data: contact } = useCamaraContact((studio as any)?.camara_id)
+  const { data: prices = [] } = usePlanPrices()
+  const { data: sub } = useStudioSubscription(studio?.id)
+  const session = useAuthStore(st => st.session)
+  const qc = useQueryClient()
+  const [buying, setBuying] = useState<PaidPlan | null>(null)
+  const [payerEmail, setPayerEmail] = useState('')
+  const [busy, setBusy] = useState(false)
+
+  const priceOf = (k: string) => prices.find(p => p.plan_type === k && p.active)?.price_ars ?? null
+  const onlinePayments = prices.some(p => p.active)
+
+  const refresh = () => {
+    // El webhook de Mercado Pago puede tardar unos segundos en activar el plan
+    const run = () => ['studio-membership', 'studio-subscription', 'studio-memberships'].forEach(k => qc.invalidateQueries({ queryKey: [k] }))
+    run(); setTimeout(run, 4000); setTimeout(run, 12000)
+  }
+
+  const openBuy = (plan: PaidPlan) => { setPayerEmail(session?.user?.email ?? ''); setBuying(plan) }
+
+  const pay = async () => {
+    if (!buying) return
+    try {
+      setBusy(true)
+      await startSubscription(buying, payerEmail)
+      setBuying(null)
+      refresh()
+      Alert.alert('¿Completaste el pago?', 'Si ya pagaste, tu plan se activa en unos segundos. Si no, podés volver a intentarlo cuando quieras.')
+    } catch (e) {
+      Alert.alert('No pudimos iniciar el pago', errorText(e))
+    } finally { setBusy(false) }
+  }
+
+  const askCancel = () => Alert.alert(
+    'Cancelar suscripción',
+    'No se te va a volver a cobrar. Tu plan sigue activo hasta el final del período que ya pagaste y después pasa a Freemium.',
+    [{ text: 'Volver', style: 'cancel' }, { text: 'Cancelar suscripción', style: 'destructive', onPress: async () => {
+      try { setBusy(true); await cancelSubscription(); refresh() }
+      catch (e) { Alert.alert('No pudimos cancelar', errorText(e)) }
+      finally { setBusy(false) }
+    } }],
+  )
 
   if (isLoading || memLoading) return <LoadingScreen />
 
@@ -92,12 +138,24 @@ export default function MembershipScreen({ navigation }: any) {
                     <View style={s.currentBadge}><Text style={s.currentBadgeTxt}>Tu plan</Text></View>
                   )}
                 </View>
+                {priceOf(plan.key) ? <Text style={s.planPrice}>{formatARS(priceOf(plan.key)!)}<Text style={s.planPer}> por mes</Text></Text> : null}
                 {[limitText(plan.limit), ...(EXTRA_FEATURES[plan.key] ?? [])].map((f, fi) => (
                   <View key={fi} style={s.featureRow}>
                     <Feather name="check" size={14} color={colors.sage} />
                     <Text style={s.featureTxt}>{f}</Text>
                   </View>
                 ))}
+                {sub && sub.plan_type === plan.key ? (
+                  <View style={s.subBox}>
+                    <Text style={s.subTxt}>
+                      {sub.status === 'paused' ? 'Débito automático en pausa' : 'Débito automático activo'}
+                      {sub.next_payment_date ? ` · próximo cobro ${formatDate(sub.next_payment_date.slice(0, 10))}` : ''}
+                    </Text>
+                    <TouchableOpacity onPress={askCancel} disabled={busy}><Text style={s.cancelTxt}>Cancelar suscripción</Text></TouchableOpacity>
+                  </View>
+                ) : priceOf(plan.key) && !(isCurrent && status.ok && !sub) ? (
+                  <Button label={sub ? `Cambiar a ${plan.label}` : 'Suscribirme con Mercado Pago'} onPress={() => openBuy(plan.key as PaidPlan)} fullWidth style={{ marginTop: spacing.sm }} />
+                ) : null}
               </BlobCard>
             )
           })}
@@ -105,18 +163,43 @@ export default function MembershipScreen({ navigation }: any) {
           <View style={s.infoBox}>
             <Feather name="info" size={14} color={colors.sage} />
             <Text style={s.infoTxt}>
-              Los planes los gestiona la Cámara: el pago y el cambio de plan se coordinan directamente con ella. Cuando lo actualice, lo vas a ver acá.
+              {onlinePayments
+                ? 'Pagás con Mercado Pago con débito automático todos los meses. Podés cancelar cuando quieras: el plan sigue hasta el final del período pagado. El plan Socio Cámara se gestiona con la Cámara.'
+                : 'Los planes los gestiona la Cámara: el pago y el cambio de plan se coordinan directamente con ella. Cuando lo actualice, lo vas a ver acá.'}
             </Text>
           </View>
 
           <Button
-            label="Pedile a la Cámara que actualice tu plan"
+            label={onlinePayments ? 'Consultar a la Cámara' : 'Pedile a la Cámara que actualice tu plan'}
+            variant={onlinePayments ? 'outline' : undefined}
             onPress={() => contactCamaraForPlan(contact, studio?.name)}
             fullWidth
             size="lg"
           />
         </ScrollView>
       )}
+
+      <Modal visible={!!buying} transparent animationType="fade" onRequestClose={() => setBuying(null)}>
+        <View style={s.overlay}>
+          <View style={s.sheet}>
+            <Text style={s.sheetTitle}>Plan {PLANS.find(p => p.key === buying)?.label}</Text>
+            <Text style={s.sheetSub}>
+              {buying && priceOf(buying) ? `${formatARS(priceOf(buying)!)} por mes con débito automático. ` : ''}
+              Ingresá el email de tu cuenta de Mercado Pago: tiene que ser el mismo con el que vas a pagar.
+            </Text>
+            <Input label="EMAIL DE MERCADO PAGO" value={payerEmail} onChangeText={setPayerEmail}
+              keyboardType="email-address" autoCapitalize="none" autoCorrect={false} />
+            {busy ? <ActivityIndicator color={colors.sage} style={{ marginVertical: spacing.md }} /> : (
+              <>
+                <Button label="Ir a pagar" onPress={pay} fullWidth size="lg" />
+                <TouchableOpacity onPress={() => setBuying(null)} style={{ alignItems: 'center', paddingVertical: spacing.md }}>
+                  <Text style={s.cancelTxt}>Ahora no</Text>
+                </TouchableOpacity>
+              </>
+            )}
+          </View>
+        </View>
+      </Modal>
     </View>
   )
 }
@@ -141,6 +224,15 @@ const s = StyleSheet.create({
   currentBadgeTxt:  { fontFamily: 'Nunito-Bold', fontSize: 10, color: colors.sage },
   featureRow:       { flexDirection: 'row', alignItems: 'center', gap: 8, paddingVertical: 3 },
   featureTxt:       { fontFamily: 'Nunito-Regular', fontSize: 13, color: colors.dark, flex: 1 },
+  planPrice:        { fontFamily: 'Nunito-Bold', fontSize: 20, color: colors.sage, marginBottom: 6 },
+  planPer:          { fontFamily: 'Nunito-Regular', fontSize: 13, color: colors.mid },
+  subBox:           { marginTop: spacing.sm, padding: spacing.sm, backgroundColor: colors.okBg, borderRadius: 10, gap: 6 },
+  subTxt:           { fontFamily: 'Nunito-SemiBold', fontSize: 12, color: colors.okTx },
+  cancelTxt:        { fontFamily: 'Nunito-Bold', fontSize: 13, color: colors.mid },
+  overlay:          { flex: 1, backgroundColor: colors.overlay, justifyContent: 'center', padding: spacing.lg },
+  sheet:            { backgroundColor: colors.cream, borderRadius: 20, padding: spacing.lg },
+  sheetTitle:       { fontFamily: 'Nunito-Bold', fontSize: 18, color: colors.dark, marginBottom: 6 },
+  sheetSub:         { fontFamily: 'Nunito-Regular', fontSize: 13, color: colors.mid, lineHeight: 19, marginBottom: spacing.md },
   infoBox:          { flexDirection: 'row', alignItems: 'flex-start', gap: 8, backgroundColor: colors.sageLighter, borderTopLeftRadius: 10, borderTopRightRadius: 0, borderBottomLeftRadius: 0, borderBottomRightRadius: 10, padding: spacing.md, marginTop: spacing.sm, marginBottom: spacing.md, borderWidth: 0.5, borderColor: colors.border },
   infoTxt:          { fontFamily: 'Nunito-Regular', fontSize: 12, color: colors.mid, flex: 1, lineHeight: 18 },
 })

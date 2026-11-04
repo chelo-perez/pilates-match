@@ -7,6 +7,7 @@ import { LoadingScreen, ErrorState, colors, spacing, radius, typography } from '
 import BlobCard from '../../components/BlobCard'
 import HeroHeader from '../../components/HeroHeader'
 import { Feather } from '@expo/vector-icons'
+import PaymentsSection from './PaymentsSection'
 
 type Period = 'month' | 'quarter' | 'year'
 const PERIODS: { key: Period; label: string }[] = [
@@ -220,6 +221,8 @@ export default function ReportsScreen() {
             <KPI num={stats.paidMemberships}   label="Planes pagos activos" color={colors.okTx} sub={`${stats.activeMemberships} activas en total`} delay={700} />
             <KPI num={stats.expiringSoon}       label="Pagos que vencen en 30 días" color={stats.expiringSoon > 0 ? colors.redTx : colors.mid} delay={1400} />
           </View>
+
+          <PaymentsSection />
 
           {/* Distribución de planes */}
           {Object.keys(stats.planCounts).length > 0 && (
