@@ -5,7 +5,7 @@ import { supabase } from '../../lib/supabase'
 import { parseLocalDate } from '../../lib/dates'
 import { LoadingScreen, ErrorState, colors, spacing, radius, typography } from '../../components/ui'
 import BlobCard from '../../components/BlobCard'
-import HeroHeader from '../../components/HeroHeader'
+import HeroHeader, { HeaderPills } from '../../components/HeroHeader'
 import { Feather } from '@expo/vector-icons'
 import PaymentsSection from './PaymentsSection'
 import { entity } from '../../lib/entity'
@@ -134,13 +134,7 @@ export default function ReportsScreen() {
         title="Reportes"
         subtitle="Panel de control de la red"
         bottomElement={
-          <View style={s.tabs}>
-            {PERIODS.map(p => (
-              <TouchableOpacity key={p.key} style={[s.tab, period === p.key && s.tabActive]} onPress={() => setPeriod(p.key)}>
-                <Text style={[s.tabTxt, period === p.key && s.tabTxtActive]}>{p.label}</Text>
-              </TouchableOpacity>
-            ))}
-          </View>
+          <HeaderPills value={period} onChange={setPeriod} items={PERIODS.map(p => ({ key: p.key, label: p.label }))} />
         }
       />
 
@@ -258,11 +252,6 @@ export default function ReportsScreen() {
 }
 
 const s = StyleSheet.create({
-  tabs:         { flexDirection: 'row', gap: 6, marginTop: 12 },
-  tab:          { paddingVertical: 5, paddingHorizontal: 12, borderRadius: 999, backgroundColor: 'rgba(255,255,255,0.15)', borderWidth: 0.5, borderColor: 'rgba(255,255,255,0.3)' },
-  tabActive:    { backgroundColor: colors.white },
-  tabTxt:       { fontFamily: 'Nunito-SemiBold', fontSize: 11, color: 'rgba(255,255,255,0.7)' },
-  tabTxtActive: { color: colors.sage, fontFamily: 'Nunito-Bold' },
   content:      { padding: spacing.md, paddingBottom: 48 },
   sectionRow:   { flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 8, marginTop: 4 },
   sectionTitle: { ...typography.caption, color: colors.sage },

@@ -6,7 +6,7 @@ import { matchAPI } from '../../lib/api'
 import { formatDate } from '../../lib/dates'
 import { MATCH_STATUS } from '../../constants/labels'
 import { Avatar, Badge, ScoreDisplay, EmptyState, ErrorState, LoadingScreen, colors, spacing } from '../../components/ui'
-import HeroHeader from '../../components/HeroHeader'
+import HeroHeader, { HeaderPills } from '../../components/HeroHeader'
 import BlobCard from '../../components/BlobCard'
 import type { NativeStackScreenProps } from '@react-navigation/native-stack'
 
@@ -54,15 +54,8 @@ export default function HistoryScreen({ navigation }: Props) {
         title="Historial"
         subtitle={view === 'propuestas' ? 'Propuestas que enviaste' : 'Evaluaciones que hiciste'}
         bottomElement={
-          <View style={s.tabs}>
-            {(['propuestas', 'evaluaciones'] as View_[]).map(v => (
-              <TouchableOpacity key={v} style={[s.tab, view === v && s.tabActive]} onPress={() => setView(v)}>
-                <Text style={[s.tabTxt, view === v && s.tabTxtActive]}>
-                  {v === 'propuestas' ? 'Propuestas' : 'Evaluaciones'}
-                </Text>
-              </TouchableOpacity>
-            ))}
-          </View>
+          <HeaderPills value={view} onChange={setView}
+            items={[{ key: 'propuestas', label: 'Propuestas' }, { key: 'evaluaciones', label: 'Evaluaciones' }]} />
         }
       />
 
@@ -194,11 +187,6 @@ export default function HistoryScreen({ navigation }: Props) {
 }
 
 const s = StyleSheet.create({
-  tabs:          { flexDirection: 'row', gap: 6, marginTop: 12 },
-  tab:           { paddingVertical: 5, paddingHorizontal: 14, borderRadius: 999, borderWidth: 0.5, borderColor: colors.sageMid },
-  tabActive:     { backgroundColor: colors.white, borderColor: colors.white },
-  tabTxt:        { fontFamily: 'Nunito-SemiBold', fontSize: 12, color: colors.sageLight },
-  tabTxtActive:  { color: colors.sage, fontFamily: 'Nunito-Bold' },
 
   filters:       { paddingHorizontal: spacing.md, paddingTop: spacing.sm, gap: 6 },
   chip:          { paddingVertical: 5, paddingHorizontal: 12, borderTopLeftRadius: 10, borderTopRightRadius: 0, borderBottomLeftRadius: 0, borderBottomRightRadius: 10, backgroundColor: colors.white, borderWidth: 0.5, borderColor: colors.border },

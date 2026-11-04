@@ -39,7 +39,7 @@ export default function HeroHeader({
             {(onBack || rightElement) && (
               <View style={s.topRow}>
                 {onBack ? (
-                  <TouchableOpacity style={s.back} onPress={onBack}>
+                  <TouchableOpacity style={s.back} onPress={onBack} accessibilityRole="button" accessibilityLabel={`Volver a ${backLabel}`} hitSlop={10}>
                     <Feather name="chevron-left" size={16} color="rgba(255,255,255,0.7)" />
                     <Text style={s.backTxt}>{backLabel}</Text>
                   </TouchableOpacity>
@@ -79,7 +79,7 @@ export default function HeroHeader({
             {(onBack || rightElement) && (
               <View style={s.topRow}>
                 {onBack ? (
-                  <TouchableOpacity style={s.back} onPress={onBack}>
+                  <TouchableOpacity style={s.back} onPress={onBack} accessibilityRole="button" accessibilityLabel={`Volver a ${backLabel}`} hitSlop={10}>
                     <Feather name="chevron-left" size={16} color="rgba(255,255,255,0.7)" />
                     <Text style={s.backTxt}>{backLabel}</Text>
                   </TouchableOpacity>
@@ -125,3 +125,31 @@ const s = StyleSheet.create({
   centeredTitle:   { fontFamily: 'Nunito-Bold', fontSize: 20, color: colors.white, letterSpacing: -0.3, textAlign: 'center' },
   centeredSubtitle:{ fontFamily: 'Nunito-SemiBold', fontSize: 12, color: 'rgba(255,255,255,0.7)', textAlign: 'center', marginTop: 2 },
 })
+
+/** Pestañas en forma de píldora para el pie del encabezado (bottomElement). */
+export function HeaderPills<T extends string>({ items, value, onChange }: {
+  items: { key: T; label: string }[]; value: T; onChange: (k: T) => void
+}) {
+  return (
+    <View style={pills.row}>
+      {items.map(i => {
+        const on = i.key === value
+        return (
+          <TouchableOpacity key={i.key} style={[pills.pill, on && pills.on]} onPress={() => onChange(i.key)}
+            accessibilityRole="tab" accessibilityState={{ selected: on }}>
+            <Text style={[pills.txt, on && pills.txtOn]}>{i.label}</Text>
+          </TouchableOpacity>
+        )
+      })}
+    </View>
+  )
+}
+
+const pills = StyleSheet.create({
+  row:   { flexDirection: 'row', marginTop: 12, gap: 6 },
+  pill:  { paddingVertical: 5, paddingHorizontal: 16, borderRadius: 999, backgroundColor: 'rgba(255,255,255,0.15)', borderWidth: 0.5, borderColor: 'rgba(255,255,255,0.3)' },
+  on:    { backgroundColor: colors.white },
+  txt:   { fontFamily: 'Nunito-SemiBold', fontSize: 12, color: 'rgba(255,255,255,0.75)' },
+  txtOn: { color: colors.sage, fontFamily: 'Nunito-Bold' },
+})
+

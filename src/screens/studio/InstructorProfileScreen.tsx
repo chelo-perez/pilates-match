@@ -58,12 +58,12 @@ export default function InstructorProfileScreen({ navigation, route }: Props) {
         subtitle={instructor.neighborhood ?? undefined}
         onBack={() => navigation.goBack()}
         backLabel="Volver"
-        rightElement={
+        rightElement={hasEvaluations ? (
           <View style={s.scoreWrap}>
-            <Text style={s.scoreNum}>{hasEvaluations ? fmt1(stats.avg_score) : '—'}</Text>
+            <Text style={s.scoreNum}>{fmt1(stats.avg_score)}</Text>
             <Text style={s.scoreLbl}>Puntaje</Text>
           </View>
-        }
+        ) : undefined}
         bottomElement={
           <View style={s.heroBottom}>
             {instructor.verification_status === 'verificado' && (
@@ -292,7 +292,7 @@ const s = StyleSheet.create({
   matchBadge:     { flexDirection: 'row', alignItems: 'center', gap: 4, backgroundColor: colors.okBg, borderRadius: 999, paddingHorizontal: 10, paddingVertical: 3 },
   matchBadgeTxt:  { fontFamily: 'Nunito-Bold', fontSize: 10, color: colors.okTx },
 
-  kpiRow:         { flexDirection: 'row', gap: spacing.sm, marginHorizontal: spacing.md, marginTop: -12, marginBottom: spacing.md, zIndex: 2 },
+  kpiRow:         { flexDirection: 'row', gap: spacing.sm, marginHorizontal: spacing.md, marginTop: spacing.md, marginBottom: spacing.md },
   kpiCard:        { flex: 1, padding: spacing.md, alignItems: 'center' },
   kpiNum:         { fontFamily: 'Nunito-Bold', fontSize: 22, color: colors.dark },
   kpiLbl:         { ...typography.caption, marginTop: 2 },

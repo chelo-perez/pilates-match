@@ -439,7 +439,7 @@ const s = StyleSheet.create({
   veriText:           { fontFamily: 'Nunito-SemiBold', fontSize: 11, color: colors.white },
   noteBanner:         { flexDirection: 'row', gap: 8, alignItems: 'flex-start', margin: spacing.md, marginBottom: 0, padding: spacing.md, ...radius.leaf, backgroundColor: colors.warnBg },
   noteBannerTxt:      { fontFamily: 'Nunito-SemiBold', fontSize: 12, flex: 1, lineHeight: 17 },
-  section:            { backgroundColor: colors.white, marginTop: 8, padding: spacing.md, borderTopWidth: 0.5, borderBottomWidth: 0.5, borderColor: colors.borderLight },
+  section:            { backgroundColor: colors.white, marginHorizontal: spacing.md, marginTop: spacing.md, padding: spacing.md, ...radius.leaf, borderWidth: 0.5, borderColor: colors.borderLight },
   sectionHeader:      { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: spacing.sm },
   sectionLabel:       { ...typography.caption, marginBottom: spacing.md },
   fieldLabel:         { ...typography.caption, marginBottom: spacing.xs },

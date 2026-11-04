@@ -15,7 +15,7 @@ import { formatDate, isPastDate } from '../../lib/dates'
 import { MATCH_STATUS } from '../../constants/labels'
 import { Badge, EmptyState, ErrorState, LoadingScreen, Button, colors, spacing, radius, typography } from '../../components/ui'
 import BlobCard from '../../components/BlobCard'
-import HeroHeader from '../../components/HeroHeader'
+import HeroHeader, { HeaderPills } from '../../components/HeroHeader'
 import Toast from '../../components/Toast'
 import { useToast } from '../../hooks/useToast'
 import { Feather } from '@expo/vector-icons'
@@ -294,17 +294,10 @@ export default function InstructorMatchesScreen({ navigation }: any) {
           </View>
         ) : undefined}
         bottomElement={
-          <View style={styles.tabs}>
-            {(['pendientes', 'historial'] as Tab[]).map(t => (
-              <TouchableOpacity key={t} style={[styles.tab, tab === t && styles.tabActive]} onPress={() => setTab(t)}>
-                <Text style={[styles.tabText, tab === t && styles.tabTextActive]}>
-                  {t === 'pendientes'
-                    ? `Pendientes${pending.length > 0 ? ` (${pending.length})` : ''}`
-                    : `Historial${toEvaluate > 0 ? ` · ${toEvaluate} por evaluar` : ''}`}
-                </Text>
-              </TouchableOpacity>
-            ))}
-          </View>
+          <HeaderPills value={tab} onChange={setTab} items={[
+            { key: 'pendientes', label: `Pendientes${pending.length > 0 ? ` (${pending.length})` : ''}` },
+            { key: 'historial', label: `Historial${toEvaluate > 0 ? ` · ${toEvaluate} por evaluar` : ''}` },
+          ]} />
         }
       />
 
@@ -378,11 +371,6 @@ const styles = StyleSheet.create({
   container:         { flex: 1, backgroundColor: colors.cream },
   countBadge:        { width: 28, height: 28, borderRadius: 14, backgroundColor: colors.white, alignItems: 'center', justifyContent: 'center' },
   countBadgeTxt:     { fontFamily: 'Nunito-Bold', fontSize: 13, color: colors.sage },
-  tabs:              { flexDirection: 'row', marginTop: 12, gap: 6 },
-  tab:               { paddingVertical: 5, paddingHorizontal: 16, borderRadius: radius.full, backgroundColor: 'rgba(255,255,255,0.15)', borderWidth: 0.5, borderColor: 'rgba(255,255,255,0.3)' },
-  tabActive:         { backgroundColor: colors.white },
-  tabText:           { fontFamily: 'Nunito-SemiBold', fontSize: 12, color: 'rgba(255,255,255,0.75)' },
-  tabTextActive:     { color: colors.sage, fontFamily: 'Nunito-Bold' },
   list:              { padding: spacing.md, paddingBottom: spacing.xxl, flexGrow: 1 },
   card:              { marginBottom: spacing.sm, padding: spacing.md, backgroundColor: colors.white },
   cardHeader:        { flexDirection: 'row', alignItems: 'center', marginBottom: spacing.sm },

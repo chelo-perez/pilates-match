@@ -8,7 +8,7 @@ import { errorText, UserError } from '../../lib/errors'
 import { BARRIOS_CABA } from '../../constants/barrios'
 import { Button, LoadingScreen, ErrorState, colors, spacing, typography, radius } from '../../components/ui'
 import SaveButton from '../../components/SaveButton'
-import HeroHeader from '../../components/HeroHeader'
+import HeroHeader, { HeaderPills } from '../../components/HeroHeader'
 import Toast from '../../components/Toast'
 import { useToast } from '../../hooks/useToast'
 import { Feather } from '@expo/vector-icons'
@@ -204,25 +204,18 @@ export default function AvailabilityScreen() {
       <HeroHeader
         title="Mi disponibilidad"
         subtitle="Configurá tus horarios y zonas de trabajo"
+        bottomElement={
+          <HeaderPills
+            value={activeTab}
+            onChange={setActiveTab}
+            items={[
+              { key: 'horarios', label: 'Horarios' },
+              { key: 'zonas', label: `Zonas${selectedZones.length ? ` (${selectedZones.length})` : ''}` },
+            ]}
+          />
+        }
       />
 
-      {/* Tabs */}
-      <View style={s.tabRow}>
-        <TouchableOpacity
-          style={[s.tab, activeTab === 'horarios' && s.tabActive]}
-          onPress={() => setActiveTab('horarios')}
-        >
-          <Text style={[s.tabText, activeTab === 'horarios' && s.tabTextActive]}>Horarios</Text>
-        </TouchableOpacity>
-        <TouchableOpacity
-          style={[s.tab, activeTab === 'zonas' && s.tabActive]}
-          onPress={() => setActiveTab('zonas')}
-        >
-          <Text style={[s.tabText, activeTab === 'zonas' && s.tabTextActive]}>
-            Zonas {selectedZones.length > 0 ? `(${selectedZones.length})` : ''}
-          </Text>
-        </TouchableOpacity>
-      </View>
 
       <ScrollView contentContainerStyle={{ padding: spacing.md, paddingBottom: 100 }}>
 
@@ -362,11 +355,6 @@ export default function AvailabilityScreen() {
 
 const s = StyleSheet.create({
 
-  tabRow:          { flexDirection: 'row', backgroundColor: colors.white, borderBottomWidth: 0.5, borderColor: colors.borderLight },
-  tab:             { flex: 1, paddingVertical: spacing.sm + 2, alignItems: 'center' },
-  tabActive:       { borderBottomWidth: 2, borderColor: colors.sage },
-  tabText:         { fontFamily: 'Nunito-SemiBold', fontSize: 13, color: colors.light },
-  tabTextActive:   { color: colors.sage },
   dirtyHint:       { fontFamily: 'Nunito-SemiBold', fontSize: 12, color: colors.warnTx, textAlign: 'center', marginBottom: spacing.sm },
   addError:        { fontFamily: 'Nunito-SemiBold', fontSize: 12, color: colors.redTx, marginBottom: spacing.sm },
   daySection:      { marginBottom: spacing.md, backgroundColor: colors.white, ...radius.leaf, padding: spacing.md, borderWidth: 0.5, borderColor: colors.borderLight },

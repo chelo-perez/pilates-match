@@ -4,6 +4,7 @@ import { View, Text, StyleSheet, TouchableOpacity, ScrollView } from 'react-nati
 import { Feather } from '@expo/vector-icons'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import type { NativeStackScreenProps } from '@react-navigation/native-stack'
+import BackLink from '../../components/BackLink'
 import { colors, spacing, radius, typography } from '../../components/ui'
 
 const ROLES = [
@@ -32,10 +33,7 @@ export default function RegisterRoleScreen({ navigation }: Props) {
       style={{ backgroundColor: colors.cream }}
       contentContainerStyle={[styles.container, { paddingTop: insets.top + spacing.md, paddingBottom: insets.bottom + spacing.xl }]}
     >
-      <TouchableOpacity style={styles.backBtn} onPress={() => navigation.goBack()} hitSlop={12}>
-        <Feather name="chevron-left" size={16} color={colors.mid} />
-        <Text style={styles.backText}>Volver</Text>
-      </TouchableOpacity>
+      <BackLink onPress={() => navigation.goBack()} style={{ marginBottom: spacing.xl }} />
 
       <Text style={styles.title}>¿Cómo vas a usar{'\n'}Trabajo Más Fácil?</Text>
       <Text style={styles.sub}>Elegí una opción para crear tu cuenta</Text>
@@ -71,8 +69,6 @@ export default function RegisterRoleScreen({ navigation }: Props) {
 
 const styles = StyleSheet.create({
   container: { flexGrow: 1, paddingHorizontal: spacing.lg },
-  backBtn:   { flexDirection: 'row', alignItems: 'center', gap: 4, marginBottom: spacing.xl, alignSelf: 'flex-start' },
-  backText:  { fontFamily: 'Nunito-SemiBold', fontSize: 14, color: colors.mid },
   title:     { fontFamily: 'Nunito-Bold', fontSize: 26, color: colors.dark, marginBottom: spacing.sm },
   sub:       { ...typography.body, marginBottom: spacing.xl },
   roles:     { gap: spacing.md },

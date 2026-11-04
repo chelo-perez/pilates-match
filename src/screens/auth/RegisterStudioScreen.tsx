@@ -11,6 +11,7 @@ import { humanizeError } from '../../lib/errors'
 import { toLocalISODate } from '../../lib/dates'
 import { startRegistration, finishRegistration, abandonRegistration } from '../../lib/auth'
 import BarrioSelect from '../../components/BarrioSelect'
+import BackLink from '../../components/BackLink'
 import CamaraSelect from '../../components/CamaraSelect'
 import { Button, Input, Badge, colors, spacing, radius, typography } from '../../components/ui'
 import Toast from '../../components/Toast'
@@ -129,7 +130,7 @@ export default function RegisterStudioScreen({ navigation }: Props) {
         contentContainerStyle={[styles.container, { paddingTop: insets.top + spacing.md, paddingBottom: insets.bottom + spacing.xl }]}
         keyboardShouldPersistTaps="handled"
       >
-        <Button label="← Volver" variant="ghost" size="sm" onPress={back} style={styles.backBtn} />
+        <BackLink onPress={back} />
 
         <View style={styles.progress}>
           {[1, 2, 3].map(s => (
@@ -219,7 +220,6 @@ export default function RegisterStudioScreen({ navigation }: Props) {
 
 const styles = StyleSheet.create({
   container: { flexGrow: 1, paddingHorizontal: spacing.lg },
-  backBtn: { alignSelf: 'flex-start', paddingHorizontal: 0, marginBottom: spacing.md },
   progress: { flexDirection: 'row', gap: spacing.xs, marginBottom: spacing.xl },
   progressDot: { flex: 1, height: 3, borderRadius: 2, backgroundColor: colors.sageLight },
   progressDotActive: { backgroundColor: colors.sage },
