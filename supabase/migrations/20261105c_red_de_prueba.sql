@@ -1,4 +1,3 @@
--- PENDIENTE: no aplicada todavía.
 -- =====================================================================
 -- Red de prueba (QA) — 2026-11-05
 -- Autorizado por el dueño de la plataforma para revisar visualmente el panel de la entidad.
@@ -163,3 +162,6 @@ BEGIN
   RETURN v_count;
 END;
 $fn$;
+
+-- Los guards corren con el rol de quien inserta: necesitan poder llamar a camara_for_insert
+GRANT EXECUTE ON FUNCTION public.camara_for_insert(uuid, uuid) TO authenticated;
