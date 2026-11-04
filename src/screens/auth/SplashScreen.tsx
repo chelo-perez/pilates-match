@@ -10,13 +10,14 @@ interface Props {
 }
 
 export default function AnimatedSplash({ onFinish }: Props) {
-  const opacity    = useRef(new Animated.Value(0)).current
-  const scale      = useRef(new Animated.Value(0.82)).current
+  // Arranca con el logo visible (igual que el splash nativo) para que no parpadee
+  const opacity    = useRef(new Animated.Value(1)).current
+  const scale      = useRef(new Animated.Value(0.94)).current
   const fadeOut    = useRef(new Animated.Value(1)).current
 
   useEffect(() => {
     Animated.sequence([
-      // 1. Fade in + scale up del logo
+      // 1. Leve zoom del logo (ya visible, igual que el splash nativo)
       Animated.parallel([
         Animated.timing(opacity, {
           toValue: 1, duration: 700,
@@ -29,9 +30,14 @@ export default function AnimatedSplash({ onFinish }: Props) {
       ]),
       // 2. Pausa con el logo visible
       Animated.delay(900),
-      // 3. Fade out suave de toda la pantalla
+      // 3. Primero se va el logo y después el fondo: así no se ven dos logos
+      //    a la vez (el del login está en otra posición)
+      Animated.timing(opacity, {
+        toValue: 0, duration: 250,
+        useNativeDriver: true,
+      }),
       Animated.timing(fadeOut, {
-        toValue: 0, duration: 500,
+        toValue: 0, duration: 400,
         useNativeDriver: true,
       }),
     ]).start(() => onFinish())
@@ -39,13 +45,10 @@ export default function AnimatedSplash({ onFinish }: Props) {
 
   return (
     <Animated.View style={[s.container, { opacity: fadeOut }]}>
-      {/* Gradiente simulado con dos Views superpuestas */}
-      <View style={s.gradTop} />
-      <View style={s.gradBottom} />
-
-      {/* Blobs decorativos */}
+      {/* Mismo fondo y círculos que el login, para que el paso sea continuo */}
       <View style={s.blob1} />
       <View style={s.blob2} />
+      <View style={s.blob3} />
 
       {/* Logo */}
       <Animated.View style={{ opacity, transform: [{ scale }] }}>
@@ -64,12 +67,11 @@ const s = StyleSheet.create({
     ...StyleSheet.absoluteFillObject,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: colors.forestDark,
+    backgroundColor: colors.forestDeep,
     zIndex: 999,
   },
-  gradTop:    { ...StyleSheet.absoluteFillObject, backgroundColor: colors.forestDark, opacity: 1 },
-  gradBottom: { position: 'absolute', bottom: 0, left: 0, right: 0, height: '60%', backgroundColor: colors.sage, opacity: 0.6 },
-  blob1: { position: 'absolute', width: 300, height: 300, borderRadius: 150, backgroundColor: 'rgba(255,255,255,0.04)', top: -80, right: -60 },
-  blob2: { position: 'absolute', width: 200, height: 200, borderRadius: 100, backgroundColor: 'rgba(255,255,255,0.03)', bottom: -50, left: -40 },
-  logo:  { width: width * 0.6, height: width * 0.4 },
+  blob1: { position: 'absolute', width: 300, height: 300, borderRadius: 150, backgroundColor: 'rgba(255,208,96,0.06)', top: -80, right: -80 },
+  blob2: { position: 'absolute', width: 200, height: 200, borderRadius: 100, backgroundColor: 'rgba(74,93,78,0.4)', bottom: 100, left: -60 },
+  blob3: { position: 'absolute', width: 150, height: 150, borderRadius: 75, backgroundColor: 'rgba(255,255,255,0.03)', top: '40%', right: -40 },
+  logo:  { width: 220, height: 170 },
 })

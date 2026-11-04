@@ -188,7 +188,7 @@ export default function LoginScreen({ navigation }: any) {
             </TouchableOpacity>
           </View>
           {/* El Modal tapa todo lo de abajo: el Toast tiene que estar adentro */}
-          <Toast visible={toast.visible && showEmail} message={toast.message} type={toast.type} onHide={hideToast} />
+          <Toast visible={toast.visible && showEmail} message={toast.message} type={toast.type} onHide={hideToast} position="top" />
         </KeyboardAvoidingView>
       </Modal>
 

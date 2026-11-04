@@ -9,10 +9,13 @@ interface ToastProps {
   type?: 'success' | 'error' | 'warning'
   visible: boolean
   onHide: () => void
+  /** 'top' cuando abajo hay un botón que no conviene tapar (p. ej. en un modal) */
+  position?: 'top' | 'bottom'
 }
 
-export default function Toast({ message, type = 'success', visible, onHide }: ToastProps) {
-  const translateY = useRef(new Animated.Value(100)).current
+export default function Toast({ message, type = 'success', visible, onHide, position = 'bottom' }: ToastProps) {
+  const offscreen = position === 'top' ? -100 : 100
+  const translateY = useRef(new Animated.Value(offscreen)).current
   const opacity = useRef(new Animated.Value(0)).current
 
   useEffect(() => {
@@ -23,7 +26,7 @@ export default function Toast({ message, type = 'success', visible, onHide }: To
       ]).start()
       const timer = setTimeout(() => {
         Animated.parallel([
-          Animated.timing(translateY, { toValue: 100, duration: 250, useNativeDriver: true }),
+          Animated.timing(translateY, { toValue: offscreen, duration: 250, useNativeDriver: true }),
           Animated.timing(opacity, { toValue: 0, duration: 250, useNativeDriver: true }),
         ]).start(() => onHide())
       }, 2500)
@@ -40,7 +43,7 @@ export default function Toast({ message, type = 'success', visible, onHide }: To
   }[type]
 
   return (
-    <Animated.View pointerEvents="none" accessibilityLiveRegion="polite" style={[s.container, { opacity, transform: [{ translateY }] }]}>
+    <Animated.View pointerEvents="none" accessibilityLiveRegion="polite" style={[s.container, position === 'top' && s.top, { opacity, transform: [{ translateY }] }]}>
       <View style={[s.toast, { backgroundColor: config.bg }]}>
         <Feather name={config.icon as any} size={18} color={config.color} />
         <Text style={s.message}>{message}</Text>
@@ -50,6 +53,7 @@ export default function Toast({ message, type = 'success', visible, onHide }: To
 }
 
 const s = StyleSheet.create({
+  top:       { top: 56, bottom: undefined },
   container: { position: 'absolute', bottom: 90, left: spacing.md, right: spacing.md, zIndex: 999, alignItems: 'center' },
   toast:     { flexDirection: 'row', alignItems: 'center', gap: 10, paddingVertical: 12, paddingHorizontal: 16, borderRadius: radius.md, shadowColor: colors.black, shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.3, shadowRadius: 8, elevation: 8, maxWidth: 360 },
   message:   { fontFamily: 'Nunito-SemiBold', fontSize: 13, color: colors.white, flex: 1, lineHeight: 18 },
