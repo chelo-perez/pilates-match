@@ -6,7 +6,6 @@ import { useAuthStore } from '../../store'
 import { confirmSignOut } from '../../lib/auth'
 import { LoadingScreen, ErrorState, colors, spacing, radius, typography } from '../../components/ui'
 import { Feather } from '@expo/vector-icons'
-import BlobCard from '../../components/BlobCard'
 import HeroHeader from '../../components/HeroHeader'
 import NotificationBell from '../../components/NotificationBell'
 
@@ -47,12 +46,14 @@ export default function CamaraDashboardScreen({ navigation }: any) {
     enabled: !!user?.camara_id,
   })
 
-  const { data: potentialMembers = [] } = useQuery({
-    queryKey: ['potential-members'],
+  // Instructores esperando verificación: primero los que esperan hace más tiempo
+  const { data: pending = [] } = useQuery({
+    queryKey: ['camara-instructors', 'pending-dashboard'],
     queryFn: async () => {
       const { data, error } = await supabase
-        .from('studios').select('id, name')
-        .eq('is_member', false).limit(5)
+        .from('instructors').select('id, full_name, created_at, certifications(review_status)')
+        .eq('verification_status', 'pendiente')
+        .order('created_at', { ascending: true }).limit(4)
       if (error) throw error
       return data ?? []
     },
@@ -85,62 +86,76 @@ export default function CamaraDashboardScreen({ navigation }: any) {
 
         />
 
-        {/* KPI grid flotante */}
-        <View style={s.kpiGrid}>
-          <BlobCard style={s.kpiCard} delay={0}
-            blobColor="rgba(42,151,142,0.18)" blobColor2="rgba(42,151,142,0.10)">
-            <Text style={[s.kpiNum, { color: colors.gold }]}>{stats?.member_studios ?? 0}</Text>
-            <Text style={[s.kpiLbl, { color: colors.gold }]}>Estudios socios</Text>
-          </BlobCard>
-          <BlobCard style={s.kpiCard} delay={2500}>
-            <Text style={[s.kpiNum, { color: colors.sage }]}>{stats?.verified_instructors ?? 0}</Text>
-            <Text style={[s.kpiLbl, { color: colors.sageMid }]}>Instructores verificados</Text>
-          </BlobCard>
-          <BlobCard style={s.kpiCard} delay={5000}
-            onPress={() => navigation.navigate('Directorio', { filter: 'pendiente' })}
-            blobColor={pendingCount > 0 ? 'rgba(196,96,10,0.16)' : undefined}
-            blobColor2={pendingCount > 0 ? 'rgba(196,96,10,0.09)' : undefined}>
-            <Text style={[s.kpiNum, { color: pendingCount > 0 ? colors.warnTx : colors.sageMid }]}>{pendingCount}</Text>
-            <Text style={[s.kpiLbl, { color: pendingCount > 0 ? colors.warnTx : colors.mid }]}>Verificaciones pendientes</Text>
-          </BlobCard>
-          <BlobCard style={s.kpiCard} delay={7500}>
-            <Text style={[s.kpiNum, { color: colors.sageMid }]}>{stats?.non_member_studios ?? 0}</Text>
-            <Text style={[s.kpiLbl, { color: colors.mid }]}>Estudios no socios</Text>
-          </BlobCard>
+        {/* 1. Lo que necesita atención: instructores esperando verificación */}
+        <View style={s.section}>
+          <View style={s.sectionHead}>
+            <Text style={s.sectionTitle}>PARA REVISAR{pendingCount ? ` (${pendingCount})` : ''}</Text>
+            {pendingCount > pending.length ? (
+              <TouchableOpacity onPress={() => navigation.navigate('Directorio', { filter: 'pendiente' })}>
+                <Text style={s.link}>Ver todos</Text>
+              </TouchableOpacity>
+            ) : null}
+          </View>
+          {pending.length === 0 ? (
+            <View style={[s.card, s.allDone]}>
+              <View style={[s.icon, { backgroundColor: colors.okBg }]}><Feather name="check" size={16} color={colors.okTx} /></View>
+              <View style={{ flex: 1 }}>
+                <Text style={s.cardTitle}>Nada pendiente</Text>
+                <Text style={s.cardSub}>No hay instructores esperando la verificación.</Text>
+              </View>
+            </View>
+          ) : pending.map((p: any) => {
+            const certs = (p.certifications ?? []).filter((c: any) => (c.review_status ?? 'pending') === 'pending').length
+            const days = Math.max(0, Math.floor((Date.now() - new Date(p.created_at).getTime()) / 86400000))
+            return (
+              <TouchableOpacity key={p.id} style={s.card} activeOpacity={0.85}
+                onPress={() => navigation.navigate('VerifyInstructor', { instructorId: p.id })}>
+                <View style={[s.icon, { backgroundColor: colors.warnBg }]}>
+                  <Text style={[s.initial, { color: colors.warnTx }]}>{p.full_name?.[0]?.toUpperCase() ?? '?'}</Text>
+                </View>
+                <View style={{ flex: 1, minWidth: 0 }}>
+                  <Text style={s.cardTitle} numberOfLines={1}>{p.full_name}</Text>
+                  <Text style={s.cardSub}>
+                    {days === 0 ? 'Se registró hoy' : days === 1 ? 'Espera desde ayer' : `Espera hace ${days} días`}
+                    {certs ? ` · ${certs} certificado${certs > 1 ? 's' : ''} para revisar` : ' · sin certificados'}
+                  </Text>
+                </View>
+                <Feather name="chevron-right" size={18} color={colors.sageMid} />
+              </TouchableOpacity>
+            )
+          })}
         </View>
 
-        {/* Alerta potenciales socios */}
-        {potentialMembers.length > 0 && (
-          <TouchableOpacity style={s.alertCard} onPress={() => navigation.navigate('Estudios')} activeOpacity={0.85}>
-            <View style={s.alertIcon}><Feather name="users" size={16} color={colors.sage} /></View>
+        {/* 2. La red, de un vistazo (cada número lleva a la lista filtrada) */}
+        <View style={s.section}>
+          <Text style={[s.sectionTitle, { marginBottom: spacing.sm }]}>LA RED</Text>
+          <View style={s.kpiRow}>
+            {[
+              { n: stats?.verified_instructors ?? 0, l: 'Instructores\nverificados', go: () => navigation.navigate('Directorio', { filter: 'verificado' }) },
+              { n: stats?.member_studios ?? 0,       l: 'Estudios\nsocios',          go: () => navigation.navigate('Estudios', { filter: 'miembro' }) },
+              { n: stats?.non_member_studios ?? 0,   l: 'Estudios\nno socios',       go: () => navigation.navigate('Estudios', { filter: 'no_miembro' }) },
+            ].map(k => (
+              <TouchableOpacity key={k.l} style={s.kpi} onPress={k.go} activeOpacity={0.85}>
+                <Text style={s.kpiNum}>{k.n}</Text>
+                <Text style={s.kpiLbl}>{k.l}</Text>
+              </TouchableOpacity>
+            ))}
+          </View>
+        </View>
+
+        {/* 3. Oportunidad: estudios que todavía no son socios */}
+        {(stats?.non_member_studios ?? 0) > 0 && (
+          <TouchableOpacity style={s.invite} onPress={() => navigation.navigate('Estudios', { filter: 'no_miembro' })} activeOpacity={0.85}>
+            <View style={[s.icon, { backgroundColor: colors.white }]}><Feather name="user-plus" size={16} color={colors.sage} /></View>
             <View style={{ flex: 1 }}>
-              <Text style={s.alertTitle}>
-                {potentialMembers.length >= 5 ? 'Varios estudios' : `${potentialMembers.length} estudio${potentialMembers.length > 1 ? 's' : ''}`} todavía no {potentialMembers.length > 1 ? 'son socios' : 'es socio'}
+              <Text style={s.inviteTitle}>
+                {stats!.non_member_studios === 1 ? '1 estudio todavía no es socio' : `${stats!.non_member_studios} estudios todavía no son socios`}
               </Text>
-              <Text style={s.alertSub}>Invitalos a sumarse a la Cámara</Text>
+              <Text style={s.cardSub}>Invitalos a sumarse a la Cámara</Text>
             </View>
-            <Feather name="chevron-right" size={16} color={colors.sage} />
+            <Feather name="chevron-right" size={18} color={colors.sage} />
           </TouchableOpacity>
         )}
-
-        {/* Acciones rápidas */}
-        <Text style={s.actionsLabel}>ACCIONES RÁPIDAS</Text>
-        <View style={s.actionsGrid}>
-          {[
-            { label: 'Directorio de instructores', icon: 'users',      screen: 'Directorio', params: { filter: 'todos' } },
-            { label: `Verificar pendientes${pendingCount ? ` (${pendingCount})` : ''}`, icon: 'user-check', screen: 'Directorio', params: { filter: 'pendiente' } },
-            { label: 'Estudios registrados',       icon: 'home',       screen: 'Estudios',   params: undefined },
-            { label: 'Rangos de tarifas',          icon: 'sliders',    screen: 'Tarifas',    params: undefined },
-          ].map((a, i) => (
-            <TouchableOpacity key={i} style={s.actionCard} onPress={() => navigation.navigate(a.screen, a.params)} activeOpacity={0.85}>
-              <View style={s.actionIcon}>
-                <Feather name={a.icon as any} size={16} color={colors.sage} />
-              </View>
-              <Text style={s.actionLbl}>{a.label}</Text>
-              <Feather name="arrow-right" size={14} color={colors.border} />
-            </TouchableOpacity>
-          ))}
-        </View>
 
       </ScrollView>
     </View>
@@ -151,19 +166,20 @@ const s = StyleSheet.create({
   logoutBtn:     { flexDirection: 'row', alignItems: 'center', gap: 4, backgroundColor: 'rgba(255,255,255,0.1)', borderRadius: 999, paddingHorizontal: 10, paddingVertical: 6 },
   logoutTxt:     { fontFamily: 'Nunito-SemiBold', fontSize: 11, color: colors.white },
 
-  kpiGrid:       { flexDirection: 'row', flexWrap: 'wrap', paddingHorizontal: spacing.md, paddingTop: spacing.xs, gap: spacing.sm, marginTop: -12, zIndex: 2, marginBottom: spacing.md },
-  kpiCard:       { flexBasis: '47%', padding: spacing.md },
-  kpiNum:        { fontFamily: 'Nunito-Bold', fontSize: 28, lineHeight: 32, marginBottom: 3 },
-  kpiLbl:        { ...typography.caption },
-
-  alertCard:     { marginHorizontal: spacing.md, marginBottom: spacing.md, backgroundColor: colors.sageLighter, ...radius.leaf, padding: spacing.md, flexDirection: 'row', alignItems: 'center', gap: spacing.sm, borderWidth: 0.5, borderColor: colors.border },
-  alertIcon:     { width: 36, height: 36, borderRadius: 18, backgroundColor: colors.sageLight, alignItems: 'center', justifyContent: 'center' },
-  alertTitle:    { fontFamily: 'Nunito-Bold', fontSize: 13, color: colors.sage },
-  alertSub:      { fontFamily: 'Nunito-Regular', fontSize: 11, color: colors.light, marginTop: 1 },
-
-  actionsLabel:  { ...typography.caption, marginHorizontal: spacing.md, marginBottom: 8 },
-  actionsGrid:   { paddingHorizontal: spacing.md, gap: 8 },
-  actionCard:    { backgroundColor: colors.white, ...radius.leaf, padding: spacing.md, borderWidth: 0.5, borderColor: colors.borderLight, flexDirection: 'row', alignItems: 'center', gap: spacing.sm, elevation: 1 },
-  actionIcon:    { width: 32, height: 32, borderRadius: 999, backgroundColor: colors.sageLight, alignItems: 'center', justifyContent: 'center', flexShrink: 0 },
-  actionLbl:     { fontFamily: 'Nunito-SemiBold', fontSize: 13, color: colors.dark, flex: 1 },
+  section:       { paddingHorizontal: spacing.md, marginBottom: spacing.lg },
+  sectionHead:   { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: spacing.sm },
+  sectionTitle:  { ...typography.caption },
+  link:          { fontFamily: 'Nunito-Bold', fontSize: 13, color: colors.sage },
+  card:          { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, backgroundColor: colors.white, ...radius.leaf, padding: spacing.md, borderWidth: 0.5, borderColor: colors.borderLight, marginBottom: spacing.sm },
+  allDone:       { backgroundColor: colors.white },
+  icon:          { width: 38, height: 38, borderRadius: 19, alignItems: 'center', justifyContent: 'center' },
+  initial:       { fontFamily: 'Nunito-Bold', fontSize: 15 },
+  cardTitle:     { fontFamily: 'Nunito-Bold', fontSize: 14, color: colors.dark },
+  cardSub:       { fontFamily: 'Nunito-Regular', fontSize: 12, color: colors.mid, marginTop: 2, lineHeight: 17 },
+  kpiRow:        { flexDirection: 'row', gap: spacing.sm },
+  kpi:           { flex: 1, backgroundColor: colors.white, ...radius.leaf, paddingVertical: spacing.md, paddingHorizontal: spacing.sm + 2, borderWidth: 0.5, borderColor: colors.borderLight },
+  kpiNum:        { fontFamily: 'Nunito-Bold', fontSize: 26, lineHeight: 30, color: colors.sage },
+  kpiLbl:        { fontFamily: 'Nunito-SemiBold', fontSize: 11, lineHeight: 14, color: colors.mid, marginTop: 4 },
+  invite:        { marginHorizontal: spacing.md, flexDirection: 'row', alignItems: 'center', gap: spacing.sm, backgroundColor: colors.sageLight, ...radius.leaf, padding: spacing.md },
+  inviteTitle:   { fontFamily: 'Nunito-Bold', fontSize: 14, color: colors.sage },
 })

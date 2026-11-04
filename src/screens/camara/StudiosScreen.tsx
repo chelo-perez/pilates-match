@@ -1,4 +1,4 @@
-import React, { useState } from 'react'
+import React, { useEffect, useState } from 'react'
 import {
   View, Text, StyleSheet, FlatList, TextInput,
   TouchableOpacity, Alert, RefreshControl
@@ -18,10 +18,14 @@ import { applyPlan, membershipOf, PAID_PLANS, STUDIO_KEYS } from './planUtils'
 
 type Filter = 'todos' | 'miembro' | 'no_miembro'
 
-export default function CamaraStudiosScreen({ navigation }: any) {
+export default function CamaraStudiosScreen({ navigation, route }: any) {
   const { toast, showToast, hideToast } = useToast()
   const qc = useQueryClient()
-  const [filter, setFilter]   = useState<Filter>('todos')
+  const [filter, setFilter]   = useState<Filter>(route?.params?.filter ?? 'todos')
+  // El dashboard abre esta pantalla con un filtro ya elegido
+  useEffect(() => {
+    if (route?.params?.filter) setFilter(route.params.filter)
+  }, [route?.params?.filter])
   const [search, setSearch]   = useState('')
   const [refreshing, setRefreshing] = useState(false)
 
