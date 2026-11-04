@@ -8,6 +8,9 @@ export const PASSWORD = 'e2e-Test-Password-1'
 export const STUDIO_EMAIL = 'visual-estudio@e2e.pilatesmatch.test'
 export const INSTRUCTOR_EMAIL = 'visual-instructora@e2e.pilatesmatch.test'
 export const STUDIO2_EMAIL = 'visual-estudio2@e2e.pilatesmatch.test'
+// Administrador de la "Red de prueba (QA)": solo ve esa red. Se crea una vez (por invitación) y no se borra.
+// Todas las cuentas de prueba quedan en esa red (ver supabase/migrations/20261105c_red_de_prueba.sql).
+export const QA_ADMIN_EMAIL = 'qa-camara@qa.pilatesmatch.test'
 const client = () => createClient(URL, KEY, { auth: { persistSession: false, autoRefreshToken: false } })
 const must = (r, what) => { if (r.error) throw new Error(`${what}: ${r.error.message}`); return r.data }
 
@@ -60,5 +63,19 @@ const studio2 = must(await st2.c.from('studios').insert({
   user_id: st2.user.id, name: 'Estudio Pilates Sur', neighborhood: 'Belgrano', equipment: ['reformer'], budget_regular: 20000, budget_replacement: 25000,
 }).select('id').single(), 'estudio 2')
 must(await st2.c.from('memberships').insert({ studio_id: studio2.id, status: 'activa', plan_type: 'freemium', matches_limit: 1, matches_used_month: 0, end_date: '2036-01-01' }), 'membresía 2')
+
+// Administrador de la red de prueba + un instructor del directorio (cargado por la entidad, verificado)
+const qa = client()
+let qaLogin = await qa.auth.signInWithPassword({ email: QA_ADMIN_EMAIL, password: PASSWORD })
+if (qaLogin.error) {
+  must(await qa.auth.signUp({ email: QA_ADMIN_EMAIL, password: PASSWORD, options: { data: { full_name: 'Admin de prueba' } } }), 'admin de prueba')
+  qaLogin = await qa.auth.signInWithPassword({ email: QA_ADMIN_EMAIL, password: PASSWORD })
+}
+const role = must(await qa.from('users').select('role, camara_id').eq('id', qaLogin.data.user.id).single(), 'rol admin')
+if (role.role !== 'camara_admin') throw new Error('El admin de prueba no quedó como administrador de la red de prueba')
+const dir = must(await qa.from('instructors').insert({
+  full_name: 'Marcelo Pérez', dni: '28999111', neighborhood: 'Otro', phone: '1166660000', camara_id: role.camara_id,
+}).select('id').single(), 'instructor del directorio')
+must(await qa.from('instructors').update({ verification_status: 'verificado', verified_at: new Date().toISOString() }).eq('id', dir.id), 'verificar directorio')
 
 console.log('listo')
