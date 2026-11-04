@@ -209,6 +209,9 @@ export function abandonRegistration() {
 
 // ── Cerrar sesión ───────────────────────────────────────────
 export async function signOutNow() {
+  // Este celular deja de recibir los avisos de la cuenta que cierra sesión
+  const uid = (await supabase.auth.getSession()).data.session?.user.id
+  if (uid) await supabase.from('push_tokens').delete().eq('user_id', uid).then(() => {}, () => {})
   const { error } = await supabase.auth.signOut()
   if (error) {
     // Aunque falle en el servidor (sin red), cerramos localmente

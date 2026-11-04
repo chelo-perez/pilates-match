@@ -58,11 +58,16 @@ export async function registerPushToken(userId: string): Promise<void> {
     }
     const { data: token } = await Notifications.getExpoPushTokenAsync({ projectId })
 
-    // push_tokens: id, user_id (UNIQUE), token, updated_at, camara_id
-    const { error } = await supabase
-      .from('push_tokens')
-      .upsert({ user_id: userId, token, updated_at: new Date().toISOString() }, { onConflict: 'user_id' })
-    if (error && __DEV__) console.warn('[push] no se guardó el token:', error.message)
+    // Un celular = un token: claim_push_token se lo saca a otras cuentas que se
+    // usaron en este teléfono, así nadie recibe avisos de una cuenta ajena.
+    const { error } = await supabase.rpc('claim_push_token', { p_token: token })
+    if (error) {
+      // Si la función todavía no existe en la base, guardamos como antes
+      const { error: upErr } = await supabase
+        .from('push_tokens')
+        .upsert({ user_id: userId, token, updated_at: new Date().toISOString() }, { onConflict: 'user_id' })
+      if (upErr && __DEV__) console.warn('[push] no se guardó el token:', upErr.message)
+    }
   } catch (err) {
     if (__DEV__) console.warn('[push] error en el registro:', err)
   }
