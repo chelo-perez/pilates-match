@@ -193,7 +193,7 @@ export default function ReportsScreen() {
           <View style={s.kpiGrid}>
             <KPI num={stats.totalStudios} label="Total"     delay={0} />
             <KPI num={stats.members}      label="Socios"    color={colors.okTx} delay={600} />
-            <KPI num={stats.nonMembers}   label="No socios" color={colors.warnTx} delay={1200} />
+            <KPI num={stats.nonMembers}   label="No socios" color={colors.mid} delay={1200} />
             <KPI num={stats.newStudios}   label="Nuevos"    color={colors.sage} sub={PERIODS.find(p => p.key === period)?.label} delay={1800} />
           </View>
 

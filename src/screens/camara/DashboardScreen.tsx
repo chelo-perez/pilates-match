@@ -86,7 +86,7 @@ export default function CamaraDashboardScreen({ navigation }: any) {
           <BlobCard style={s.kpiCard} delay={0}
             blobColor="rgba(42,151,142,0.18)" blobColor2="rgba(42,151,142,0.10)">
             <Text style={[s.kpiNum, { color: colors.gold }]}>{stats?.member_studios ?? 0}</Text>
-            <Text style={[s.kpiLbl, { color: colors.warnTx }]}>Estudios socios</Text>
+            <Text style={[s.kpiLbl, { color: colors.gold }]}>Estudios socios</Text>
           </BlobCard>
           <BlobCard style={s.kpiCard} delay={2500}>
             <Text style={[s.kpiNum, { color: colors.sage }]}>{stats?.verified_instructors ?? 0}</Text>

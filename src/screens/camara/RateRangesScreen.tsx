@@ -121,12 +121,12 @@ export default function RateRangesScreen() {
           </View>
           <View style={s.row}>
             <View style={s.half}>
-              <Text style={[s.halfLabel, { color: colors.warnTx }]}>MÍNIMO</Text>
+              <Text style={[s.halfLabel, { color: colors.gold }]}>MÍNIMO</Text>
               <Stepper value={repMin} onChange={setRepMin} max={repMax - 1} accent={colors.gold} />
             </View>
             <View style={[s.divider, { backgroundColor: 'rgba(42,151,142,0.2)' }]} />
             <View style={s.half}>
-              <Text style={[s.halfLabel, { color: colors.warnTx }]}>MÁXIMO</Text>
+              <Text style={[s.halfLabel, { color: colors.gold }]}>MÁXIMO</Text>
               <Stepper value={repMax} onChange={setRepMax} min={repMin + 1} accent={colors.gold} />
             </View>
           </View>

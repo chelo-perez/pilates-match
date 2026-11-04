@@ -286,7 +286,7 @@ export default function VerifyInstructorScreen({ navigation, route }: any) {
                 <Text style={s.rateVal}>{rates.rate_regular ? '$' + rates.rate_regular.toLocaleString('es-AR') : '—'}</Text>
               </View>
               <View style={[s.rateBox, { backgroundColor: colors.goldLight }]}>
-                <Text style={[s.rateLabel, { color: colors.warnTx }]}>REEMPLAZO</Text>
+                <Text style={[s.rateLabel, { color: colors.gold }]}>REEMPLAZO</Text>
                 <Text style={[s.rateVal, { color: colors.gold }]}>{rates.rate_replacement ? '$' + rates.rate_replacement.toLocaleString('es-AR') : '—'}</Text>
               </View>
             </View>

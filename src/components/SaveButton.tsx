@@ -1,8 +1,9 @@
 // src/components/SaveButton.tsx
 // Botón de guardar con 3 estados: idle → loading → success
-// Opción A: feedback visual en el botón mismo, sin toast ni navegación forzada
+// El "Guardado" se muestra un momento y vuelve a "Guardar": así se puede volver a
+// editar y guardar (antes quedaba trabado, porque isSuccess de la mutación no se apaga).
 
-import React, { useEffect, useRef } from 'react'
+import React, { useEffect, useRef, useState } from 'react'
 import { TouchableOpacity, Text, StyleSheet, Animated, ActivityIndicator, View } from 'react-native'
 import { Feather } from '@expo/vector-icons'
 import { colors, radius } from './ui'
@@ -32,10 +33,11 @@ export default function SaveButton({
 }: SaveButtonProps) {
   const scaleAnim = useRef(new Animated.Value(1)).current
   const prevSuccess = useRef(false)
+  const [showSuccess, setShowSuccess] = useState(false)
 
   useEffect(() => {
     if (isSuccess && !prevSuccess.current) {
-      // Pulse animation when success lands
+      setShowSuccess(true)
       Animated.sequence([
         Animated.timing(scaleAnim, { toValue: 0.95, duration: 80,  useNativeDriver: true }),
         Animated.spring(scaleAnim,  { toValue: 1,    friction: 4,   useNativeDriver: true }),
@@ -44,15 +46,23 @@ export default function SaveButton({
     prevSuccess.current = isSuccess
   }, [isSuccess])
 
+  // Vuelve a "Guardar" a los 2 s, o apenas empieza un nuevo guardado
+  useEffect(() => {
+    if (!showSuccess) return
+    const t = setTimeout(() => setShowSuccess(false), 2000)
+    return () => clearTimeout(t)
+  }, [showSuccess])
+  useEffect(() => { if (isPending) setShowSuccess(false) }, [isPending])
+
   const isSecondary = variant === 'secondary'
 
-  const bgColor = isSuccess
-    ? colors.okTx
+  const bgColor = showSuccess
+    ? colors.forest
     : isPending
       ? colors.sageMid
       : isSecondary ? colors.sageLight : colors.sage
 
-  const borderColor = isSecondary && !isSuccess && !isPending ? colors.sage : bgColor
+  const borderColor = isSecondary && !showSuccess && !isPending ? colors.sage : bgColor
 
   return (
     <Animated.View style={{ transform: [{ scale: scaleAnim }] }}>
@@ -65,12 +75,12 @@ export default function SaveButton({
           style,
         ]}
         onPress={onPress}
-        disabled={disabled || isPending || isSuccess}
+        disabled={disabled || isPending}
         activeOpacity={0.85}
       >
         {isPending ? (
           <ActivityIndicator color={isSecondary ? colors.sage : colors.white} size="small" />
-        ) : isSuccess ? (
+        ) : showSuccess ? (
           <View style={s.successRow}>
             <Feather name="check" size={16} color={colors.white} />
             <Text style={s.btnTxt}>{labelSuccess}</Text>

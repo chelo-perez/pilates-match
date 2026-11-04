@@ -9,6 +9,7 @@
 import React, { useEffect } from 'react'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { View } from 'react-native'
+import { StatusBar } from 'expo-status-bar'
 import { NavigationContainer, createNavigationContainerRef } from '@react-navigation/native'
 import { createNativeStackNavigator } from '@react-navigation/native-stack'
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs'
@@ -281,11 +282,30 @@ export default function RootNavigator() {
     )
   }
 
+  // Dentro de la app (con sesión y perfil) todas las pantallas tienen encabezado oscuro.
+  // La barra de estado de Android es transparente: sin esta franja fija, al deslizar
+  // el contenido pasa por detrás de la hora y la batería.
+  const inApp = !!session && !registering && !passwordRecovery && !!user && !(needsOnboarding && !isAdmin)
+
   return (
-    <NavigationContainer ref={navigationRef}>
-      <Stack.Navigator screenOptions={noHeader}>
-        {screens}
-      </Stack.Navigator>
-    </NavigationContainer>
+    <View style={{ flex: 1 }}>
+      <NavigationContainer ref={navigationRef}>
+        <Stack.Navigator screenOptions={noHeader}>
+          {screens}
+        </Stack.Navigator>
+      </NavigationContainer>
+      {inApp ? <StatusBarBand /> : null}
+    </View>
+  )
+}
+
+function StatusBarBand() {
+  const insets = useSafeAreaInsets()
+  if (!insets.top) return null
+  return (
+    <>
+      <StatusBar style="light" />
+      <View pointerEvents="none" style={{ position: 'absolute', top: 0, left: 0, right: 0, height: insets.top, backgroundColor: colors.forest, zIndex: 100, elevation: 100 }} />
+    </>
   )
 }
