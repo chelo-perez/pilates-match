@@ -48,6 +48,11 @@ npm run update:preview -- --message "Qué cambió"
 **Cuándo SÍ hace falta un build nuevo:** si cambian permisos, íconos, el splash,
 librerías nativas (`npx expo install ...`) o la `version` en app.json.
 
+**Importante:** si agregás una librería nativa, subí `version` en app.json (p. ej. 1.0.1 → 1.0.2)
+antes del build. Las actualizaciones solo llegan a builds con la misma versión: así una
+actualización que usa la librería nueva nunca le llega a una app instalada que no la tiene
+(se cerraría).
+
 **Antes de publicar:** `npm run typecheck` y `npm run test:e2e`.
 
 ---

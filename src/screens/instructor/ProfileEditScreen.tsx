@@ -2,7 +2,7 @@
 import React, { useState, useEffect } from 'react'
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Modal, FlatList, ActivityIndicator, Alert, Linking } from 'react-native'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
-import * as ImagePicker from 'expo-image-picker'
+import { pickSquareImage } from '../../lib/images'
 import * as FileSystem from 'expo-file-system/legacy'
 import * as DocumentPicker from 'expo-document-picker'
 import { supabase, storage } from '../../lib/supabase'
@@ -102,17 +102,14 @@ export default function ProfileEditScreen() {
 
   const pickAvatar = async () => {
     if (!user?.id || !instructor) return
-    const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync()
-    if (status !== 'granted') { showToast('Necesitamos acceso a tu galería', 'warning'); return }
-    const result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ImagePicker.MediaTypeOptions.Images,
-      allowsEditing: true, aspect: [1, 1], quality: 0.7,
-    })
-    if (result.canceled || !result.assets[0]) return
+    // Sin el recortador nativo (en Android 15 no deja guardar): recortamos nosotros
+    let pickedUri: string | null
+    try { pickedUri = await pickSquareImage() } catch (e) { showToast(errorText(e), 'warning'); return }
+    if (!pickedUri) return
 
     try {
       setUploading(true)
-      const bytes = await readBytes(result.assets[0].uri, 'jpg')
+      const bytes = await readBytes(pickedUri, 'jpg')
       const path = `${user.id}/avatar.jpg`
       const { error } = await supabase.storage.from('avatars')
         .upload(path, bytes, { upsert: true, contentType: 'image/jpeg' })

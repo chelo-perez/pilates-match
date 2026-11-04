@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react'
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, TextInput, Alert } from 'react-native'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import * as ImagePicker from 'expo-image-picker'
+import { pickSquareImage } from '../../lib/images'
 import * as FileSystem from 'expo-file-system/legacy'
 import { supabase } from '../../lib/supabase'
 import { useAuthStore } from '../../store'
@@ -65,18 +65,14 @@ export default function CamaraProfileEditScreen({ navigation }: any) {
     storagePath: string,
     onSuccess: (url: string) => Promise<void>
   ) => {
-    const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync()
-    if (status !== 'granted') { showToast('Necesitamos acceso a tu galería', 'warning'); return }
-
-    const result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ImagePicker.MediaTypeOptions.Images,
-      allowsEditing: true, aspect: [1, 1], quality: 0.7,
-    })
-    if (result.canceled || !result.assets[0]) return
+    // Sin el recortador nativo (en Android 15 no deja guardar): recortamos nosotros
+    let pickedUri: string | null
+    try { pickedUri = await pickSquareImage() } catch (e) { showToast(errorText(e), 'warning'); return }
+    if (!pickedUri) return
 
     try {
       setUploading(true)
-      const sourceUri = result.assets[0].uri
+      const sourceUri = pickedUri
       // Copy to cache to resolve content:// URIs on Android
       const cacheUri = FileSystem.cacheDirectory + 'upload_' + Date.now() + '.jpg'
       await FileSystem.copyAsync({ from: sourceUri, to: cacheUri })
