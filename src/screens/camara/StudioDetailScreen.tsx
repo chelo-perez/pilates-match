@@ -22,7 +22,7 @@ const PLAN_STYLE: Record<string, { desc: string; color: string; bg: string }> = 
   premium:  { desc: 'Propuestas ilimitadas',      color: colors.gold,   bg: colors.goldLight },
 }
 
-const longDate = (d?: string | null) => (d ? formatDate(d, { day: '2-digit', month: 'long', year: 'numeric' }) : '—')
+const longDate = (d?: string | null) => (d ? formatDate(d, { day: 'numeric', month: 'long', year: 'numeric' }) : '—')
 
 function Row({ icon, label, value, valueColor }: { icon: string; label: string; value?: string | null; valueColor?: string }) {
   return (
