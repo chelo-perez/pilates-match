@@ -23,9 +23,13 @@ export default function HeroHeader({
   avatarUri, avatarFallback, onAvatarPress, centered,
 }: HeroHeaderProps) {
   const insets = useSafeAreaInsets()
+  // La punta ("hoja") va solo en encabezados de título o de perfil. Si el encabezado
+  // termina en un control (buscador, pestañas, filtros), cierra recto: la punta
+  // quedaría colgando debajo del control y sumaría espacio vacío.
+  const showWave = centered || !bottomElement
 
   return (
-    <View style={[s.hero, { paddingTop: insets.top + 12 }]}>
+    <View style={[s.hero, { paddingTop: insets.top + 12 }, !showWave && s.heroFlat]}>
       <View style={s.blob1} />
       <View style={s.blob2} />
 
@@ -98,16 +102,19 @@ export default function HeroHeader({
 
       </View>
 
-      <View style={s.waveRow}>
-        <View style={s.waveLeft} />
-        <View style={s.waveRight} />
-      </View>
+      {showWave ? (
+        <View style={s.waveRow}>
+          <View style={s.waveLeft} />
+          <View style={s.waveRight} />
+        </View>
+      ) : null}
     </View>
   )
 }
 
 const s = StyleSheet.create({
   hero:            { backgroundColor: colors.forest, paddingHorizontal: spacing.md, paddingBottom: 28, position: 'relative', overflow: 'hidden' },
+  heroFlat:        { paddingBottom: spacing.md },
   blob1:           { position: 'absolute', width: 200, height: 200, borderRadius: 100, backgroundColor: 'rgba(255,255,255,0.06)', top: -60, right: -50 },
   blob2:           { position: 'absolute', width: 130, height: 130, borderRadius: 65, backgroundColor: 'rgba(255,255,255,0.04)', bottom: -40, left: -20 },
   inner:           { position: 'relative', zIndex: 1 },
