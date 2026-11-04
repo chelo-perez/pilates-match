@@ -162,7 +162,7 @@ export function subscribeAuth() {
 // finishRegistration(). Si algo falla, la persona sigue en el formulario y
 // puede corregir y reintentar (se reutiliza la sesión ya creada).
 
-export type SignUpResult = { userId: string } | { needsConfirmation: true; email: string }
+export type SignUpResult = { userId: string; isCamaraAdmin?: boolean } | { needsConfirmation: true; email: string }
 
 export async function startRegistration(
   email: string, password: string, role: 'estudio' | 'instructor', name: string,
@@ -188,6 +188,12 @@ export async function startRegistration(
     // El proyecto pide confirmar el email: no hay sesión todavía
     st.setRegistering(false)
     return { needsConfirmation: true, email: clean }
+  }
+  // Invitado/a como administrador/a de una Cámara: no crea estudio ni perfil de instructor
+  const { data: prof } = await supabase.from('users').select('role').eq('id', data.user.id).maybeSingle()
+  if (prof?.role === 'camara_admin') {
+    await finishRegistration(data.user.id)
+    return { userId: data.user.id, isCamaraAdmin: true }
   }
   return { userId: data.user.id }
 }

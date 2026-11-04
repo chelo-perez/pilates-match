@@ -108,6 +108,7 @@ export default function RegisterInstructorScreen({ navigation }: Props) {
         )
         return
       }
+      if (res.isCamaraAdmin) return // entra como administrador/a de la Cámara
       const userId = res.userId
 
       // ¿Ya quedó creado el perfil en un intento anterior?

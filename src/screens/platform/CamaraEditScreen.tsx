@@ -1,12 +1,13 @@
 // Dueño de la plataforma: alta y edición de una Cámara (sector, % de reparto, precios y admins).
 import React, { useEffect, useState } from 'react'
 import { View, Text, StyleSheet, ScrollView, Switch, Alert, KeyboardAvoidingView, Platform } from 'react-native'
-import { useQuery, useQueryClient } from '@tanstack/react-query'
+import { useQueryClient } from '@tanstack/react-query'
 import { supabase } from '../../lib/supabase'
 import { errorText, UserError } from '../../lib/errors'
-import { rpc, useCamara } from '../../lib/platform'
+import { useCamara } from '../../lib/platform'
 import { usePlanPrices } from '../../lib/payments'
 import HeroHeader from '../../components/HeroHeader'
+import CamaraTeam from '../../components/CamaraTeam'
 import { Button, Input, LoadingScreen, colors, spacing, radius, typography } from '../../components/ui'
 
 const slugify = (s: string) => s.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase()
@@ -19,20 +20,11 @@ export default function PlatformCamaraEditScreen({ navigation, route }: any) {
   const qc = useQueryClient()
   const { data: camara, isLoading } = useCamara(camaraId)
   const { data: prices = [] } = usePlanPrices(camaraId)
-  const { data: admins = [], refetch: refetchAdmins } = useQuery({
-    queryKey: ['camara-admins', camaraId],
-    queryFn: async () => {
-      const { data } = await supabase.from('users').select('id, email, full_name').eq('role', 'camara_admin').eq('camara_id', camaraId!)
-      return data ?? []
-    },
-    enabled: !!camaraId,
-  })
 
   const [f, setF] = useState({
     name: '', sector: '', business_label: '', instructor_label: '', pct: '25', cuit: '', email: '', active: true,
     starter: '', premium: '',
   })
-  const [adminEmail, setAdminEmail] = useState('')
   const [saving, setSaving] = useState(false)
   const [saved, setSaved] = useState(false)
   const set = (k: keyof typeof f) => (v: any) => setF(p => ({ ...p, [k]: v }))
@@ -91,14 +83,6 @@ export default function PlatformCamaraEditScreen({ navigation, route }: any) {
     finally { setSaving(false) }
   }
 
-  const addAdmin = async () => {
-    try {
-      await rpc('platform_set_camara_admin', { p_email: adminEmail, p_camara: camaraId })
-      setAdminEmail(''); refetchAdmins()
-      Alert.alert('Listo', 'La próxima vez que entre a la app va a ver el panel de la Cámara.')
-    } catch (e) { Alert.alert('No pudimos nombrarlo', errorText(e)) }
-  }
-
   if (!isNew && isLoading) return <LoadingScreen />
 
   return (
@@ -136,17 +120,7 @@ export default function PlatformCamaraEditScreen({ navigation, route }: any) {
             fullWidth size="lg" style={saved ? { backgroundColor: colors.forest } : undefined} />
           {saved ? <Text style={s.savedTxt}>Los precios y el porcentaje ya rigen para esta red.</Text> : null}
 
-          {!isNew && (
-            <View style={[s.card, { marginTop: spacing.md }]}>
-              <Text style={s.caption}>ADMINISTRADORES</Text>
-              {admins.length === 0 ? <Text style={s.hint}>Todavía no tiene administradores.</Text> : admins.map((a: any) => (
-                <Text key={a.id} style={s.admin}>{a.full_name ? `${a.full_name} · ` : ''}{a.email}</Text>
-              ))}
-              <Text style={s.hint}>La persona tiene que tener una cuenta creada en la app.</Text>
-              <Input label="EMAIL" value={adminEmail} onChangeText={setAdminEmail} keyboardType="email-address" autoCapitalize="none" />
-              <Button label="Nombrar administrador" variant="secondary" onPress={addAdmin} disabled={!adminEmail.trim()} fullWidth />
-            </View>
-          )}
+          {!isNew && camaraId ? <View style={{ marginTop: spacing.md }}><CamaraTeam camaraId={camaraId} camaraName={camara?.name} /></View> : null}
         </ScrollView>
       </KeyboardAvoidingView>
     </View>
@@ -161,5 +135,4 @@ const s = StyleSheet.create({
   switchRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   switchTxt: { fontFamily: 'Nunito-Regular', fontSize: 13, color: colors.dark },
   savedTxt:  { fontFamily: 'Nunito-SemiBold', fontSize: 12, color: colors.okTx, textAlign: 'center', marginTop: spacing.sm },
-  admin:     { fontFamily: 'Nunito-SemiBold', fontSize: 13, color: colors.dark, paddingVertical: 4 },
 })

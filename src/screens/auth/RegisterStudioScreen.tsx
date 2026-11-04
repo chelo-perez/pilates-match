@@ -81,6 +81,7 @@ export default function RegisterStudioScreen({ navigation }: Props) {
         )
         return
       }
+      if (res.isCamaraAdmin) return // entra como administrador/a de la Cámara
       const userId = res.userId
 
       // Estudio (si ya existe de un intento anterior, seguimos)

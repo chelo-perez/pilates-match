@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react'
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, TextInput, Alert } from 'react-native'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { usePhotoCropper } from '../../components/PhotoCropper'
+import CamaraTeam from '../../components/CamaraTeam'
 import * as FileSystem from 'expo-file-system/legacy'
 import { supabase } from '../../lib/supabase'
 import { useAuthStore } from '../../store'
@@ -192,6 +193,8 @@ export default function CamaraProfileEditScreen({ navigation }: any) {
           isPending={saveMutation.isPending}
           isSuccess={saveMutation.isSuccess}
         />
+
+        {user?.camara_id ? <View style={{ marginTop: spacing.lg }}><CamaraTeam camaraId={user.camara_id} camaraName={camara?.name} /></View> : null}
       </ScrollView>
 
       <Toast visible={toast.visible} message={toast.message} type={toast.type} onHide={hideToast} />
