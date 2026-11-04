@@ -19,6 +19,9 @@ import { supabase } from '../lib/supabase'
 import { useMyInstructor } from '../hooks'
 import { syncAuthUser, signOutNow } from '../lib/auth'
 import { listenForNotifications } from '../lib/notifications'
+import { openNotificationTarget } from '../lib/notificationTarget'
+import { queryClient } from '../lib/queryClient'
+import NotificationsScreen from '../screens/shared/NotificationsScreen'
 import LottieTab from '../components/LottieTab'
 import { ErrorState, LoadingScreen, Button, colors, spacing } from '../components/ui'
 
@@ -214,22 +217,12 @@ function useNotificationRouting(role: string | undefined) {
   useEffect(() => {
     if (!role) return
     return listenForNotifications(
-      () => {},
+      // Con la app abierta: actualizar la campanita y las listas
+      () => { queryClient.invalidateQueries({ queryKey: ['notifications'] }); queryClient.invalidateQueries({ queryKey: ['instructor-matches'] }) },
       (response) => {
         const data: any = response.notification.request.content.data ?? {}
         if (!navigationRef.isReady()) return
-        const nav: any = navigationRef
-        // Cada aviso lleva data.screen; si viene de una versión vieja, solo match_id
-        const screen = data.screen ?? (data.match_id ? 'propuestas' : null)
-        if (role === 'instructor') {
-          if (screen === 'propuestas') nav.navigate('InstructorTabs', { screen: 'InstructorPropuestas' })
-          else if (screen === 'perfil') nav.navigate('InstructorTabs', { screen: 'InstructorPerfil' })
-          else if (screen === 'inicio') nav.navigate('InstructorTabs', { screen: 'InstructorInicio' })
-        } else if (role === 'estudio') {
-          if (screen === 'historial') nav.navigate('EstudioHome', { screen: 'HistoryList' })
-        } else if (role === 'camara_admin' || role === 'super_admin') {
-          if (screen === 'verificar' && data.instructor_id) nav.navigate('VerifyInstructor', { instructorId: data.instructor_id })
-        }
+        openNotificationTarget(navigationRef, role, data)
       },
     )
   }, [role])
@@ -265,6 +258,7 @@ export default function RootNavigator() {
       <>
         <Stack.Screen name="InstructorTabs" component={InstructorTabs} />
         <Stack.Screen name="EvaluateStudio" component={EvaluateStudioScreen} />
+        <Stack.Screen name="Notifications" component={NotificationsScreen} />
       </>
     )
   } else if (user.role === 'estudio') {
@@ -277,6 +271,7 @@ export default function RootNavigator() {
         <Stack.Screen name="MembershipPaywall" component={MembershipPaywallScreen} />
         <Stack.Screen name="Membership" component={MembershipScreen} />
         <Stack.Screen name="StudioProfileEdit" component={StudioProfileEditScreen} />
+        <Stack.Screen name="Notifications" component={NotificationsScreen} />
       </>
     )
   } else {
@@ -287,6 +282,7 @@ export default function RootNavigator() {
         <Stack.Screen name="VerifyInstructor" component={VerifyInstructorScreen} />
         <Stack.Screen name="StudioDetail" component={StudioDetailScreen} />
         <Stack.Screen name="CamaraProfileEdit" component={CamaraProfileEditScreen} />
+        <Stack.Screen name="Notifications" component={NotificationsScreen} />
       </>
     )
   }

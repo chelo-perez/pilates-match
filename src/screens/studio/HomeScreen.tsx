@@ -10,6 +10,7 @@ import { MATCH_STATUS } from '../../constants/labels'
 import { Feather } from '@expo/vector-icons'
 import BlobCard from '../../components/BlobCard'
 import HeroHeader from '../../components/HeroHeader'
+import NotificationBell from '../../components/NotificationBell'
 import { usePendingEvaluationMatches } from './studioQueries'
 
 export default function StudioHomeScreen({ navigation }: any) {
@@ -69,10 +70,13 @@ export default function StudioHomeScreen({ navigation }: any) {
           avatarFallback={studio.name ?? 'E'}
           onAvatarPress={() => navigation.navigate('StudioProfileEdit')}
           rightElement={
-            <TouchableOpacity style={s.logoutPill} onPress={confirmSignOut}>
-              <Feather name="log-out" size={13} color={colors.white} />
-              <Text style={s.logoutTxt}>Salir</Text>
-            </TouchableOpacity>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.sm }}>
+              <NotificationBell />
+              <TouchableOpacity style={s.logoutPill} onPress={confirmSignOut}>
+                <Feather name="log-out" size={13} color={colors.white} />
+                <Text style={s.logoutTxt}>Salir</Text>
+              </TouchableOpacity>
+            </View>
           }
           bottomElement={isMember ? (
             <View style={s.memberBadge}>

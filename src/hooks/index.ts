@@ -135,3 +135,36 @@ export function invalidateInstructorProfile(qc: ReturnType<typeof useQueryClient
   qc.invalidateQueries({ queryKey: ['instructor-detail'] })
   qc.invalidateQueries({ queryKey: ['camara-instructors'] })
 }
+
+// ── Notificaciones (campanita) ──────────────────────────────
+// La key empieza con 'notifications': al llegar un aviso con la app abierta se invalida.
+export const useNotificationsList = () => {
+  const userId = useUserId()
+  return useQuery({
+    queryKey: ['notifications', userId, 'list'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('notifications').select('*')
+        .order('created_at', { ascending: false }).limit(60)
+      if (error) throw error
+      return data ?? []
+    },
+    enabled: !!userId,
+  })
+}
+
+export const useUnreadNotifications = () => {
+  const userId = useUserId()
+  const { data } = useQuery({
+    queryKey: ['notifications', userId, 'unread'],
+    queryFn: async () => {
+      const { count, error } = await supabase
+        .from('notifications').select('id', { count: 'exact', head: true }).is('read_at', null)
+      if (error) return 0 // si la tabla todavía no existe, la campanita queda sin número
+      return count ?? 0
+    },
+    enabled: !!userId,
+    refetchInterval: 60_000,
+  })
+  return data ?? 0
+}
