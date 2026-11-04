@@ -34,6 +34,7 @@ export default function PlatformCamaraEditScreen({ navigation, route }: any) {
   })
   const [adminEmail, setAdminEmail] = useState('')
   const [saving, setSaving] = useState(false)
+  const [saved, setSaved] = useState(false)
   const set = (k: keyof typeof f) => (v: any) => setF(p => ({ ...p, [k]: v }))
 
   useEffect(() => {
@@ -47,7 +48,7 @@ export default function PlatformCamaraEditScreen({ navigation, route }: any) {
   useEffect(() => {
     const get = (k: string) => prices.find(p => p.plan_type === k)?.price_ars
     setF(p => ({ ...p, starter: get('starter') ? String(get('starter')) : '', premium: get('premium') ? String(get('premium')) : '' }))
-  }, [prices.length, camaraId])
+  }, [JSON.stringify(prices), camaraId])
 
   const save = async () => {
     try {
@@ -79,9 +80,13 @@ export default function PlatformCamaraEditScreen({ navigation, route }: any) {
           : await supabase.from('plan_prices').delete().eq('camara_id', id!).eq('plan_type', plan)
         if (error) throw error
       }
-      ;['platform-camaras', 'camara', 'plan-prices', 'active-camaras'].forEach(k => qc.invalidateQueries({ queryKey: [k] }))
+      await Promise.all(['platform-camaras', 'camara', 'plan-prices', 'active-camaras', 'platform-counts']
+        .map(k => qc.invalidateQueries({ queryKey: [k] })))
       if (isNew) navigation.replace('PlatformCamaraEdit', { camaraId: id })
-      else Alert.alert('Guardado', 'Los cambios ya están activos.')
+      else {
+        setSaved(true)
+        setTimeout(() => setSaved(false), 2500)
+      }
     } catch (e) { Alert.alert('No pudimos guardar', errorText(e)) }
     finally { setSaving(false) }
   }
@@ -127,7 +132,9 @@ export default function PlatformCamaraEditScreen({ navigation, route }: any) {
             <Input label="PREMIUM (SIN LÍMITE) — ARS" value={f.premium} onChangeText={set('premium')} keyboardType="number-pad" placeholder="Ej: 30000" />
           </View>
 
-          <Button label={isNew ? 'Crear Cámara' : 'Guardar cambios'} onPress={save} isLoading={saving} fullWidth size="lg" />
+          <Button label={saved ? '✓ Cambios guardados' : isNew ? 'Crear Cámara' : 'Guardar cambios'} onPress={save} isLoading={saving}
+            fullWidth size="lg" style={saved ? { backgroundColor: colors.forest } : undefined} />
+          {saved ? <Text style={s.savedTxt}>Los precios y el porcentaje ya rigen para esta red.</Text> : null}
 
           {!isNew && (
             <View style={[s.card, { marginTop: spacing.md }]}>
@@ -153,5 +160,6 @@ const s = StyleSheet.create({
   hint:      { fontFamily: 'Nunito-Regular', fontSize: 12, color: colors.mid, lineHeight: 17, marginBottom: spacing.sm },
   switchRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   switchTxt: { fontFamily: 'Nunito-Regular', fontSize: 13, color: colors.dark },
+  savedTxt:  { fontFamily: 'Nunito-SemiBold', fontSize: 12, color: colors.okTx, textAlign: 'center', marginTop: spacing.sm },
   admin:     { fontFamily: 'Nunito-SemiBold', fontSize: 13, color: colors.dark, paddingVertical: 4 },
 })
