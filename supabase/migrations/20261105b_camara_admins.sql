@@ -1,4 +1,3 @@
--- PENDIENTE: no aplicada todavía.
 -- =====================================================================
 -- Redes y entidades + equipo de cada entidad — 2026-11-05
 --  * Una "red" (tabla camaras) la coordina una entidad: Cámara, Asociación, Colegio,
