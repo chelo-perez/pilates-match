@@ -30,7 +30,7 @@ const RULES: { test: (m: string, code: string) => boolean; msg: string }[] = [
   { test: (m) => m.includes('rate limit') || m.includes('too many requests'), msg: 'Hiciste demasiados intentos. Esperá unos minutos y probá de nuevo.' },
   { test: (m) => m.includes('network request failed') || m.includes('failed to fetch') || m.includes('network'), msg: 'No hay conexión. Revisá tu internet y probá de nuevo.' },
   { test: (m) => m.includes('jwt expired') || m.includes('not authenticated') || m.includes('no hay sesión'), msg: 'Tu sesión venció. Volvé a iniciar sesión.' },
-  { test: (m, c) => c === '23505' && m.includes('camara_code'), msg: 'Ese código de la Cámara ya está asociado a otro estudio.' },
+  { test: (m, c) => c === '23505' && m.includes('camara_code'), msg: 'Ese código de socio ya está asociado a otro estudio.' },
   { test: (_m, c) => c === '23505', msg: 'Ese dato ya está registrado.' },
   { test: (_m, c) => c === '23514', msg: 'Algún valor no es válido. Revisá los datos.' },
   { test: (_m, c) => c === '42501' || _m.includes('row-level security') || _m.includes('not allowed'), msg: 'No tenés permiso para hacer esto.' },

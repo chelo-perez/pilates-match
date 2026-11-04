@@ -16,6 +16,7 @@ import { useAuthStore } from '../../store'
 import { Button, Input, colors, radius, spacing, typography } from '../../components/ui'
 import Toast from '../../components/Toast'
 import { useToast } from '../../hooks/useToast'
+import { entity } from '../../lib/entity'
 
 type Role = 'instructor' | 'estudio'
 
@@ -32,7 +33,7 @@ const ROLES: { key: Role; icon: 'activity' | 'home'; title: string; desc: string
     icon: 'activity',
     title: 'Soy instructor/a',
     desc: 'Doy clases de Pilates y busco estudios donde trabajar',
-    note: 'La Cámara verifica tu perfil antes de que aparezcas en las búsquedas',
+    get note() { return `${entity().La} verifica tu perfil antes de que aparezcas en las búsquedas` },
   },
 ]
 
@@ -157,7 +158,7 @@ export default function SelectRoleScreen() {
               ))}
             </View>
             <Text style={s.footer}>
-              ¿Administrás una Cámara? Escribinos y te damos el acceso.
+              ¿Coordinás una red (Cámara, Asociación, Colegio)? Escribinos y te damos el acceso.
             </Text>
           </>
         ) : (
@@ -166,7 +167,7 @@ export default function SelectRoleScreen() {
             <Text style={s.subtitle}>
               {role === 'estudio'
                 ? 'Así te van a ver los instructores. Después podés completar el resto desde tu perfil.'
-                : 'La Cámara usa estos datos para verificarte. Después podés sumar certificados y tarifas.'}
+                : `${entity().La} usa estos datos para verificarte. Después podés sumar certificados y tarifas.`}
             </Text>
             <Input
               label={role === 'estudio' ? 'NOMBRE DEL ESTUDIO' : 'NOMBRE Y APELLIDO'}

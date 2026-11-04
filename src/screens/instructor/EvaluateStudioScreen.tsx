@@ -19,6 +19,7 @@ import HeroHeader from '../../components/HeroHeader'
 import { Feather } from '@expo/vector-icons'
 import Toast from '../../components/Toast'
 import { useToast } from '../../hooks/useToast'
+import { entity } from '../../lib/entity'
 
 type Props = {
   navigation: any
@@ -99,7 +100,7 @@ export default function EvaluateStudioScreen({ navigation, route }: Props) {
       qc.invalidateQueries({ queryKey: ['instructor-studio-evals'] })
       Alert.alert(
         'Evaluación enviada',
-        'Gracias. El estudio no ve tu evaluación; la Cámara la usa para cuidar la calidad de la red.',
+        `Gracias. El estudio no ve tu evaluación; ${entity().la} la usa para cuidar la calidad de la red.`,
         [{ text: 'OK', onPress: () => navigation.goBack() }]
       )
     },
@@ -111,7 +112,7 @@ export default function EvaluateStudioScreen({ navigation, route }: Props) {
     if (hasIssue) {
       Alert.alert(
         'Reportás un problema',
-        'Tu reporte quedará visible para la Cámara. ¿Confirmás?',
+        `Tu reporte quedará visible para ${entity().la}. ¿Confirmás?`,
         [
           { text: 'Cancelar', style: 'cancel' },
           { text: 'Confirmar y enviar', onPress: () => createMutation.mutate() },
@@ -200,7 +201,7 @@ export default function EvaluateStudioScreen({ navigation, route }: Props) {
         <Text style={styles.sectionTitle}>¿HUBO ALGÚN PROBLEMA?</Text>
         <Card style={{ marginBottom: spacing.md }}>
           <Text style={styles.issueNote}>
-            Los reportes van directo a la Cámara. Usalos solo si corresponde.
+            Los reportes van directo {entity().a}. Usalos solo si corresponde.
           </Text>
           {ISSUES.map(({ key, label }) => (
             <TouchableOpacity

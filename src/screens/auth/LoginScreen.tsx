@@ -94,7 +94,7 @@ export default function LoginScreen({ navigation }: any) {
       <View style={s.brand}>
         <BrandLogo width={168} style={s.logo} />
         <Text style={s.headline}>Estudios e instructores{'\n'}de Pilates, conectados</Text>
-        <Text style={s.subline}>Reemplazos y clases regulares en Buenos Aires, con el aval de la Cámara de Pilates</Text>
+        <Text style={s.subline}>Reemplazos y clases regulares con profesionales verificados</Text>
       </View>
 
       <View style={s.buttons}>

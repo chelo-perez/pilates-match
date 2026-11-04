@@ -7,6 +7,7 @@ import { Feather } from '@expo/vector-icons'
 import BlobCard from '../../components/BlobCard'
 import HeroHeader from '../../components/HeroHeader'
 import type { NativeStackScreenProps } from '@react-navigation/native-stack'
+import { entity } from '../../lib/entity'
 
 type Props = NativeStackScreenProps<any, 'InstructorProfile'>
 type Tab = 'perfil' | 'certificaciones' | 'disponibilidad'
@@ -67,7 +68,7 @@ export default function InstructorProfileScreen({ navigation, route }: Props) {
           <View style={s.heroBottom}>
             {instructor.verification_status === 'verificado' && (
               <View style={s.veriBadge}>
-                <Text style={s.veriTxt}>✓ Verificado por la Cámara</Text>
+                <Text style={s.veriTxt}>✓ Verificado por {entity().la}</Text>
               </View>
             )}
             {isFullMatch && (
@@ -194,7 +195,7 @@ export default function InstructorProfileScreen({ navigation, route }: Props) {
                       {cert.institution ? <Text style={s.certMeta}>{cert.institution}{cert.year ? ` · ${cert.year}` : ''}</Text> : null}
                       <View style={[s.miniTag, { backgroundColor: approved ? colors.okBg : colors.warnBg, marginTop: 4 }]}>
                         <Text style={[s.miniTagTxt, { color: approved ? colors.okTx : colors.warnTx }]}>
-                          {approved ? '✓ Revisado por la Cámara' : 'En revisión'}
+                          {approved ? `✓ Revisado por ${entity().la}` : 'En revisión'}
                         </Text>
                       </View>
                     </View>

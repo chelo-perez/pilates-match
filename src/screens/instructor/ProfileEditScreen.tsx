@@ -18,6 +18,7 @@ import Toast from '../../components/Toast'
 import { useToast } from '../../hooks/useToast'
 import { Feather } from '@expo/vector-icons'
 import SaveButton from '../../components/SaveButton'
+import { entity } from '../../lib/entity'
 
 const SPECIALTIES = Object.entries(SPECIALTY_LABELS as Record<string, string>).map(([key, label]) => ({ key, label }))
 
@@ -155,7 +156,7 @@ export default function ProfileEditScreen() {
     if (year !== null && (isNaN(year) || year < 1950 || year > new Date().getFullYear())) {
       setCertError('Revisá el año.'); return
     }
-    if (!certFile) { setCertError('Adjuntá el certificado en PDF o foto: la Cámara lo necesita para verificarte.'); return }
+    if (!certFile) { setCertError(`Adjuntá el certificado en PDF o foto: ${entity().la} lo necesita para verificarte.`); return }
     setCertError('')
     try {
       setSavingCert(true)
@@ -206,7 +207,7 @@ export default function ProfileEditScreen() {
   }
 
   const deleteCert = (certId: string) => {
-    Alert.alert('Eliminar certificado', 'Se va a quitar de tu perfil y de la revisión de la Cámara.', [
+    Alert.alert('Eliminar certificado', `Se va a quitar de tu perfil y de la revisión ${entity().de}.`, [
       { text: 'Cancelar', style: 'cancel' },
       { text: 'Eliminar', style: 'destructive', onPress: async () => {
         const { error } = await supabase.from('certifications').delete().eq('id', certId)
@@ -271,7 +272,7 @@ export default function ProfileEditScreen() {
           <View style={[s.noteBanner, status === 'rechazado' ? { backgroundColor: colors.redBg } : null]}>
             <Feather name="alert-circle" size={14} color={status === 'rechazado' ? colors.redTx : colors.warnTx} />
             <Text style={[s.noteBannerTxt, { color: status === 'rechazado' ? colors.redTx : colors.warnTx }]}>
-              Mensaje de la Cámara: {instructor.verification_note}
+              Mensaje {entity().de}: {instructor.verification_note}
             </Text>
           </View>
         ) : null}
@@ -314,7 +315,7 @@ export default function ProfileEditScreen() {
             <Button label="Agregar" size="sm" variant="secondary" onPress={() => { resetCertForm(); setShowAddCert(true) }}
               icon={<Feather name="plus" size={14} color={colors.sage} />} />
           </View>
-          <Text style={s.note}>Subí tus certificados en PDF o foto. La Cámara los revisa para verificar tu perfil.</Text>
+          <Text style={s.note}>Subí tus certificados en PDF o foto. {entity().La} los revisa para verificar tu perfil.</Text>
           {certs.length === 0 ? (
             <View style={s.emptyBox}>
               <Feather name="award" size={28} color={colors.border} />

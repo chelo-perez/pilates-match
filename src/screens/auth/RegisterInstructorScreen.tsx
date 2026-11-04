@@ -17,6 +17,7 @@ import { VERIFICATION_STATUS } from '../../constants/labels'
 import { Button, Input, Card, Avatar, Badge, colors, spacing, radius, typography } from '../../components/ui'
 import Toast from '../../components/Toast'
 import { useToast } from '../../hooks/useToast'
+import { entity } from '../../lib/entity'
 
 // ── Schemas por paso ────────────────────────────────────────
 const currentYear = new Date().getFullYear()
@@ -165,7 +166,7 @@ export default function RegisterInstructorScreen({ navigation }: Props) {
 
       Alert.alert(
         '¡Cuenta creada!',
-        'Tu perfil quedó pendiente de verificación por la Cámara. Podés ver el estado desde Inicio.',
+        `Tu perfil quedó pendiente de verificación por ${entity().la}. Podés ver el estado desde Inicio.`,
         [{ text: 'Entendido' }],
       )
       await finishRegistration(userId)
@@ -200,7 +201,7 @@ export default function RegisterInstructorScreen({ navigation }: Props) {
             <View style={styles.infoBanner}>
               <Feather name="search" size={16} color={colors.sage} style={{ marginRight: spacing.sm, marginTop: 1 }} />
               <Text style={[styles.infoText, { flex: 1 }]}>
-                La Cámara puede haberte cargado. Buscá tu nombre para reclamar tu perfil.
+                {entity().La} puede haberte cargado. Buscá tu nombre para reclamar tu perfil.
               </Text>
             </View>
 
@@ -253,7 +254,7 @@ export default function RegisterInstructorScreen({ navigation }: Props) {
           <>
             <Text style={styles.title}>Datos personales</Text>
             <Text style={styles.sub}>
-              Paso 2 de {TOTAL_STEPS} · {selectedProfile ? 'Tu DNI tiene que coincidir con el que cargó la Cámara' : 'La Cámara los usa para verificar tu identidad'}
+              Paso 2 de {TOTAL_STEPS} · {selectedProfile ? `Tu DNI tiene que coincidir con el que cargó ${entity().la}` : `${entity().La} los usa para verificar tu identidad`}
             </Text>
 
             <Controller control={personal.control} name="fullName"
@@ -297,7 +298,7 @@ export default function RegisterInstructorScreen({ navigation }: Props) {
         {step === 3 && (
           <>
             <Text style={styles.title}>Formación</Text>
-            <Text style={styles.sub}>Paso 3 de {TOTAL_STEPS} · La Cámara revisa tus certificaciones</Text>
+            <Text style={styles.sub}>Paso 3 de {TOTAL_STEPS} · {entity().La} revisa tus certificaciones</Text>
 
             <Controller control={cert.control} name="institution"
               render={({ field: { onChange, value } }) => (
@@ -360,7 +361,7 @@ export default function RegisterInstructorScreen({ navigation }: Props) {
 
             <View style={styles.infoBox}>
               <Text style={styles.infoBoxText}>
-                Tu perfil queda pendiente hasta que la Cámara verifique tus datos. Mientras tanto podés completar horarios y tarifas.
+                Tu perfil queda pendiente hasta que {entity().la} verifique tus datos. Mientras tanto podés completar horarios y tarifas.
               </Text>
             </View>
 

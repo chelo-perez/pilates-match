@@ -8,6 +8,7 @@ import { LoadingScreen, ErrorState, colors, spacing, radius, typography } from '
 import { Feather } from '@expo/vector-icons'
 import HeroHeader from '../../components/HeroHeader'
 import NotificationBell from '../../components/NotificationBell'
+import { entity } from '../../lib/entity'
 
 export default function CamaraDashboardScreen({ navigation }: any) {
   const user = useAuthStore(s => s.user)
@@ -69,7 +70,7 @@ export default function CamaraDashboardScreen({ navigation }: any) {
       <ScrollView contentContainerStyle={{ paddingBottom: 100 }} showsVerticalScrollIndicator={false}>
 
         <HeroHeader
-          title={camara?.name ?? 'Cámara de Pilates'}
+          title={camara?.name ?? entity().La}
           centered
           avatarUri={camara?.logo_url ?? undefined}
           avatarFallback={camara?.name ?? 'C'}
@@ -151,7 +152,7 @@ export default function CamaraDashboardScreen({ navigation }: any) {
               <Text style={s.inviteTitle}>
                 {stats!.non_member_studios === 1 ? '1 estudio todavía no es socio' : `${stats!.non_member_studios} estudios todavía no son socios`}
               </Text>
-              <Text style={s.cardSub}>Invitalos a sumarse a la Cámara</Text>
+              <Text style={s.cardSub}>Invitalos a sumarse {entity().a}</Text>
             </View>
             <Feather name="chevron-right" size={18} color={colors.sage} />
           </TouchableOpacity>

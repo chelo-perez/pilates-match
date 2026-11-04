@@ -12,6 +12,7 @@ import { Feather } from '@expo/vector-icons'
 import BlobCard from '../../components/BlobCard'
 import HeroHeader from '../../components/HeroHeader'
 import type { NativeStackScreenProps } from '@react-navigation/native-stack'
+import { entity } from '../../lib/entity'
 
 type Props = NativeStackScreenProps<any, 'Search'>
 type MatchLevel = 'full' | 'partial' | 'none'
@@ -144,7 +145,7 @@ export default function SearchScreen({ navigation }: Props) {
     <View style={{ flex: 1, backgroundColor: colors.cream }}>
       <HeroHeader
         title="Instructores"
-        subtitle={profileComplete ? 'Ordenados por compatibilidad con tu estudio' : 'Instructores verificados por la Cámara'}
+        subtitle={profileComplete ? 'Ordenados por compatibilidad con tu estudio' : `Instructores verificados por ${entity().la}`}
         bottomElement={
           profileComplete ? (
             <View style={s.statsRow}>

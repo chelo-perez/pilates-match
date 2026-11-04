@@ -1,4 +1,4 @@
-// Dueño de la plataforma: liquidaciones del mes a cada Cámara (cobrado, su parte, factura y pago).
+// Dueño de la plataforma: liquidaciones del mes a cada entidad (cobrado, su parte, factura y pago).
 import React, { useState } from 'react'
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Modal, Alert } from 'react-native'
 import { useQueryClient } from '@tanstack/react-query'
@@ -40,7 +40,7 @@ export default function PlatformSettlementsScreen() {
     <View style={{ flex: 1, backgroundColor: colors.cream }}>
       <HeroHeader
         title="Liquidaciones"
-        subtitle="Lo que le corresponde a cada Cámara"
+        subtitle="Lo que le corresponde a cada entidad"
         bottomElement={
           <View style={s.monthRow}>
             <TouchableOpacity onPress={() => setOffset(o => o - 1)} hitSlop={12}><Feather name="chevron-left" size={22} color={colors.white} /></TouchableOpacity>
@@ -55,7 +55,7 @@ export default function PlatformSettlementsScreen() {
         <View style={s.kpis}>
           <KPI n={formatARS(collected)} l="Cobrado" />
           <KPI n={formatARS(collected - shares)} l="Queda para la plataforma" />
-          <KPI n={formatARS(owed)} l="Falta pagar a Cámaras" warn={owed > 0} />
+          <KPI n={formatARS(owed)} l="Falta pagar a entidades" warn={owed > 0} />
         </View>
 
         {list.length === 0 ? (
@@ -65,7 +65,7 @@ export default function PlatformSettlementsScreen() {
           return (
             <View key={st.id} style={s.card}>
               <View style={s.head}>
-                <Text style={s.name} numberOfLines={2}>{st.camara?.name ?? 'Cámara'}</Text>
+                <Text style={s.name} numberOfLines={2}>{st.camara?.name ?? 'Entidad'}</Text>
                 <View style={[s.badge, { backgroundColor: b.bg }]}><Text style={[s.badgeTxt, { color: b.tx }]}>{b.label}</Text></View>
               </View>
               <Row l="Cobrado a sus estudios" v={formatARS(Number(st.collected_ars))} />
@@ -80,7 +80,7 @@ export default function PlatformSettlementsScreen() {
         })}
 
         <Button label={list.length ? 'Recalcular este mes' : 'Calcular este mes'} variant="secondary" onPress={build} isLoading={busy || isFetching} fullWidth style={{ marginTop: spacing.sm }} />
-        <Text style={s.note}>Recalcular no cambia las liquidaciones que la Cámara ya facturó.</Text>
+        <Text style={s.note}>Recalcular no cambia las liquidaciones que la entidad ya facturó.</Text>
       </ScrollView>
 
       <Modal visible={!!paying} transparent animationType="fade" onRequestClose={() => setPaying(null)}>

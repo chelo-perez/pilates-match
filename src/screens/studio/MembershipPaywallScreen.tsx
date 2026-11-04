@@ -11,6 +11,7 @@ import HeroHeader from '../../components/HeroHeader'
 import type { NativeStackScreenProps } from '@react-navigation/native-stack'
 import { usePlanPrices } from '../../lib/payments'
 import { contactCamaraForPlan, limitText, nextResetLabel, useCamaraContact, useStudioMembership } from './studioQueries'
+import { entity } from '../../lib/entity'
 
 type Props = NativeStackScreenProps<any, 'MembershipPaywall'>
 
@@ -36,7 +37,7 @@ export default function MembershipPaywallScreen({ navigation }: Props) {
         ? `Usaste ${limit === 1 ? 'la propuesta' : `las ${limit} propuestas`} de este mes`
         : 'Ampliá tu plan'
   const subtitle = inactive || !membership
-    ? 'Para enviar propuestas, la Cámara tiene que activar tu plan.'
+    ? `Para enviar propuestas, ${entity().la} tiene que activar tu plan.`
     : `Tu plan ${plan.label} incluye ${limitText(limit).toLowerCase()}. El contador vuelve a cero el ${nextResetLabel()}.`
 
   return (
@@ -72,12 +73,12 @@ export default function MembershipPaywallScreen({ navigation }: Props) {
           <Text style={styles.infoText}>
             {online
               ? 'Podés pasar a un plan pago ahora mismo con Mercado Pago, y seguir enviando propuestas apenas se acredite el pago.'
-              : 'El cambio de plan y el pago se coordinan directamente con la Cámara. Cuando lo actualice, vas a poder seguir enviando propuestas.'}
+              : `El cambio de plan y el pago se coordinan directamente con ${entity().la}. Cuando lo actualice, vas a poder seguir enviando propuestas.`}
           </Text>
         </View>
 
         <Button
-          label={online ? 'Ver planes y pagar' : 'Pedile a la Cámara que actualice tu plan'}
+          label={online ? 'Ver planes y pagar' : `Pedile ${entity().a} que actualice tu plan`}
           onPress={() => online ? navigation.navigate('Membership' as any) : contactCamaraForPlan(contact, studio?.name)}
           fullWidth
           size="lg"

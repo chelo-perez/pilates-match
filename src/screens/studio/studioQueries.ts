@@ -4,6 +4,7 @@ import { Alert, Linking } from 'react-native'
 import { useQuery } from '@tanstack/react-query'
 import { supabase } from '../../lib/supabase'
 import { toLocalISODate } from '../../lib/dates'
+import { entity } from '../../lib/entity'
 
 // ── Evaluaciones pendientes ─────────────────────────────────
 // Clases aceptadas con fecha anterior a hoy (hora local) que todavía no se evaluaron.
@@ -99,8 +100,8 @@ export function contactCamaraForPlan(contact: CamaraContact | undefined, studioN
 
   if (!phone) { openMail(); return }
   Alert.alert(
-    'Pedile a la Cámara que actualice tu plan',
-    `¿Cómo querés contactar a ${contact?.name ?? 'la Cámara'}?`,
+    `Pedile ${entity().a} que actualice tu plan`,
+    `¿Cómo querés contactar a ${contact?.name ?? entity().la}?`,
     [
       { text: 'Cancelar', style: 'cancel' },
       { text: 'WhatsApp', onPress: openWhatsApp },

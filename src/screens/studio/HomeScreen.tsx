@@ -12,6 +12,7 @@ import BlobCard from '../../components/BlobCard'
 import HeroHeader from '../../components/HeroHeader'
 import NotificationBell from '../../components/NotificationBell'
 import { usePendingEvaluationMatches } from './studioQueries'
+import { entity } from '../../lib/entity'
 
 export default function StudioHomeScreen({ navigation }: any) {
   const { data: studio, isLoading, isError, refetch } = useMyStudio()
@@ -80,7 +81,7 @@ export default function StudioHomeScreen({ navigation }: any) {
           }
           bottomElement={isMember ? (
             <View style={s.memberBadge}>
-              <Text style={s.memberBadgeTxt}>★ Socio de la Cámara</Text>
+              <Text style={s.memberBadgeTxt}>★ Socio {entity().de}</Text>
             </View>
           ) : null}
         />

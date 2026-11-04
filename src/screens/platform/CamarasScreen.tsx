@@ -1,4 +1,4 @@
-// Dueño de la plataforma: las Cámaras (una por sector), cuántos estudios tienen y su % de reparto.
+// Dueño de la plataforma: las redes (cada una coordinada por una entidad), su actividad y el % de reparto.
 import React from 'react'
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from 'react-native'
 import { useQuery } from '@tanstack/react-query'
@@ -28,8 +28,8 @@ export default function PlatformCamarasScreen({ navigation }: any) {
   return (
     <View style={{ flex: 1, backgroundColor: colors.cream }}>
       <HeroHeader
-        title="Cámaras"
-        subtitle="Cada Cámara coordina un sector"
+        title="Redes"
+        subtitle="Cada red la coordina una entidad"
         rightElement={
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.sm }}>
             <NotificationBell />
@@ -40,14 +40,14 @@ export default function PlatformCamarasScreen({ navigation }: any) {
           </View>
         }
       />
-      {isLoading ? <LoadingScreen /> : isError ? <ErrorState message="No pudimos cargar las Cámaras." onRetry={refetch} /> : (
+      {isLoading ? <LoadingScreen /> : isError ? <ErrorState message="No pudimos cargar las redes." onRetry={refetch} /> : (
         <ScrollView contentContainerStyle={s.content}>
           {camaras.map(c => (
             <TouchableOpacity key={c.id} style={s.card} activeOpacity={0.85} onPress={() => navigation.navigate('PlatformCamaraEdit', { camaraId: c.id })}>
               <View style={s.head}>
                 <View style={{ flex: 1 }}>
                   <Text style={s.name} numberOfLines={2}>{c.name}</Text>
-                  <Text style={s.sector}>{c.business_label ?? c.sector}{c.is_active ? '' : ' · inactiva'}</Text>
+                  <Text style={s.sector}>Red de {(c.business_label ?? c.sector)?.toLowerCase()} · {(c as any).entity_type ?? 'Cámara'}{c.is_active ? '' : ' · inactiva'}</Text>
                 </View>
                 <View style={s.pct}><Text style={s.pctTxt}>{Number(c.revenue_share_pct ?? 0).toLocaleString('es-AR')}%</Text></View>
               </View>
@@ -58,7 +58,7 @@ export default function PlatformCamarasScreen({ navigation }: any) {
               </View>
             </TouchableOpacity>
           ))}
-          <Button label="Nueva Cámara" icon={<Feather name="plus" size={16} color={colors.white} />} onPress={() => navigation.navigate('PlatformCamaraEdit', {})} fullWidth size="lg" />
+          <Button label="Nueva red" icon={<Feather name="plus" size={16} color={colors.white} />} onPress={() => navigation.navigate('PlatformCamaraEdit', {})} fullWidth size="lg" />
         </ScrollView>
       )}
     </View>

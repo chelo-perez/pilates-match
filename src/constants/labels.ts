@@ -1,6 +1,7 @@
 // src/constants/labels.ts
 // Textos para los valores de los enums de la base.
 import type { MatchStatus, Specialty, VerificationStatus } from '../types/database'
+import { entity } from '../lib/entity'
 
 export type BadgeVariant = 'success' | 'warning' | 'danger' | 'info' | 'neutral'
 
@@ -34,8 +35,8 @@ export const MATCH_STATUS: Record<MatchStatus | string, { label: string; variant
 }
 
 export const VERIFICATION_STATUS: Record<VerificationStatus | string, { label: string; variant: BadgeVariant; message: string }> = {
-  pendiente:  { label: 'Pendiente',  variant: 'warning', message: 'La Cámara está revisando tu perfil. Mientras tanto no aparecés en las búsquedas de los estudios.' },
-  verificado: { label: 'Verificado', variant: 'success', message: 'Tu perfil está verificado por la Cámara y aparece en las búsquedas.' },
-  rechazado:  { label: 'Rechazado',  variant: 'danger',  message: 'La Cámara no pudo verificar tu perfil. Revisá el motivo, corregí tus datos y volvé a enviarlos.' },
+  pendiente:  { label: 'Pendiente',  variant: 'warning', get message() { return `${entity().La} está revisando tu perfil. Mientras tanto no aparecés en las búsquedas de los estudios.` } },
+  verificado: { label: 'Verificado', variant: 'success', get message() { return `Tu perfil está verificado por ${entity().la} y aparece en las búsquedas.` } },
+  rechazado:  { label: 'Rechazado',  variant: 'danger',  get message() { return `${entity().La} no pudo verificar tu perfil. Revisá el motivo, corregí tus datos y volvé a enviarlos.` } },
   inactivo:   { label: 'Inactivo',   variant: 'neutral', message: 'Tu perfil está inactivo y no aparece en las búsquedas.' },
 }

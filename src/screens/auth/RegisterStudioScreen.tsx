@@ -15,6 +15,7 @@ import CamaraSelect from '../../components/CamaraSelect'
 import { Button, Input, Badge, colors, spacing, radius, typography } from '../../components/ui'
 import Toast from '../../components/Toast'
 import { useToast } from '../../hooks/useToast'
+import { entity } from '../../lib/entity'
 
 const schema = z.object({
   studioName: z.string().trim().min(2, 'Escribí el nombre del estudio'),
@@ -31,7 +32,7 @@ const STEP_FIELDS: Record<number, (keyof Form)[]> = {
   2: ['email', 'password'],
   3: ['camaraCode'],
 }
-const STEP_TITLES = ['Tu estudio', 'Acceso', 'Código de la Cámara']
+const STEP_TITLES = ['Tu negocio', 'Acceso', 'Código de socio']
 
 type Props = NativeStackScreenProps<any, 'RegisterStudio'>
 
@@ -183,7 +184,7 @@ export default function RegisterStudioScreen({ navigation }: Props) {
           <>
             <View style={styles.infoBox}>
               <Text style={styles.infoText}>
-                Si tu estudio es socio de la Cámara, ingresá el código que te dieron: la Cámara lo valida y activa tu plan de socio. Si no tenés código, dejalo vacío: empezás con el plan Freemium (1 propuesta por mes) y podés asociarte más adelante.
+                Si tu estudio es socio {entity().de}, ingresá el código que te dieron: {entity().la} lo valida y activa tu plan de socio. Si no tenés código, dejalo vacío: empezás con el plan Freemium (1 propuesta por mes) y podés asociarte más adelante.
               </Text>
             </View>
             <View style={styles.codeRow}>
@@ -197,7 +198,7 @@ export default function RegisterStudioScreen({ navigation }: Props) {
               <Button label="Revisar" variant="secondary" size="sm" onPress={checkCode}
                 isLoading={codeStatus === 'checking'} disabled={!camaraCode} style={{ marginLeft: spacing.sm, marginBottom: 6 }} />
             </View>
-            {codeStatus === 'free' && <Badge label="Código libre: la Cámara lo va a validar" variant="success" style={{ marginTop: spacing.sm }} />}
+            {codeStatus === 'free' && <Badge label={`Código libre: ${entity().la} lo va a validar`} variant="success" style={{ marginTop: spacing.sm }} />}
             {codeStatus === 'taken' && <Badge label="Ese código ya lo usa otro estudio" variant="danger" style={{ marginTop: spacing.sm }} />}
           </>
         )}

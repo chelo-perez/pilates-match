@@ -13,6 +13,7 @@ import HeroHeader from '../../components/HeroHeader'
 import BlobCard from '../../components/BlobCard'
 import SaveButton from '../../components/SaveButton'
 import Slider from '@react-native-community/slider'
+import { entity } from '../../lib/entity'
 
 const STEP = 500
 const fmt = (n: number) => '$' + n.toLocaleString('es-AR')
@@ -65,7 +66,7 @@ function RateSection({ title, badge, value, setValue, range, accent, textColor, 
           <View style={s.rangeRow}>
             <View><Text style={s.rangeVal}>{fmt(range.min_ars)}</Text><Text style={s.rangeLbl}>Mínimo</Text></View>
             <View style={[s.rangePill, { backgroundColor: bg }]}>
-              <Text style={[s.rangePillTxt, { color: textColor }]}>Rango sugerido por la Cámara</Text>
+              <Text style={[s.rangePillTxt, { color: textColor }]}>Rango sugerido por {entity().la}</Text>
             </View>
             <View style={{ alignItems: 'flex-end' }}><Text style={s.rangeVal}>{fmt(range.max_ars)}</Text><Text style={s.rangeLbl}>Máximo</Text></View>
           </View>
@@ -147,7 +148,7 @@ export default function InstructorRatesScreen() {
 
         {outOfRange ? (
           <View style={[s.diffBox, { backgroundColor: colors.warnBg }]}>
-            <Text style={[s.diffTxt, { color: colors.warnTx }]}>Tu tarifa guardada está fuera del rango sugerido por la Cámara. Ajustala y guardá.</Text>
+            <Text style={[s.diffTxt, { color: colors.warnTx }]}>Tu tarifa guardada está fuera del rango sugerido por {entity().la}. Ajustala y guardá.</Text>
           </View>
         ) : null}
 

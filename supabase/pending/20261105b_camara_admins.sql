@@ -1,11 +1,20 @@
 -- PENDIENTE: no aplicada todavía.
 -- =====================================================================
--- Equipo de cada Cámara — 2026-11-05
+-- Redes y entidades + equipo de cada entidad — 2026-11-05
+--  * Una "red" (tabla camaras) la coordina una entidad: Cámara, Asociación, Colegio,
+--    Escuela, Federación... Los textos de la app usan su tipo ("la Cámara", "el Colegio").
 --  * Varios administradores por Cámara: los nombra la plataforma o la propia Cámara
 --  * Invitación a quien todavía no tiene cuenta: al registrarse con ese email
 --    entra directo como administrador
 --  * Quitar administradores y cancelar invitaciones
 -- =====================================================================
+
+ALTER TABLE public.camaras
+  ADD COLUMN IF NOT EXISTS entity_type    text NOT NULL DEFAULT 'Cámara',
+  ADD COLUMN IF NOT EXISTS entity_article text NOT NULL DEFAULT 'la';
+DO $do$ BEGIN
+  ALTER TABLE public.camaras ADD CONSTRAINT camaras_entity_article_check CHECK (entity_article IN ('la', 'el'));
+EXCEPTION WHEN duplicate_object THEN NULL; END $do$;
 
 CREATE TABLE IF NOT EXISTS public.camara_admin_invites (
   email      text PRIMARY KEY,
@@ -34,7 +43,7 @@ BEGIN
   IF FOUND THEN
     IF u.role = 'super_admin' THEN RAISE EXCEPTION 'Esa cuenta es de la plataforma'; END IF;
     IF u.role = 'camara_admin' AND u.camara_id = p_camara THEN RETURN 'promoted'; END IF;
-    IF u.role = 'camara_admin' THEN RAISE EXCEPTION 'Esa cuenta ya administra otra Cámara'; END IF;
+    IF u.role = 'camara_admin' THEN RAISE EXCEPTION 'Esa cuenta ya administra otra red'; END IF;
     IF EXISTS (SELECT 1 FROM public.studios WHERE user_id = u.id)
        OR EXISTS (SELECT 1 FROM public.instructors WHERE user_id = u.id) THEN
       RAISE EXCEPTION 'Esa cuenta ya es de un estudio o un instructor. Pedile que use otro email.';

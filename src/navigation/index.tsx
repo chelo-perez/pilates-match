@@ -20,6 +20,7 @@ import { useMyInstructor } from '../hooks'
 import { syncAuthUser, signOutNow } from '../lib/auth'
 import { listenForNotifications } from '../lib/notifications'
 import { openNotificationTarget } from '../lib/notificationTarget'
+import { useLoadEntity } from '../lib/entity'
 import { queryClient } from '../lib/queryClient'
 import NotificationsScreen from '../screens/shared/NotificationsScreen'
 import PlatformCamarasScreen from '../screens/platform/CamarasScreen'
@@ -205,7 +206,7 @@ function PlatformTabs() {
   return (
     <Tab.Navigator screenOptions={tabScreenOptions(tabStyle)}>
       <Tab.Screen name="PlataformaCamaras" component={PlatformCamarasScreen}
-        options={{ tabBarLabel: 'Cámaras', tabBarIcon: lottieIcon(ICONS.home) }} />
+        options={{ tabBarLabel: 'Redes', tabBarIcon: lottieIcon(ICONS.home) }} />
       <Tab.Screen name="Liquidaciones" component={PlatformSettlementsScreen}
         options={{ tabBarLabel: 'Liquidaciones', tabBarIcon: lottieIcon(ICONS.reports) }} />
       <Tab.Screen name="Directorio" component={CamaraDirectoryScreen}
@@ -256,6 +257,8 @@ function useNotificationRouting(role: string | undefined) {
 export default function RootNavigator() {
   const { user, session, isLoading, needsOnboarding, registering, profileError, passwordRecovery } = useAuthStore()
   useNotificationRouting(user?.role)
+  // Cómo se llama la entidad que coordina la red de la persona ("la Cámara", "el Colegio"...)
+  useLoadEntity(user?.id, user?.role, (user as any)?.camara_id)
 
   if (isLoading) return <LoadingScreen />
 

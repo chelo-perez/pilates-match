@@ -11,6 +11,7 @@ import { Feather } from '@expo/vector-icons'
 import BlobCard from '../../components/BlobCard'
 import HeroHeader from '../../components/HeroHeader'
 import NotificationBell from '../../components/NotificationBell'
+import { entity } from '../../lib/entity'
 
 const fmtMoney = (n?: number | null) => (n ? '$' + n.toLocaleString('es-AR') : 'Sin cargar')
 
@@ -27,7 +28,7 @@ export default function InstructorDashboardScreen({ navigation }: any) {
       if (instructor?.camara_id) q = q.eq('id', instructor.camara_id)
       const { data, error } = await q.maybeSingle()
       if (error) throw error
-      return data?.name ?? 'la Cámara'
+      return data?.name ?? entity().la
     },
     enabled: !!instructor,
     staleTime: 60 * 60 * 1000,
@@ -92,7 +93,7 @@ export default function InstructorDashboardScreen({ navigation }: any) {
   const statusInfo  = VERIFICATION_STATUS[status] ?? VERIFICATION_STATUS.pendiente
   const isVerified  = status === 'verificado'
   const firstName   = instructor.full_name?.split(' ')?.[0] ?? 'Hola'
-  const camara      = camaraName ?? 'la Cámara'
+  const camara      = camaraName ?? entity().la
   const avgScore    = stats?.avg_score ? Number(stats.avg_score).toFixed(1) : '—'
   const hasActivity = (activity?.classes ?? 0) > 0 || Number(stats?.total_evaluations ?? 0) > 0
   const rates: any  = Array.isArray(instructor.rates) ? instructor.rates[0] : instructor.rates

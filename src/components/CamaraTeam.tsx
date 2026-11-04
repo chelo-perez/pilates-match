@@ -1,5 +1,5 @@
-// Equipo de una Cámara: administradores actuales, invitaciones pendientes y alta de nuevos.
-// Lo usan la plataforma (Editar Cámara) y la propia Cámara (Perfil de la Cámara).
+// Equipo de la entidad que coordina una red: administradores, invitaciones pendientes y altas.
+// Lo usan la plataforma (Editar red) y la propia entidad (su perfil).
 import React, { useState } from 'react'
 import { View, Text, StyleSheet, TouchableOpacity, Alert, Share } from 'react-native'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
@@ -10,8 +10,8 @@ import { useAuthStore } from '../store'
 import { Button, Input, colors, spacing, radius, typography } from './ui'
 
 const inviteText = (email: string, camara?: string) =>
-  `Te sumé como administrador/a de ${camara ?? 'la Cámara'} en Trabajo Más Fácil. ` +
-  `Descargá la app y registrate con este email: ${email}. Vas a entrar directo al panel de la Cámara.`
+  `Te sumé como administrador/a de ${camara ?? 'nuestra red'} en Trabajo Más Fácil. ` +
+  `Descargá la app y registrate con este email: ${email}. Vas a entrar directo al panel de administración.`
 
 export default function CamaraTeam({ camaraId, camaraName }: { camaraId: string; camaraName?: string }) {
   const qc = useQueryClient()
@@ -43,13 +43,13 @@ export default function CamaraTeam({ camaraId, camaraName }: { camaraId: string;
         Alert.alert('Invitación creada', `${clean} todavía no tiene cuenta. Mandale la invitación: cuando se registre con ese email entra directo como administrador/a.`,
           [{ text: 'Después' }, { text: 'Compartir', onPress: () => share(clean) }])
       } else {
-        Alert.alert('Listo', `${clean} ya es administrador/a. La próxima vez que abra la app ve el panel de la Cámara.`)
+        Alert.alert('Listo', `${clean} ya es administrador/a. La próxima vez que abra la app ve el panel de administración.`)
       }
     } catch (e) { Alert.alert('No pudimos agregarlo', errorText(e)) }
     finally { setBusy(false) }
   }
 
-  const remove = (u: any) => Alert.alert('Quitar administrador/a', `${u.full_name || u.email} deja de ver el panel de la Cámara.`, [
+  const remove = (u: any) => Alert.alert('Quitar administrador/a', `${u.full_name || u.email} deja de ver el panel de administración.`, [
     { text: 'Cancelar', style: 'cancel' },
     { text: 'Quitar', style: 'destructive', onPress: async () => {
       const { error } = await supabase.rpc('remove_camara_admin', { p_user: u.id })

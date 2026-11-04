@@ -13,12 +13,13 @@ import { Feather } from '@expo/vector-icons'
 import BlobCard from '../../components/BlobCard'
 import HeroHeader from '../../components/HeroHeader'
 import { contactCamaraForPlan, limitText, nextResetLabel, useCamaraContact, useStudioMembership } from './studioQueries'
+import { entity } from '../../lib/entity'
 
 // Solo beneficios que la app ofrece hoy
 const EXTRA_FEATURES: Record<string, string[]> = {
   freemium: ['Directorio de instructores verificados', 'Historial de tus propuestas'],
   starter:  ['Directorio de instructores verificados', 'Historial de tus propuestas'],
-  socio:    ['Sos socio de la Cámara: lo vas a ver en tu perfil', 'Directorio e historial completos'],
+  get socio() { return [`Sos socio ${entity().de}: lo vas a ver en tu perfil`, 'Directorio e historial completos'] },
   premium:  ['Directorio e historial completos'],
 }
 
@@ -121,7 +122,7 @@ export default function MembershipScreen({ navigation }: any) {
             {price ? <Text style={s.metaTxt}>Abono: ${Number(price).toLocaleString('es-AR')} por mes</Text> : null}
             {!status.ok && membership && (
               <Text style={[s.metaTxt, { color: colors.warnTx }]}>
-                Con el plan {status.label.toLowerCase()} no podés enviar propuestas. Pedile a la Cámara que lo reactive.
+                Con el plan {status.label.toLowerCase()} no podés enviar propuestas. Pedile {entity().a} que lo reactive.
               </Text>
             )}
           </BlobCard>
@@ -164,13 +165,13 @@ export default function MembershipScreen({ navigation }: any) {
             <Feather name="info" size={14} color={colors.sage} />
             <Text style={s.infoTxt}>
               {onlinePayments
-                ? 'Pagás con Mercado Pago con débito automático todos los meses. Podés cancelar cuando quieras: el plan sigue hasta el final del período pagado. El plan Socio Cámara se gestiona con la Cámara.'
-                : 'Los planes los gestiona la Cámara: el pago y el cambio de plan se coordinan directamente con ella. Cuando lo actualice, lo vas a ver acá.'}
+                ? 'Pagás con Mercado Pago con débito automático todos los meses. Podés cancelar cuando quieras: el plan sigue hasta el final del período pagado. El plan Socio se gestiona con ' + entity().la + '.'
+                : `Los planes los gestiona ${entity().la}: el pago y el cambio de plan se coordinan directamente. Cuando lo actualice, lo vas a ver acá.`}
             </Text>
           </View>
 
           <Button
-            label={onlinePayments ? 'Consultar a la Cámara' : 'Pedile a la Cámara que actualice tu plan'}
+            label={onlinePayments ? `Consultar ${entity().a}` : `Pedile ${entity().a} que actualice tu plan`}
             variant={onlinePayments ? 'outline' : undefined}
             onPress={() => contactCamaraForPlan(contact, studio?.name)}
             fullWidth

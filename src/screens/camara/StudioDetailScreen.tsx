@@ -13,12 +13,13 @@ import HeroHeader from '../../components/HeroHeader'
 import Toast from '../../components/Toast'
 import { useToast } from '../../hooks/useToast'
 import { applyPlan, membershipOf, planDurationLabel, PlanKey, STUDIO_KEYS } from './planUtils'
+import { entity } from '../../lib/entity'
 
 // Estilo visual por plan (la definición de límites vive en constants/plans)
 const PLAN_STYLE: Record<string, { desc: string; color: string; bg: string }> = {
   freemium: { desc: '1 propuesta por mes',        color: colors.mid,    bg: colors.sageLighter },
   starter:  { desc: '5 propuestas por mes',       color: colors.sage,   bg: colors.sageLight },
-  socio:    { desc: '5 propuestas por mes + socio de la Cámara', color: colors.blueTx, bg: colors.blueBg },
+  socio:    { get desc() { return `5 propuestas por mes + socio ${entity().de}` }, color: colors.blueTx, bg: colors.blueBg },
   premium:  { desc: 'Propuestas ilimitadas',      color: colors.gold,   bg: colors.goldLight },
 }
 

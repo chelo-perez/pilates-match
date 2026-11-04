@@ -1,5 +1,5 @@
-// Registro: ¿a qué red se suma? (Estudio de Pilates, Gimnasio...). Cada opción es una Cámara activa.
-// Si hay una sola Cámara no se muestra nada: la base asigna la principal.
+// Registro: ¿a qué red se suma? (Estudio de Pilates, Gimnasio...). Cada opción es una red activa.
+// Si hay una sola red no se muestra nada: la base asigna la principal.
 import React, { useEffect } from 'react'
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native'
 import { useQuery } from '@tanstack/react-query'

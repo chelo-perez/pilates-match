@@ -15,6 +15,7 @@ import Toast from '../../components/Toast'
 import { useToast } from '../../hooks/useToast'
 import { Feather } from '@expo/vector-icons'
 import { applyPlan, membershipOf, PAID_PLANS, STUDIO_KEYS } from './planUtils'
+import { entity } from '../../lib/entity'
 
 type Filter = 'todos' | 'miembro' | 'no_miembro'
 
@@ -53,7 +54,7 @@ export default function CamaraStudiosScreen({ navigation, route }: any) {
       applyPlan(studioId, isMember ? 'socio' : 'freemium'),
     onSuccess: (_data, vars) => {
       STUDIO_KEYS.forEach(queryKey => qc.invalidateQueries({ queryKey }))
-      showToast(vars.isMember ? 'Ahora es socio de la Cámara' : 'Ya no es socio: pasó a Freemium')
+      showToast(vars.isMember ? `Ahora es socio ${entity().de}` : 'Ya no es socio: pasó a Freemium')
     },
     onError: (e: any) => showToast(errorText(e), 'error'),
   })
@@ -68,7 +69,7 @@ export default function CamaraStudiosScreen({ navigation, route }: any) {
       nowMember ? 'Quitar de socios' : 'Hacer socio',
       (nowMember
         ? `"${studio.name}" deja de ser socio y pasa al plan Freemium (1 propuesta por mes).`
-        : `"${studio.name}" pasa al plan Socio Cámara (5 propuestas por mes) por 12 meses.`) + paidWarning,
+        : `"${studio.name}" pasa al plan Socio (5 propuestas por mes) por 12 meses.`) + paidWarning,
       [
         { text: 'Cancelar', style: 'cancel' },
         {

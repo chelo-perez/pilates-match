@@ -14,6 +14,7 @@ import HeroHeader from '../../components/HeroHeader'
 import SaveButton from '../../components/SaveButton'
 import Toast from '../../components/Toast'
 import { useToast } from '../../hooks/useToast'
+import { entity } from '../../lib/entity'
 
 export default function CamaraProfileEditScreen({ navigation }: any) {
   const { pickPhoto, cropModal } = usePhotoCropper('Ajustá el logo')
@@ -48,14 +49,14 @@ export default function CamaraProfileEditScreen({ navigation }: any) {
 
   const saveMutation = useMutation({
     mutationFn: async () => {
-      if (!name.trim()) throw new UserError('El nombre de la Cámara no puede quedar vacío.')
+      if (!name.trim()) throw new UserError('El nombre no puede quedar vacío.')
       const { data, error } = await supabase.from('camaras').update({
         name:     name.trim(),
         website:  website.trim() || null,
         phone:    phone.trim() || null,
       }).eq('id', user!.camara_id).select('id')
       if (error) throw error
-      if (!data?.length) throw new UserError('No tenés permiso para editar esta Cámara.')
+      if (!data?.length) throw new UserError('No tenés permiso para editar esta entidad.')
     },
     onSuccess: () => { qc.invalidateQueries({ queryKey: ['camara-profile'] }); showToast('Perfil guardado') },
     onError: (e: any) => showToast(errorText(e), 'error'),
@@ -108,7 +109,7 @@ export default function CamaraProfileEditScreen({ navigation }: any) {
     async (url) => {
       const { data, error } = await supabase.from('camaras').update({ logo_url: url }).eq('id', user!.camara_id).select('id')
       if (error) throw error
-      if (!data?.length) throw new UserError('No tenés permiso para editar esta Cámara.')
+      if (!data?.length) throw new UserError('No tenés permiso para editar esta entidad.')
       setLogoUrl(url)
       qc.invalidateQueries({ queryKey: ['camara-profile'] })
     }
@@ -117,18 +118,18 @@ export default function CamaraProfileEditScreen({ navigation }: any) {
   if (!user?.camara_id) {
     return (
       <View style={{ flex: 1, backgroundColor: colors.cream }}>
-        <HeroHeader title="Perfil de la Cámara" onBack={() => navigation.goBack()} backLabel="Inicio" />
-        <ErrorState message="Tu usuario no está asociado a ninguna Cámara. Pedile a un administrador que lo configure." onRetry={() => navigation.goBack()} />
+        <HeroHeader title={`Perfil ${entity().de}`} onBack={() => navigation.goBack()} backLabel="Inicio" />
+        <ErrorState message="Tu usuario no está asociado a ninguna red. Pedile a un administrador que lo configure." onRetry={() => navigation.goBack()} />
       </View>
     )
   }
   if (isLoading) return <LoadingScreen message="Cargando perfil..." />
-  if (isError || !camara) return <ErrorState message="No pudimos cargar el perfil de la Cámara." onRetry={refetch} />
+  if (isError || !camara) return <ErrorState message={`No pudimos cargar el perfil ${entity().de}.`} onRetry={refetch} />
 
   return (
     <View style={{ flex: 1, backgroundColor: colors.cream }}>
       <HeroHeader
-        title="Perfil de la Cámara"
+        title={`Perfil ${entity().de}`}
         subtitle="Nombre e identidad visual"
         centered
         avatarUri={logoUrl}

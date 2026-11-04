@@ -1,11 +1,12 @@
-// Dueño de la plataforma y Cámaras: Cámaras, precios por Cámara y liquidaciones mensuales.
+// Dueño de la plataforma y entidades: redes, precios por red y liquidaciones mensuales.
+// (En la base cada red es una fila de 'camaras'.)
 import { useQuery } from '@tanstack/react-query'
 import { supabase } from './supabase'
 import { colors } from '../components/ui'
 
 export interface Camara {
   id: string; name: string; slug: string; sector: string; business_label: string; instructor_label: string
-  revenue_share_pct: number; cuit: string | null; contact_email: string | null; is_active: boolean; logo_url: string | null
+  revenue_share_pct: number; entity_type?: string; entity_article?: 'la' | 'el'; cuit: string | null; contact_email: string | null; is_active: boolean; logo_url: string | null
 }
 export interface Settlement {
   id: string; camara_id: string; period: string; collected_ars: number; share_pct: number; share_ars: number
@@ -48,7 +49,7 @@ export const useCamara = (id: string | null | undefined) =>
     enabled: !!id,
   })
 
-/** Liquidaciones visibles para quien consulta (la plataforma: todas; la Cámara: las suyas) */
+/** Liquidaciones visibles para quien consulta (la plataforma: todas; la entidad: las suyas) */
 export const useSettlements = (period?: string) =>
   useQuery({
     queryKey: ['settlements', period ?? 'all'],

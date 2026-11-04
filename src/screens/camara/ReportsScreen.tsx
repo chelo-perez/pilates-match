@@ -8,6 +8,7 @@ import BlobCard from '../../components/BlobCard'
 import HeroHeader from '../../components/HeroHeader'
 import { Feather } from '@expo/vector-icons'
 import PaymentsSection from './PaymentsSection'
+import { entity } from '../../lib/entity'
 
 type Period = 'month' | 'quarter' | 'year'
 const PERIODS: { key: Period; label: string }[] = [
@@ -202,7 +203,7 @@ export default function ReportsScreen() {
           {stats.totalStudios > 0 && (
             <BlobCard style={[s.rankCard, { marginBottom: spacing.md }]} delay={300}
               blobColor="rgba(42,151,142,0.10)" blobColor2="rgba(42,151,142,0.06)">
-              <Text style={s.rankTitle}>Estudios socios de la Cámara</Text>
+              <Text style={s.rankTitle}>Estudios socios {entity().de}</Text>
               <View style={s.convRow}>
                 <Text style={s.convPct}>{Math.round((stats.members / stats.totalStudios) * 100)}%</Text>
                 <Text style={s.convDesc}>de los estudios registrados son socios</Text>
@@ -231,7 +232,7 @@ export default function ReportsScreen() {
               <Text style={s.rankTitle}>Distribución de planes</Text>
               {[
                 { key: 'premium',  label: 'Premium',      color: colors.gold },
-                { key: 'socio',    label: 'Socio Cámara', color: colors.blueTx },
+                { key: 'socio',    label: 'Socio',        color: colors.blueTx },
                 { key: 'starter',  label: 'Starter',      color: colors.sage },
                 { key: 'freemium', label: 'Freemium',     color: colors.mid  },
               ].map(plan => {

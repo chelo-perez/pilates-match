@@ -7,7 +7,7 @@ export type PlanKey = 'freemium' | 'starter' | 'socio' | 'premium'
 export const PLANS: { key: PlanKey; label: string; limit: number | null }[] = [
   { key: 'freemium', label: 'Freemium',     limit: 1 },
   { key: 'starter',  label: 'Starter',      limit: 5 },
-  { key: 'socio',    label: 'Socio Cámara', limit: 5 },
+  { key: 'socio',    label: 'Socio',       limit: 5 },
   { key: 'premium',  label: 'Premium',      limit: null },
 ]
 

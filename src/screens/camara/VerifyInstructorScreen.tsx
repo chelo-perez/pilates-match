@@ -18,7 +18,7 @@ import { useToast } from '../../hooks/useToast'
 
 const REJECT_CERT_REASONS = [
   'Certificado inválido o vencido',
-  'Institución no reconocida por la Cámara',
+  'Institución no reconocida por la entidad',
   'Imagen ilegible o incompleta',
   'El nombre no coincide con el del perfil',
   'Las horas declaradas no coinciden',
@@ -33,7 +33,7 @@ const FIX_REASONS = [
 ]
 
 const REJECT_REASONS = [
-  'No cumple los requisitos mínimos de la Cámara',
+  'No cumple los requisitos mínimos de la entidad',
   'Instructor inhabilitado',
   'Decisión del directorio',
   'Otro',
