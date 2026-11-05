@@ -439,7 +439,7 @@ const s = StyleSheet.create({
   privacyTxt:       { fontFamily: 'Nunito-SemiBold', fontSize: 11, color: colors.mid, flex: 1, lineHeight: 17 },
   offerRow:    { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, marginTop: 4 },
   offerBtn:    { width: 44, height: 48, ...radius.leafSm, backgroundColor: colors.sageLighter, alignItems: 'center', justifyContent: 'center' },
-  offerInput:  { flex: 1, height: 48, textAlign: 'center', fontFamily: 'Nunito-Bold', fontSize: 22, color: colors.sage, backgroundColor: colors.cream, ...radius.leafSm },
+  offerInput:  { flex: 1, minWidth: 0, height: 48, textAlign: 'center', fontFamily: 'Nunito-Bold', fontSize: 22, color: colors.sage, backgroundColor: colors.cream, ...radius.leafSm },
   offerHint:   { fontFamily: 'Nunito-SemiBold', fontSize: 12, color: colors.mid, marginTop: spacing.sm },
   offerNote:   { fontFamily: 'Nunito-Regular', fontSize: 12, color: colors.light, lineHeight: 17, marginTop: 6 },
 })

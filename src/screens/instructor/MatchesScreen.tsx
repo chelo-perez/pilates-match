@@ -442,7 +442,7 @@ const styles = StyleSheet.create({
   offerSub:          { fontFamily: 'Nunito-Regular', fontSize: 12, color: colors.mid, marginTop: 1 },
   counterRow:        { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, marginBottom: spacing.md },
   counterBtn:        { width: 44, height: 48, ...radius.leafSm, backgroundColor: colors.sageLighter, alignItems: 'center', justifyContent: 'center' },
-  counterInput:      { flex: 1, height: 48, textAlign: 'center', fontFamily: 'Nunito-Bold', fontSize: 22, color: colors.sage, backgroundColor: colors.cream, ...radius.leafSm },
+  counterInput:      { flex: 1, minWidth: 0, height: 48, textAlign: 'center', fontFamily: 'Nunito-Bold', fontSize: 22, color: colors.sage, backgroundColor: colors.cream, ...radius.leafSm },
   evaluatedTxt:      { ...typography.small, color: colors.okTx, marginTop: spacing.xs },
   modalOverlay:      { flex: 1, backgroundColor: 'rgba(0,0,0,0.45)', justifyContent: 'flex-end' },
   modalBox:          { backgroundColor: colors.white, borderTopLeftRadius: 20, borderTopRightRadius: 20, padding: spacing.xl, paddingBottom: spacing.xxl },

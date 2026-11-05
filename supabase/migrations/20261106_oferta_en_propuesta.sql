@@ -1,4 +1,3 @@
--- PENDIENTE: no aplicada todavía.
 -- =====================================================================
 -- Match, paso 1: el precio es una oferta, no un filtro — 2026-11-06
 --  * La propuesta lleva el monto por clase que el estudio va a pagar (offered_rate).
