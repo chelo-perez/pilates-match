@@ -1,4 +1,3 @@
--- PENDIENTE: no aplicada todavía.
 -- =====================================================================
 -- Match, paso 4: clases abiertas — 2026-11-06
 -- El estudio publica una clase (sobre todo reemplazos urgentes) con su oferta. Los
