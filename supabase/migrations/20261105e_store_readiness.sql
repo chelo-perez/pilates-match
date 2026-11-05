@@ -1,4 +1,3 @@
--- PENDIENTE: no aplicada todavía.
 -- =====================================================================
 -- Preparación para Play Store — 2026-11-05
 --  1. Eliminar la cuenta desde la app (Google lo exige)
