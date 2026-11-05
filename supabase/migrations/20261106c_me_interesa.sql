@@ -1,4 +1,3 @@
--- PENDIENTE: no aplicada todavía.
 -- =====================================================================
 -- Match, paso 3: "Me interesa trabajar acá" — 2026-11-06
 -- El instructor marca estudios de su red. El estudio lo ve primero al buscar
