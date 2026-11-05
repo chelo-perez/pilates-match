@@ -4,10 +4,11 @@ import React, { useState } from 'react'
 import { View, Text, StyleSheet, FlatList, TouchableOpacity, TextInput, Switch } from 'react-native'
 import { useQuery } from '@tanstack/react-query'
 import { supabase } from '../../lib/supabase'
-import { instructorAPI } from '../../lib/api'
 import { useMyStudio } from '../../hooks'
-import { Avatar, EmptyState, ErrorState, LoadingScreen, colors, spacing, typography } from '../../components/ui'
-import { SPECIALTY_LABELS } from '../../constants/labels'
+import { Avatar, EmptyState, ErrorState, LoadingScreen, colors, spacing, radius, typography } from '../../components/ui'
+import PickerField from '../../components/PickerField'
+import { useSearchNeed, needDays, parseLocal, fromHHMM, DAY_SHORT } from '../../store/searchNeed'
+import { toLocalISODate, toHHMM } from '../../lib/dates'
 import { Feather } from '@expo/vector-icons'
 import BlobCard from '../../components/BlobCard'
 import HeroHeader from '../../components/HeroHeader'
@@ -23,50 +24,16 @@ interface MatchedInstructor {
   neighborhood: string | null
   avatar_url: string | null
   score: number | null
+  total_evaluations: number
+  worked_together: boolean
   match_level: MatchLevel
   match_score: number  // 0-100
   match_reasons: string[]
   missing_reasons: string[]
 }
 
-const money = (n: number) => `$${n.toLocaleString('es-AR')}`
-const specialtyName = (k: string) => (SPECIALTY_LABELS as Record<string, string>)[k] ?? k
 
 // Puntaje: tarifa regular 20 + tarifa reemplazo 20 + zona 30 + equipamiento 30
-function calcMatch(instructor: any, studio: any, workedTogether: boolean): Pick<MatchedInstructor, 'match_level' | 'match_score' | 'match_reasons' | 'missing_reasons'> {
-  // La tarifa del instructor es privada: no entra en el puntaje. El precio se ofrece en la propuesta.
-  const studioEquip: string[] = (studio?.equipment ?? []).filter((e: string) => e in (SPECIALTY_LABELS as Record<string, string>))
-  const instrZones: string[] = (instructor.zones ?? []).map((z: any) => z.neighborhood)
-  const instrSpecialties: string[] = (instructor.specialties ?? []).map((s: any) => s.specialty)
-
-  const reasons: string[] = []
-  const missing: string[] = []
-  let points = 0
-
-  if (instrZones.includes(studio?.neighborhood)) {
-    points += 40; reasons.push(`Trabaja en ${studio.neighborhood}`)
-  } else if (instrZones.length > 0) {
-    missing.push(`No trabaja en ${studio?.neighborhood}`)
-  } else {
-    missing.push('No cargó zonas de trabajo')
-  }
-
-  if (studioEquip.length > 0) {
-    const matchingEquip = studioEquip.filter(e => instrSpecialties.includes(e))
-    points += (matchingEquip.length / studioEquip.length) * 40
-    if (matchingEquip.length > 0) reasons.push(`Sabe usar ${matchingEquip.map(specialtyName).join(', ')}`)
-    const missingEquip = studioEquip.filter(e => !instrSpecialties.includes(e))
-    if (missingEquip.length > 0) missing.push(`No declaró ${missingEquip.map(specialtyName).join(', ')}`)
-  }
-
-  // Señal ganada: ya dieron una clase juntos
-  if (workedTogether) { points += 20; reasons.push('Ya trabajaron juntos') }
-
-  const match_score = Math.round(points)
-  const match_level: MatchLevel = match_score >= 80 ? 'full' : match_score >= 40 ? 'partial' : 'none'
-  return { match_score, match_level, match_reasons: reasons, missing_reasons: missing }
-}
-
 export default function SearchScreen({ navigation }: Props) {
   const { data: studio, isLoading: studioLoading } = useMyStudio()
   const [search, setSearch] = useState('')
@@ -74,51 +41,36 @@ export default function SearchScreen({ navigation }: Props) {
 
   const profileComplete = (studio?.equipment?.length ?? 0) > 0 && !!studio?.neighborhood
 
-  const { data: instructors = [], isLoading, isError, refetch, isRefetching } = useQuery({
-    queryKey: ['instructor-match', studio?.id],
+  // La clase que necesita cubrir: el match se calcula en el servidor para ESA clase
+  const need = useSearchNeed(st => st.need)
+  const setNeed = useSearchNeed(st => st.set)
+  const days = needDays(need)
+
+  const { data: results = [], isLoading, isError, refetch, isRefetching } = useQuery({
+    queryKey: ['instructor-match', studio?.id, need.classType, days.join(','), need.from, need.to],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from('instructors')
-        .select(`
-          id, full_name, neighborhood, avatar_url,
-          specialties:instructor_specialties(specialty),
-          zones:instructor_zones(neighborhood)
-        `)
-        .eq('verification_status', 'verificado')
-        .eq('is_active', true)
+      const { data, error } = await supabase.rpc('search_instructors', {
+        p_class_type: need.classType, p_days: days, p_from: need.from + ':00', p_to: need.to + ':00',
+      })
       if (error) throw error
-      // El puntaje no es una columna: se calcula con get_instructor_stats (igual que en el perfil)
-      return Promise.all((data ?? []).map(async (ins: any) => {
-        const stats = await instructorAPI.getStats(ins.id)
-        return { ...ins, score: stats && stats.total_evaluations > 0 ? Number(stats.avg_score) : null }
-      }))
-    },
-    enabled: !!studio?.id,
-  })
-  // Instructores con los que el estudio ya dio una clase (propuesta aceptada)
-  const { data: workedWith = new Set<string>() } = useQuery({
-    queryKey: ['studio-worked-with', studio?.id],
-    queryFn: async () => {
-      const { data } = await supabase.from('matches').select('instructor_id').eq('studio_id', studio!.id).eq('status', 'aceptado')
-      return new Set((data ?? []).map((m: any) => m.instructor_id as string))
+      return (data ?? []) as any[]
     },
     enabled: !!studio?.id,
   })
 
   if (studioLoading) return <LoadingScreen />
 
-  const matched: MatchedInstructor[] = instructors.map((ins: any): MatchedInstructor => ({
-    id:               ins.id,
-    full_name:        ins.full_name,
-    neighborhood:     ins.neighborhood,
-    avatar_url:       ins.avatar_url,
-    score:            ins.score,
-    ...calcMatch(ins, studio, workedWith.has(ins.id)),
+  const matched: MatchedInstructor[] = results.map((r: any): MatchedInstructor => ({
+    id: r.id, full_name: r.full_name, neighborhood: r.neighborhood, avatar_url: r.avatar_url,
+    score: r.avg_score != null ? Number(r.avg_score) : null, total_evaluations: r.total_evaluations ?? 0,
+    worked_together: !!r.worked_together,
+    match_score: r.match_score, match_level: r.match_score >= 75 ? 'full' : r.match_score >= 40 ? 'partial' : 'none',
+    match_reasons: r.match_reasons ?? [], missing_reasons: r.missing_reasons ?? [],
   }))
   .filter((ins) => !profileComplete || showAll || ins.match_level !== 'none')
   .filter((ins) => !search || ins.full_name.toLowerCase().includes(search.trim().toLowerCase()))
-  .sort((a, b) => b.match_score - a.match_score)
 
+  const validRange = need.to > need.from
   const fullMatches    = matched.filter(i => i.match_level === 'full').length
   const partialMatches = matched.filter(i => i.match_level === 'partial').length
 
@@ -139,7 +91,7 @@ export default function SearchScreen({ navigation }: Props) {
     <View style={{ flex: 1, backgroundColor: colors.cream }}>
       <HeroHeader
         title="Instructores"
-        subtitle={profileComplete ? 'Ordenados por compatibilidad con tu estudio' : `Instructores verificados por ${entity().la}`}
+        subtitle={profileComplete ? 'Ordenados por compatibilidad con esta clase' : `Instructores verificados por ${entity().la}`}
         bottomElement={
           profileComplete ? (
             <View style={s.statsRow}>
@@ -172,6 +124,41 @@ export default function SearchScreen({ navigation }: Props) {
           <Feather name="chevron-right" size={16} color={colors.warnTx} />
         </TouchableOpacity>
       )}
+
+      {/* Qué clase necesita cubrir */}
+      <View style={s.needCard}>
+        <View style={s.needTypeRow}>
+          {(['reemplazo', 'regular'] as const).map(k => (
+            <TouchableOpacity key={k} style={[s.needType, need.classType === k && s.needTypeOn]} onPress={() => setNeed({ classType: k })}>
+              <Text style={[s.needTypeTxt, need.classType === k && s.needTypeTxtOn]}>{k === 'reemplazo' ? 'Reemplazo' : 'Clase regular'}</Text>
+            </TouchableOpacity>
+          ))}
+        </View>
+        {need.classType === 'reemplazo' ? (
+          <PickerField mode="date" value={parseLocal(need.date)} minimumDate={new Date()}
+            display={parseLocal(need.date).toLocaleDateString('es-AR', { weekday: 'long', day: 'numeric', month: 'long' })}
+            onChange={d => setNeed({ date: toLocalISODate(d) })} />
+        ) : (
+          <View style={s.dayRow}>
+            {Object.keys(DAY_SHORT).map(d => {
+              const on = need.days.includes(d)
+              return (
+                <TouchableOpacity key={d} style={[s.dayChip, on && s.dayChipOn]}
+                  onPress={() => setNeed({ days: on ? need.days.filter(x => x !== d) : [...need.days, d] })}>
+                  <Text style={[s.dayTxt, on && s.dayTxtOn]}>{DAY_SHORT[d]}</Text>
+                </TouchableOpacity>
+              )
+            })}
+          </View>
+        )}
+        <View style={s.timeRow}>
+          <View style={{ flex: 1 }}><PickerField mode="time" small minuteInterval={15} value={fromHHMM(need.from)} display={need.from} onChange={d => setNeed({ from: toHHMM(d) })} /></View>
+          <Feather name="arrow-right" size={16} color={colors.sageMid} />
+          <View style={{ flex: 1 }}><PickerField mode="time" small minuteInterval={15} value={fromHHMM(need.to)} display={need.to} onChange={d => setNeed({ to: toHHMM(d) })} /></View>
+        </View>
+        {!validRange ? <Text style={s.needErr}>La hora de fin tiene que ser posterior a la de inicio</Text>
+          : need.classType === 'regular' && need.days.length === 0 ? <Text style={s.needErr}>Elegí al menos un día</Text> : null}
+      </View>
 
       <View style={s.searchBar}>
         <Feather name="search" size={15} color={colors.light} />
@@ -300,4 +287,17 @@ const s = StyleSheet.create({
   reasonTxt:      { fontFamily: 'Nunito-SemiBold', fontSize: 11, color: colors.okTx, flex: 1 },
   missingRow:     { flexDirection: 'row', alignItems: 'center', gap: 5, marginTop: 4 },
   missingTxt:     { fontFamily: 'Nunito-SemiBold', fontSize: 11, color: colors.warnTx, flex: 1 },
+  needCard:      { marginHorizontal: spacing.md, marginTop: spacing.md, backgroundColor: colors.white, ...radius.leaf, padding: spacing.md, borderWidth: 0.5, borderColor: colors.borderLight, gap: spacing.sm },
+  needTypeRow:   { flexDirection: 'row', backgroundColor: colors.cream, borderRadius: 999, padding: 3 },
+  needType:      { flex: 1, paddingVertical: 8, borderRadius: 999, alignItems: 'center' },
+  needTypeOn:    { backgroundColor: colors.sage },
+  needTypeTxt:   { fontFamily: 'Nunito-Bold', fontSize: 13, color: colors.mid },
+  needTypeTxtOn: { color: colors.white },
+  dayRow:        { flexDirection: 'row', gap: 4 },
+  dayChip:       { flex: 1, paddingVertical: 8, borderRadius: 999, alignItems: 'center', backgroundColor: colors.cream, borderWidth: 0.5, borderColor: colors.border },
+  dayChipOn:     { backgroundColor: colors.sage, borderColor: colors.sage },
+  dayTxt:        { fontFamily: 'Nunito-SemiBold', fontSize: 12, color: colors.mid },
+  dayTxtOn:      { color: colors.white },
+  timeRow:       { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
+  needErr:       { fontFamily: 'Nunito-SemiBold', fontSize: 12, color: colors.redTx },
 })

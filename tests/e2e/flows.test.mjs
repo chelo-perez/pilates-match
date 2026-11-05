@@ -163,14 +163,28 @@ test('el instructor solo ve su propio usuario y su propio perfil', async () => {
 
 // ── Estudio ────────────────────────────────────────────────────────
 
-test('la búsqueda de instructores del estudio no da error (SearchScreen)', async () => {
+test('la búsqueda se calcula en el servidor para la clase pedida (SearchScreen)', async () => {
   const { c } = S.studio
-  ok(await c.from('instructors').select(`
-      id, full_name, neighborhood, avatar_url,
-      rates:instructor_rates(rate_regular, rate_replacement),
-      specialties:instructor_specialties(specialty),
-      zones:instructor_zones(neighborhood)
-    `).eq('verification_status', 'verificado').eq('is_active', true), 'búsqueda')
+  // La entidad de prueba verifica al instructor para que aparezca en las búsquedas
+  ok(await cleaner.from('instructors').update({ verification_status: 'verificado' }).eq('id', S.instructor.id), 'verificar')
+  const fits = ok(await c.rpc('search_instructors', { p_class_type: 'regular', p_days: ['lunes'], p_from: '09:00:00', p_to: '10:00:00' }), 'buscar')
+  const me = fits.find(r => r.id === S.instructor.id)
+  assert.ok(me, 'el instructor verificado aparece')
+  assert.ok(me.match_reasons.includes('Disponible en ese horario'), 'cuenta la disponibilidad del lunes 9-12')
+  assert.ok(!('rate_regular' in me) && !('offered_rate' in me), 'la búsqueda no expone tarifas')
+  const miss = ok(await c.rpc('search_instructors', { p_class_type: 'regular', p_days: ['martes'], p_from: '09:00:00', p_to: '10:00:00' }), 'buscar martes')
+  const me2 = miss.find(r => r.id === S.instructor.id)
+  assert.ok(me2.missing_reasons.includes('Sin disponibilidad en ese horario'), 'el martes no está disponible')
+  assert.ok(me.match_score > me2.match_score, 'el puntaje depende de la clase pedida')
+  const asInstructor = await S.instructor.c.rpc('search_instructors', { p_class_type: 'regular', p_days: ['lunes'], p_from: '09:00:00', p_to: '10:00:00' })
+  assert.ok(asInstructor.error, 'solo los estudios pueden buscar')
+})
+
+test('el instructor ve la reputación agregada del estudio, no sus evaluaciones', async () => {
+  const r = ok(await S.instructor.c.rpc('studio_reputation', { p_studio_id: S.studio.id }), 'studio_reputation')
+  assert.ok('classes' in r && 'paid_total' in r)
+  const asStudio = ok(await S.studio.c.rpc('studio_reputation', { p_studio_id: S.studio.id }), 'studio_reputation estudio')
+  assert.equal(asStudio, null, 'el estudio no consulta su propia reputación por acá')
 })
 
 test('el estudio ve el puntaje de un instructor', async () => {

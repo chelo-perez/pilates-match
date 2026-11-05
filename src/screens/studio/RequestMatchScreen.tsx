@@ -4,7 +4,8 @@ import {
   View, Text, StyleSheet, ScrollView, TouchableOpacity,
   KeyboardAvoidingView, Platform, TextInput
 } from 'react-native'
-import DateTimePicker from '@react-native-community/datetimepicker'
+import PickerField from '../../components/PickerField'
+import { useSearchNeed, parseLocal, fromHHMM } from '../../store/searchNeed'
 import { useQuery } from '@tanstack/react-query'
 import { useCanMatch, useCreateMatch, useInstructor, useMyStudio } from '../../hooks'
 import { supabase } from '../../lib/supabase'
@@ -31,50 +32,8 @@ const DAYS = [
   { key: 'domingo', label: 'Dom' },
 ]
 
-const at = (h: number) => { const d = new Date(); d.setHours(h, 0, 0, 0); return d }
 const money = (n: number) => '$' + Math.round(n).toLocaleString('es-AR')
 const fmtDate = (d: Date) => d.toLocaleDateString('es-AR', { weekday: 'long', day: 'numeric', month: 'long' })
-
-// Selector de fecha/hora: en Android abre el diálogo nativo; en iOS queda abierto hasta tocar "Listo".
-function PickerField({ value, mode, onChange, display, small, minimumDate, minuteInterval }: {
-  value: Date; mode: 'date' | 'time'; onChange: (d: Date) => void; display: string
-  small?: boolean; minimumDate?: Date; minuteInterval?: any
-}) {
-  const [open, setOpen] = useState(false)
-  return (
-    <View>
-      <TouchableOpacity style={small ? s.pickerBtnSm : s.pickerBtn} onPress={() => setOpen(o => !o)} activeOpacity={0.8}>
-        {!small && <Feather name="calendar" size={15} color={colors.sage} />}
-        <Text style={small ? s.pickerTxtSm : s.pickerTxt}>{display}</Text>
-      </TouchableOpacity>
-      {open && (
-        <>
-          <DateTimePicker
-            value={value}
-            mode={mode}
-            display={Platform.OS === 'ios' ? 'spinner' : 'default'}
-            minimumDate={minimumDate}
-            minuteInterval={minuteInterval}
-            is24Hour
-            locale="es-AR"
-            onChange={(event: any, d?: Date) => {
-              if (Platform.OS === 'android') setOpen(false)
-              if (event?.type === 'dismissed' || !d) return
-              const nd = new Date(d)
-              if (mode === 'time') nd.setSeconds(0, 0)
-              onChange(nd)
-            }}
-          />
-          {Platform.OS === 'ios' && (
-            <TouchableOpacity style={s.doneBtn} onPress={() => setOpen(false)}>
-              <Text style={s.doneTxt}>Listo</Text>
-            </TouchableOpacity>
-          )}
-        </>
-      )}
-    </View>
-  )
-}
 
 export default function RequestMatchScreen({ navigation, route }: Props) {
   const { instructorId, instructorName } = (route.params || {}) as any
@@ -84,17 +43,19 @@ export default function RequestMatchScreen({ navigation, route }: Props) {
   const createMatch = useCreateMatch()
   const { toast, showToast, hideToast } = useToast()
 
-  const [classType, setClassType] = useState<'regular' | 'reemplazo'>('reemplazo')
+  // Arranca con la clase que el estudio buscó (store searchNeed)
+  const need = useSearchNeed(st => st.need)
+  const [classType, setClassType] = useState<'regular' | 'reemplazo'>(need.classType)
 
   // ── Reemplazo ──
-  const [classDate, setClassDate] = useState(() => { const d = new Date(); d.setHours(0, 0, 0, 0); return d })
-  const [startTime, setStartTime] = useState(() => at(8))
-  const [endTime, setEndTime]     = useState(() => at(11))
+  const [classDate, setClassDate] = useState(() => { const d = parseLocal(need.date); d.setHours(0, 0, 0, 0); return d < new Date(new Date().setHours(0, 0, 0, 0)) ? new Date(new Date().setHours(0, 0, 0, 0)) : d })
+  const [startTime, setStartTime] = useState(() => fromHHMM(need.from))
+  const [endTime, setEndTime]     = useState(() => fromHHMM(need.to))
 
   // ── Regular ──
-  const [selectedDays, setSelectedDays] = useState<string[]>([])
-  const [scheduleFrom, setScheduleFrom] = useState(() => at(8))
-  const [scheduleTo,   setScheduleTo]   = useState(() => at(12))
+  const [selectedDays, setSelectedDays] = useState<string[]>(need.days)
+  const [scheduleFrom, setScheduleFrom] = useState(() => fromHHMM(need.from))
+  const [scheduleTo,   setScheduleTo]   = useState(() => fromHHMM(need.to))
 
   const [note, setNote] = useState('')
 
@@ -408,10 +369,6 @@ const s = StyleSheet.create({
   typeBtnSub:       { fontFamily: 'Nunito-Regular', fontSize: 10, color: colors.light, textAlign: 'center' },
   typeBtnSubActive: { color: colors.sageLight },
 
-  pickerBtn:        { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, backgroundColor: colors.sageLighter, borderTopLeftRadius: 14, borderTopRightRadius: 0, borderBottomLeftRadius: 0, borderBottomRightRadius: 14, padding: spacing.md },
-  pickerTxt:        { fontFamily: 'Nunito-SemiBold', fontSize: 14, color: colors.dark, flex: 1 },
-  doneBtn:          { alignSelf: 'flex-end', paddingVertical: 6, paddingHorizontal: 12 },
-  doneTxt:          { fontFamily: 'Nunito-Bold', fontSize: 14, color: colors.sage },
 
   daysRow:          { flexDirection: 'row', gap: 6, flexWrap: 'wrap' },
   dayBtn:           { width: 40, height: 40, borderRadius: 999, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.sageLighter, borderWidth: 0.5, borderColor: colors.border },
@@ -422,8 +379,6 @@ const s = StyleSheet.create({
   franjaRow:        { flexDirection: 'row', alignItems: 'flex-start', gap: spacing.sm },
   franjaLbl:        { ...typography.caption, marginBottom: 4 },
   franjaArrow:      { marginTop: 28 },
-  pickerBtnSm:      { backgroundColor: colors.goldLight, borderTopLeftRadius: 10, borderTopRightRadius: 0, borderBottomLeftRadius: 0, borderBottomRightRadius: 10, padding: 10, alignItems: 'center' },
-  pickerTxtSm:      { fontFamily: 'Nunito-Bold', fontSize: 16, color: colors.gold },
   clasesInfo:       { flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: spacing.md, backgroundColor: colors.goldLight, borderTopLeftRadius: 8, borderTopRightRadius: 0, borderBottomLeftRadius: 0, borderBottomRightRadius: 8, padding: spacing.sm },
   clasesInfoTxt:    { fontFamily: 'Nunito-SemiBold', fontSize: 11, color: colors.gold, flex: 1 },
   errorTxt:         { fontFamily: 'Nunito-SemiBold', fontSize: 12, color: colors.redTx, marginTop: spacing.sm },

@@ -26,6 +26,28 @@ const DAYS_SHORT: Record<string, string> = {
   lunes: 'Lun', martes: 'Mar', miercoles: 'Mié',
   jueves: 'Jue', viernes: 'Vie', sabado: 'Sáb', domingo: 'Dom',
 }
+/** Lo que el instructor ve del estudio antes de aceptar (agregados que calcula el servidor) */
+function StudioRep({ studioId }: { studioId: string }) {
+  const { data: r } = useQuery({
+    queryKey: ['studio-reputation', studioId],
+    queryFn: async () => { const { data } = await supabase.rpc('studio_reputation', { p_studio_id: studioId }); return data as any },
+    staleTime: 5 * 60_000,
+  })
+  if (!r) return null
+  if (!r.classes && !r.evals) return <Text style={styles.repTxt}>Sin historial en la app todavía</Text>
+  const bad = r.paid_total > 0 && r.paid_ok < r.paid_total
+  const parts = [
+    r.classes ? `${r.classes} clase${r.classes === 1 ? '' : 's'}` : null,
+    r.avg_payment != null ? `pago ${r.avg_payment}/10` : null,
+    r.paid_total > 0 ? `pagó lo acordado ${r.paid_ok}/${r.paid_total}` : null,
+  ].filter(Boolean)
+  return (
+    <Text style={[styles.repTxt, bad && { color: colors.warnTx }]}>
+      <Feather name={bad ? 'alert-triangle' : 'shield'} size={11} /> {parts.join(' · ')}
+    </Text>
+  )
+}
+
 const money = (n: number) => '$' + Math.round(Number(n)).toLocaleString('es-AR')
 const DAY_ORDER = ['lunes', 'martes', 'miercoles', 'jueves', 'viernes', 'sabado', 'domingo']
 
@@ -195,6 +217,7 @@ export default function InstructorMatchesScreen({ navigation }: any) {
                 <Feather name="map-pin" size={11} color={colors.light} /> {studio.neighborhood}
               </Text>
             ) : null}
+            <StudioRep studioId={match.studio_id} />
           </View>
           <Badge
             label={match.class_type === 'reemplazo' ? 'Reemplazo' : 'Regular'}
@@ -425,6 +448,7 @@ const styles = StyleSheet.create({
   studioLetter:      { fontFamily: 'Nunito-SemiBold', fontSize: 17, color: colors.sage },
   studioName:        { fontFamily: 'Nunito-SemiBold', fontSize: 14, color: colors.dark },
   studioNeighborhood:{ ...typography.small, color: colors.mid, marginTop: 1 },
+  repTxt:            { fontFamily: 'Nunito-SemiBold', fontSize: 11, color: colors.sage, marginTop: 2 },
   datetimeRow:       { gap: spacing.xs, marginBottom: spacing.sm },
   datetimeItem:      { flexDirection: 'row', alignItems: 'center', gap: spacing.xs },
   datetimeText:      { fontFamily: 'Nunito-Medium', fontSize: 13, color: colors.dark, flexShrink: 1 },
