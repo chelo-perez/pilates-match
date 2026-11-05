@@ -73,10 +73,9 @@ export async function syncAuthUser(userId: string) {
 /** URL de vuelta a la app. Tiene que estar en Auth → URL Configuration → Redirect URLs de Supabase. */
 export function authRedirectUrl(path?: string) {
   if (Platform.OS === 'web' && typeof window !== 'undefined') {
-    // La web puede vivir en una subcarpeta (www.masfacil.com.ar/trabajo): se vuelve a esa base.
-    // No hace falta el path: la recuperación de contraseña llega con type=recovery en la URL.
-    const base = window.location.pathname.startsWith('/trabajo') ? '/trabajo' : ''
-    return `${window.location.origin}${base}`
+    // Se vuelve a la raíz de la web (app.trabajo.masfacil.com.ar). No hace falta el path:
+    // la recuperación de contraseña llega con type=recovery en la URL.
+    return window.location.origin
   }
   return AuthSession.makeRedirectUri({ scheme: 'trabajomasfacil', path })
 }

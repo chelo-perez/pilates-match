@@ -22,7 +22,7 @@ El identificador no se puede cambiar después de publicar. Pasos:
 ## Publicar
 - Actualizaciones de prueba: `scripts/publish-update.sh preview "mensaje"`.
 - Actualizaciones de Play Store: `scripts/publish-update.sh production "mensaje"`.
-- Versión web (pagos): `scripts/deploy-web.sh --prod` → https://masfacil.com.ar/trabajo (el sitio masfacil-landing reenvía /trabajo a Expo Hosting)
+- Versión web (pagos): `scripts/deploy-web.sh --prod` → https://app.trabajo.masfacil.com.ar (proyecto Vercel `app-proxy` en masfacil-landing reenvía a Expo Hosting); landing en https://masfacil.com.ar/trabajo
 - Paquete para Play Store: `npx eas build --platform android --profile production`. **La primera vez** se sube a mano en Play Console. Después se puede usar `npx eas submit --platform android --profile production`.
 
 ## Pendiente de terceros
