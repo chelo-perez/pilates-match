@@ -17,7 +17,7 @@
     ],
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.pilates.match",
+      "bundleIdentifier": "ar.com.masfacil.trabajo",
       "infoPlist": {
         "NSCameraUsageDescription": "Para subir tu foto de perfil.",
         "NSPhotoLibraryUsageDescription": "Para seleccionar una foto de perfil.",

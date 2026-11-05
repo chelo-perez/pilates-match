@@ -10,6 +10,7 @@ import HeroHeader from '../../components/HeroHeader'
 import NotificationBell from '../../components/NotificationBell'
 import { entity } from '../../lib/entity'
 import { myNetwork } from '../../lib/platform'
+import LogoutPill from '../../components/LogoutPill'
 
 export default function CamaraDashboardScreen({ navigation }: any) {
   const user = useAuthStore(s => s.user)
@@ -78,10 +79,7 @@ export default function CamaraDashboardScreen({ navigation }: any) {
           rightElement={
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.sm }}>
               <NotificationBell />
-              <TouchableOpacity style={s.logoutBtn} onPress={() => confirmSignOut()}>
-                <Feather name="log-out" size={13} color={colors.white} />
-                <Text style={s.logoutTxt}>Salir</Text>
-              </TouchableOpacity>
+              <LogoutPill />
             </View>
           }
 

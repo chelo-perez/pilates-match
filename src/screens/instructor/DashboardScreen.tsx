@@ -12,6 +12,7 @@ import BlobCard from '../../components/BlobCard'
 import HeroHeader from '../../components/HeroHeader'
 import NotificationBell from '../../components/NotificationBell'
 import { entity } from '../../lib/entity'
+import LogoutPill from '../../components/LogoutPill'
 
 const fmtMoney = (n?: number | null) => (n ? '$' + n.toLocaleString('es-AR') : 'Sin cargar')
 
@@ -117,7 +118,12 @@ export default function InstructorDashboardScreen({ navigation }: any) {
           avatarUri={instructor.avatar_url}
           avatarFallback={firstName}
           onAvatarPress={() => navigation.navigate('InstructorPerfil')}
-          rightElement={<NotificationBell />}
+          rightElement={
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.sm }}>
+              <NotificationBell />
+              <LogoutPill />
+            </View>
+          }
         />
         <View style={{ height: spacing.md }} />
 

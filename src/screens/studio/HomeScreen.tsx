@@ -13,6 +13,7 @@ import HeroHeader from '../../components/HeroHeader'
 import NotificationBell from '../../components/NotificationBell'
 import { usePendingEvaluationMatches } from './studioQueries'
 import { entity } from '../../lib/entity'
+import LogoutPill from '../../components/LogoutPill'
 
 export default function StudioHomeScreen({ navigation }: any) {
   const { data: studio, isLoading, isError, refetch } = useMyStudio()
@@ -73,10 +74,7 @@ export default function StudioHomeScreen({ navigation }: any) {
           rightElement={
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.sm }}>
               <NotificationBell />
-              <TouchableOpacity style={s.logoutPill} onPress={confirmSignOut}>
-                <Feather name="log-out" size={13} color={colors.white} />
-                <Text style={s.logoutTxt}>Salir</Text>
-              </TouchableOpacity>
+              <LogoutPill />
             </View>
           }
           bottomElement={isMember ? (

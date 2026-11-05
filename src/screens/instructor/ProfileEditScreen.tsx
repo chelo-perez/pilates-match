@@ -255,12 +255,6 @@ export default function ProfileEditScreen() {
           avatarUri={instructor.avatar_url}
           avatarFallback={instructor.full_name ?? 'I'}
           onAvatarPress={uploading ? undefined : pickAvatar}
-          rightElement={
-            <TouchableOpacity style={s.logoutPill} onPress={() => confirmSignOut()}>
-              <Feather name="log-out" size={13} color={colors.white} />
-              <Text style={s.logoutPillTxt}>Salir</Text>
-            </TouchableOpacity>
-          }
         />
 
         {instructor.verification_note && status !== 'verificado' ? (
@@ -371,7 +365,7 @@ export default function ProfileEditScreen() {
 
           <SaveButton label="Guardar perfil" onPress={() => saveMutation.mutate()} isPending={saveMutation.isPending} isSuccess={saveMutation.isSuccess} />
         </View>
-        <DeleteAccount />
+        <DeleteAccount inset />
       </ScrollView>
 
       <Modal visible={showNeighborhoodModal} animationType="slide" transparent onRequestClose={() => setShowNeighborhoodModal(false)}>
@@ -429,8 +423,6 @@ const s = StyleSheet.create({
   activeDot:          { width: 10, height: 10, borderRadius: 5 },
   activeTxt:          { fontFamily: 'Nunito-Bold', fontSize: 13, flex: 1 },
   rowFields:          { flexDirection: 'row', gap: spacing.sm },
-  logoutPill:         { flexDirection: 'row', alignItems: 'center', gap: 4, backgroundColor: 'rgba(255,255,255,0.15)', borderRadius: radius.full, paddingHorizontal: 10, paddingVertical: 6 },
-  logoutPillTxt:      { fontFamily: 'Nunito-SemiBold', fontSize: 11, color: colors.white },
   veriBadge:          { flexDirection: 'row', alignItems: 'center', gap: 6, alignSelf: 'center', marginTop: 10, paddingHorizontal: 12, paddingVertical: 4, borderRadius: radius.full, backgroundColor: 'rgba(255,255,255,0.2)' },
   veriText:           { fontFamily: 'Nunito-SemiBold', fontSize: 11, color: colors.white },
   noteBanner:         { flexDirection: 'row', gap: 8, alignItems: 'flex-start', margin: spacing.md, marginBottom: 0, padding: spacing.md, ...radius.leaf, backgroundColor: colors.warnBg },

@@ -5,7 +5,7 @@ import { View, Text, StyleSheet, TouchableOpacity, Modal, ActivityIndicator, Ale
 import { Feather } from '@expo/vector-icons'
 import { supabase } from '../lib/supabase'
 import { errorText } from '../lib/errors'
-import { signOutNow } from '../lib/auth'
+import { confirmSignOut, signOutNow } from '../lib/auth'
 import { cancelSubscription } from '../lib/payments'
 import { useAuthStore } from '../store'
 import { Button, Input, colors, spacing, radius } from './ui'
@@ -16,12 +16,12 @@ const WHAT: Record<string, string> = {
   camara_admin: 'tu acceso al panel. La entidad y su red no se borran',
 }
 
-export default function DeleteAccount() {
+/** Final de los perfiles: "Cerrar sesión" y "Eliminar mi cuenta". */
+export default function DeleteAccount({ inset = false }: { inset?: boolean }) {
   const role = useAuthStore(s => s.user?.role) ?? 'estudio'
   const [open, setOpen] = useState(false)
   const [confirm, setConfirm] = useState('')
   const [busy, setBusy] = useState(false)
-  if (role === 'super_admin') return null
 
   const run = async () => {
     try {
@@ -38,11 +38,14 @@ export default function DeleteAccount() {
   }
 
   return (
-    <View style={s.wrap}>
-      <TouchableOpacity style={s.link} onPress={() => { setConfirm(''); setOpen(true) }} accessibilityRole="button">
+    <View style={[s.wrap, inset && { marginHorizontal: spacing.md }]}>
+      {/* Cerrar sesión: al final del perfil, donde se lo suele buscar */}
+      <Button label="Cerrar sesión" variant="outline" onPress={() => confirmSignOut()} fullWidth
+        icon={<Feather name="log-out" size={15} color={colors.sage} />} />
+      {role !== 'super_admin' && <TouchableOpacity style={s.link} onPress={() => { setConfirm(''); setOpen(true) }} accessibilityRole="button">
         <Feather name="trash-2" size={14} color={colors.redTx} />
         <Text style={s.linkTxt}>Eliminar mi cuenta</Text>
-      </TouchableOpacity>
+      </TouchableOpacity>}
 
       <Modal visible={open} transparent animationType="fade" onRequestClose={() => !busy && setOpen(false)}>
         <View style={s.overlay}>
@@ -68,7 +71,7 @@ export default function DeleteAccount() {
 }
 
 const s = StyleSheet.create({
-  wrap:    { alignItems: 'center', marginTop: spacing.lg, marginBottom: spacing.md },
+  wrap:    { alignItems: 'center', marginTop: spacing.lg, marginBottom: spacing.md, gap: spacing.sm },
   link:    { flexDirection: 'row', alignItems: 'center', gap: 6, paddingVertical: spacing.sm, paddingHorizontal: spacing.md },
   linkTxt: { fontFamily: 'Nunito-SemiBold', fontSize: 13, color: colors.redTx },
   overlay: { flex: 1, backgroundColor: colors.overlay, justifyContent: 'center', padding: spacing.lg },

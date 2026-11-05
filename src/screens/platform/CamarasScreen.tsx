@@ -9,6 +9,7 @@ import { useCamaras } from '../../lib/platform'
 import HeroHeader from '../../components/HeroHeader'
 import NotificationBell from '../../components/NotificationBell'
 import { Button, ErrorState, LoadingScreen, colors, spacing, radius, typography } from '../../components/ui'
+import LogoutPill from '../../components/LogoutPill'
 
 export default function PlatformCamarasScreen({ navigation }: any) {
   const { data: camaras = [], isLoading, isError, refetch } = useCamaras()
@@ -33,10 +34,7 @@ export default function PlatformCamarasScreen({ navigation }: any) {
         rightElement={
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.sm }}>
             <NotificationBell />
-            <TouchableOpacity style={s.logoutBtn} onPress={() => confirmSignOut()}>
-              <Feather name="log-out" size={13} color={colors.white} />
-              <Text style={s.logoutTxt}>Salir</Text>
-            </TouchableOpacity>
+            <LogoutPill />
           </View>
         }
       />
