@@ -1,4 +1,3 @@
--- PENDIENTE: no aplicada todavía.
 -- Clases abiertas: si se borra la propuesta o el instructor (eliminar cuenta, limpieza de pruebas),
 -- la clase abierta queda sin esa referencia en vez de bloquear el borrado.
 ALTER TABLE public.open_classes DROP CONSTRAINT IF EXISTS open_classes_match_id_fkey;
