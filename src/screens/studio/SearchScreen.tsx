@@ -1,7 +1,7 @@
 // src/screens/studio/SearchScreen.tsx
 // Motor de match: muestra instructores compatibles con el perfil del estudio
 import React, { useState } from 'react'
-import { View, Text, StyleSheet, FlatList, TouchableOpacity, TextInput, Switch } from 'react-native'
+import { View, Text, StyleSheet, FlatList, TouchableOpacity, TextInput, Switch, Modal, Alert } from 'react-native'
 import { useQuery } from '@tanstack/react-query'
 import { supabase } from '../../lib/supabase'
 import { useMyStudio } from '../../hooks'
@@ -14,6 +14,9 @@ import BlobCard from '../../components/BlobCard'
 import HeroHeader from '../../components/HeroHeader'
 import type { NativeStackScreenProps } from '@react-navigation/native-stack'
 import { entity } from '../../lib/entity'
+import { publishOpenClass, money } from '../../lib/openClasses'
+import { errorText } from '../../lib/errors'
+import { Button } from '../../components/ui'
 
 type Props = NativeStackScreenProps<any, 'Search'>
 type MatchLevel = 'full' | 'partial' | 'none'
@@ -86,6 +89,39 @@ export default function SearchScreen({ navigation }: Props) {
   .filter((ins) => !search || ins.full_name.toLowerCase().includes(search.trim().toLowerCase()))
 
   const validRange = need.to > need.from
+
+  // Publicar clase abierta: los instructores compatibles se anotan y el estudio elige
+  const [publishing, setPublishing] = useState(false)
+  const [offer, setOffer] = useState(0)
+  const [pubNote, setPubNote] = useState('')
+  const [busy, setBusy] = useState(false)
+  const { data: ranges = [] } = useQuery({
+    queryKey: ['rate-ranges'],
+    queryFn: async () => { const { data } = await supabase.from('rate_ranges').select('class_type, min_ars, max_ars'); return data ?? [] },
+  })
+  const range: any = ranges.find((r: any) => r.class_type === need.classType)
+  const openPublish = () => {
+    const budget = need.classType === 'regular' ? studio?.budget_regular : studio?.budget_replacement
+    setOffer(Number(budget) || Number(range?.max_ars) || 0); setPubNote(''); setPublishing(true)
+  }
+  const publish = async () => {
+    if (offer < 1000) { Alert.alert('Indicá cuánto pagás por clase'); return }
+    try {
+      setBusy(true)
+      await publishOpenClass({
+        classType: need.classType, classDate: need.classType === 'reemplazo' ? need.date : toLocalISODate(new Date()),
+        start: need.from, end: need.to, days: need.classType === 'regular' ? need.days : undefined,
+        from: need.classType === 'regular' ? need.from : undefined, to: need.classType === 'regular' ? need.to : undefined,
+        offered: offer, note: pubNote.trim() || undefined,
+      })
+      setPublishing(false)
+      navigation.navigate('StudioOpenClasses')
+    } catch (e: any) {
+      setPublishing(false)
+      if (e?.message === 'MATCH_LIMIT_REACHED') navigation.navigate('MembershipPaywall')
+      else Alert.alert('No pudimos publicar la clase', errorText(e))
+    } finally { setBusy(false) }
+  }
   const fullMatches    = matched.filter(i => i.match_level === 'full').length
   const partialMatches = matched.filter(i => i.match_level === 'partial').length
 
@@ -173,6 +209,11 @@ export default function SearchScreen({ navigation }: Props) {
         </View>
         {!validRange ? <Text style={s.needErr}>La hora de fin tiene que ser posterior a la de inicio</Text>
           : need.classType === 'regular' && need.days.length === 0 ? <Text style={s.needErr}>Elegí al menos un día</Text> : null}
+        <TouchableOpacity style={s.publishBtn} onPress={openPublish} disabled={!validRange || (need.classType === 'regular' && need.days.length === 0)} activeOpacity={0.85}>
+          <Feather name="radio" size={14} color={colors.gold} />
+          <Text style={s.publishTxt}>Publicar clase abierta: que se anoten los compatibles</Text>
+          <Feather name="chevron-right" size={14} color={colors.gold} />
+        </TouchableOpacity>
       </View>
 
       <View style={s.searchBar}>
@@ -265,11 +306,49 @@ export default function SearchScreen({ navigation }: Props) {
           )}
         />
       )}
+
+      <Modal visible={publishing} transparent animationType="fade" onRequestClose={() => !busy && setPublishing(false)}>
+        <View style={s.overlay}>
+          <View style={s.sheet}>
+            <Text style={s.sheetTitle}>Publicar clase abierta</Text>
+            <Text style={s.sheetSub}>
+              Avisamos a los instructores verificados de tu red con zona u horario compatibles. Los que quieran se anotan y vos elegís. Cuenta como una propuesta de tu plan.
+            </Text>
+            <Text style={s.offerLabel}>CUÁNTO PAGÁS POR CLASE</Text>
+            <View style={s.offerRow}>
+              <TouchableOpacity style={s.offerBtn} onPress={() => setOffer(o => Math.max(0, o - 500))}><Feather name="minus" size={18} color={colors.sage} /></TouchableOpacity>
+              <TextInput style={s.offerInput} value={offer ? String(offer) : ''} keyboardType="number-pad" maxLength={7}
+                onChangeText={v => setOffer(parseInt(v.replace(/\D/g, ''), 10) || 0)} placeholder="0" placeholderTextColor={colors.light} />
+              <TouchableOpacity style={s.offerBtn} onPress={() => setOffer(o => o + 500)}><Feather name="plus" size={18} color={colors.sage} /></TouchableOpacity>
+            </View>
+            {range ? <Text style={s.offerHint}>Referencia de la red: {money(range.min_ars)} – {money(range.max_ars)}</Text> : null}
+            <TextInput style={s.noteInput} placeholder="Nota (opcional): nivel del grupo, cantidad de alumnos..." placeholderTextColor={colors.light}
+              value={pubNote} onChangeText={setPubNote} multiline maxLength={300} />
+            <Button label="Publicar" onPress={publish} isLoading={busy} fullWidth size="lg" />
+            <TouchableOpacity onPress={() => setPublishing(false)} style={{ alignItems: 'center', paddingVertical: spacing.md }}>
+              <Text style={s.cancelTxt}>Cancelar</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
     </View>
   )
 }
 
 const s = StyleSheet.create({
+  publishBtn:    { flexDirection: 'row', alignItems: 'center', gap: 8, backgroundColor: colors.goldLight, ...radius.leafSm, paddingVertical: 10, paddingHorizontal: spacing.sm },
+  publishTxt:    { flex: 1, fontFamily: 'Nunito-Bold', fontSize: 12, color: colors.gold },
+  overlay:       { flex: 1, backgroundColor: colors.overlay, justifyContent: 'center', padding: spacing.lg },
+  sheet:         { backgroundColor: colors.cream, ...radius.leaf, padding: spacing.lg },
+  sheetTitle:    { fontFamily: 'Nunito-Bold', fontSize: 18, color: colors.dark, marginBottom: 6 },
+  sheetSub:      { fontFamily: 'Nunito-Regular', fontSize: 13, color: colors.mid, lineHeight: 19, marginBottom: spacing.md },
+  offerLabel:    { ...typography.caption, color: colors.light, marginBottom: 6 },
+  offerRow:      { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
+  offerBtn:      { width: 44, height: 48, ...radius.leafSm, backgroundColor: colors.sageLighter, alignItems: 'center', justifyContent: 'center' },
+  offerInput:    { flex: 1, minWidth: 0, height: 48, textAlign: 'center', fontFamily: 'Nunito-Bold', fontSize: 22, color: colors.sage, backgroundColor: colors.white, ...radius.leafSm },
+  offerHint:     { fontFamily: 'Nunito-SemiBold', fontSize: 12, color: colors.mid, marginTop: spacing.sm },
+  noteInput:     { backgroundColor: colors.white, ...radius.leafSm, padding: spacing.sm, minHeight: 64, fontFamily: 'Nunito-Regular', fontSize: 13, color: colors.dark, marginVertical: spacing.md, textAlignVertical: 'top' },
+  cancelTxt:     { fontFamily: 'Nunito-Bold', fontSize: 13, color: colors.mid },
   statsRow:       { flexDirection: 'row', gap: 8, marginTop: 12 },
   statPill:       { flexDirection: 'row', alignItems: 'center', gap: 5, borderRadius: 999, paddingHorizontal: 10, paddingVertical: 4 },
   statNum:        { fontFamily: 'Nunito-Bold', fontSize: 14 },

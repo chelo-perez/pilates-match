@@ -21,6 +21,11 @@ export default function InstructorDashboardScreen({ navigation }: any) {
   const { data: instructor, isLoading, isError, refetch } = useMyInstructor()
   const instructorId = instructor?.id
 
+  const openQ = useQuery({
+    queryKey: ['open-classes', 'count', instructor?.id],
+    queryFn: async () => { const { count } = await supabase.from('open_classes').select('id', { count: 'exact', head: true }).eq('status', 'abierta'); return count ?? 0 },
+    enabled: !!instructor?.id,
+  })
   // Nombre de la Cámara que verifica (no hardcodeado)
   const { data: camaraName } = useQuery({
     queryKey: ['camara-name', instructor?.camara_id ?? 'default'],
@@ -95,6 +100,7 @@ export default function InstructorDashboardScreen({ navigation }: any) {
   const isVerified  = status === 'verificado'
   const firstName   = instructor.full_name?.split(' ')?.[0] ?? 'Hola'
   const camara      = camaraName ?? entity().la
+  const openCount   = openQ.data ?? 0
   const avgScore    = stats?.avg_score ? Number(stats.avg_score).toFixed(1) : '—'
   const hasActivity = (activity?.classes ?? 0) > 0 || Number(stats?.total_evaluations ?? 0) > 0
   const rates: any  = Array.isArray(instructor.rates) ? instructor.rates[0] : instructor.rates
@@ -157,6 +163,16 @@ export default function InstructorDashboardScreen({ navigation }: any) {
             fullWidth
           />
         </View>
+
+        {/* Clases abiertas de la red */}
+        <TouchableOpacity style={[s.studiosCard, { backgroundColor: colors.goldLight }]} onPress={() => navigation.navigate('OpenClasses')} activeOpacity={0.85}>
+          <View style={s.studiosIcon}><Feather name="radio" size={16} color={colors.gold} /></View>
+          <View style={{ flex: 1 }}>
+            <Text style={[s.studiosTitle, { color: colors.gold }]}>{openCount ? `${openCount} clase${openCount > 1 ? 's' : ''} abierta${openCount > 1 ? 's' : ''} en tu red` : 'Clases abiertas'}</Text>
+            <Text style={s.studiosSub}>{openCount ? 'Estudios que buscan instructor: anotate' : 'Cuando un estudio publique una clase, la ves acá'}</Text>
+          </View>
+          <Feather name="chevron-right" size={18} color={colors.gold} />
+        </TouchableOpacity>
 
         {/* Estudios de la red: "me interesa" */}
         <TouchableOpacity style={s.studiosCard} onPress={() => navigation.navigate('InstructorStudios')} activeOpacity={0.85}>

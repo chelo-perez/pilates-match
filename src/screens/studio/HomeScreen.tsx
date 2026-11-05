@@ -3,6 +3,7 @@ import { View, Text, ScrollView, TouchableOpacity, StyleSheet, RefreshControl } 
 import { useQuery } from '@tanstack/react-query'
 import { supabase } from '../../lib/supabase'
 import { confirmSignOut } from '../../lib/auth'
+import { useStudioOpenClasses } from '../../lib/openClasses'
 import { useMyStudio, useStudioStats } from '../../hooks'
 import { Badge, Button, EmptyState, ErrorState, LoadingScreen, colors, spacing, typography } from '../../components/ui'
 import { planLabel } from '../../constants/plans'
@@ -17,6 +18,7 @@ import LogoutPill from '../../components/LogoutPill'
 
 export default function StudioHomeScreen({ navigation }: any) {
   const { data: studio, isLoading, isError, refetch } = useMyStudio()
+  const openQ = useStudioOpenClasses(studio?.id)
   const { data: stats, refetch: refetchStats } = useStudioStats(studio?.id)
   const { data: pending = [], refetch: refetchPending } = usePendingEvaluationMatches(studio?.id)
 
@@ -55,6 +57,8 @@ export default function StudioHomeScreen({ navigation }: any) {
   const isMember     = studio.is_member === true
   const planName     = planLabel(membership?.plan_type ?? 'freemium')
   const pendingEvals = pending.length
+  const openClasses  = (openQ.data ?? []).filter(c => c.status === 'abierta')
+  const openApplicants = openClasses.reduce((n, c) => n + (c.applications?.length ?? 0), 0)
   const avgScore     = Number(stats?.avg_score ?? 0)
   const hasActivity  = (stats?.total_evaluations ?? 0) > 0 || pendingEvals > 0
 
@@ -94,6 +98,18 @@ export default function StudioHomeScreen({ navigation }: any) {
             size="lg"
           />
         </View>
+
+        {/* Clases abiertas */}
+        {openClasses.length > 0 && (
+          <TouchableOpacity style={[s.alertCard, { backgroundColor: colors.sageLight, borderColor: colors.sageLight }]} onPress={() => navigation.navigate('StudioOpenClasses')} activeOpacity={0.85}>
+            <View style={s.alertIcon}><Feather name="radio" size={16} color={colors.sage} /></View>
+            <View style={{ flex: 1 }}>
+              <Text style={[s.alertTitle, { color: colors.sage }]}>{openClasses.length} clase{openClasses.length > 1 ? 's' : ''} abierta{openClasses.length > 1 ? 's' : ''} · {openApplicants} anotado{openApplicants === 1 ? '' : 's'}</Text>
+              <Text style={[s.alertSub, { color: colors.sage }]}>{openApplicants ? 'Elegí con quién hacer la clase' : 'Avisamos a los instructores compatibles'}</Text>
+            </View>
+            <Feather name="chevron-right" size={16} color={colors.sage} />
+          </TouchableOpacity>
+        )}
 
         {/* Evaluaciones pendientes */}
         {pendingEvals > 0 && (

@@ -4,11 +4,13 @@ export function openNotificationTarget(nav: any, role: string | undefined, data:
   if (!nav || !screen) return
   if (role === 'instructor') {
     if (screen === 'propuestas') nav.navigate('InstructorTabs', { screen: 'InstructorPropuestas' })
+    else if (screen === 'clases_abiertas') nav.navigate('OpenClasses')
     else if (screen === 'perfil') nav.navigate('InstructorTabs', { screen: 'InstructorPerfil' })
     else if (screen === 'inicio') nav.navigate('InstructorTabs', { screen: 'InstructorInicio' })
   } else if (role === 'estudio') {
     if (screen === 'historial') nav.navigate('EstudioHome', { screen: 'HistoryList' })
     else if (screen === 'buscar') nav.navigate('EstudioHome', { screen: 'Search' })
+    else if (screen === 'clases_abiertas') nav.navigate('StudioOpenClasses')
     else if (screen === 'inicio') nav.navigate('EstudioHome', { screen: 'EstudioInicio' })
   } else if (role === 'super_admin') {
     if (screen === 'liquidaciones') nav.navigate('PlatformTabs', { screen: 'Liquidaciones' })
