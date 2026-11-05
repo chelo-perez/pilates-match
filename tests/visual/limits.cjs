@@ -46,7 +46,7 @@ const login = async (email) => { const c = createClient(URL, KEY, { auth: { pers
     }
     // Intento directo a la base, salteando la app
     const d = new Date(Date.now() + 5 * 864e5).toISOString().slice(0, 10)
-    const r = await studio.from('matches').insert({ studio_id: st.id, instructor_id: ins.id, class_type: 'reemplazo', class_date: d, start_time: '10:00', end_time: '11:00', status: 'pendiente' })
+    const r = await studio.from('matches').insert({ studio_id: st.id, instructor_id: ins.id, class_type: 'reemplazo', class_date: d, start_time: '10:00', end_time: '11:00', offered_rate: 15000 })
     console.log('   intento directo a la base:', r.error ? `RECHAZADO (${r.error.message})` : 'ACEPTADO ⚠️')
     console.log(`   después: ${JSON.stringify(await memb())} · propuestas en la base: ${await count()}`)
     await p.reload({ waitUntil: 'networkidle' }); await p.waitForTimeout(4500)

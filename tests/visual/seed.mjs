@@ -58,11 +58,12 @@ must(await st.c.from('memberships').insert({ studio_id: studio.id, status: 'acti
 // Clase de ayer, aceptada: habilita "Evaluar" en los dos lados y agota el Freemium (1/mes)
 const d = new Date(Date.now() - 864e5)
 const ayer = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
-must(await st.c.from('matches').insert({
+const match = must(await st.c.from('matches').insert({
   studio_id: studio.id, instructor_id: instructor.id, class_type: 'reemplazo',
-  class_date: ayer, start_time: '18:00', end_time: '19:00', status: 'aceptado',
-  note_studio: 'Reemplazo de la clase de reformer intermedio.', responded_at: new Date().toISOString(),
-}), 'match')
+  class_date: ayer, start_time: '18:00', end_time: '19:00', offered_rate: 22000,
+  note_studio: 'Reemplazo de la clase de reformer intermedio.',
+}).select('id').single(), 'match')
+must(await ins.c.from('matches').update({ status: 'aceptado' }).eq('id', match.id), 'aceptar match')
 
 // Segundo estudio, sin propuestas: para ver el formulario de pedir clase
 const st2 = await signUp(STUDIO2_EMAIL, 'estudio', 'Estudio Pilates Sur')

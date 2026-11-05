@@ -1,7 +1,7 @@
 import React, { useState } from 'react'
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from 'react-native'
 import { useCanMatch, useInstructor, useMyStudio } from '../../hooks'
-import { Button, EmptyState, ErrorState, TariffMatchPill, LoadingScreen, colors, spacing, typography } from '../../components/ui'
+import { Button, EmptyState, ErrorState, LoadingScreen, colors, spacing, typography } from '../../components/ui'
 import { SPECIALTY_LABELS } from '../../constants/labels'
 import { Feather } from '@expo/vector-icons'
 import BlobCard from '../../components/BlobCard'
@@ -35,17 +35,8 @@ export default function InstructorProfileScreen({ navigation, route }: Props) {
     return <EmptyState icon="user-x" title="Perfil no disponible" message="Este instructor ya no está en el directorio." action="Volver" onAction={() => navigation.goBack()} />
   }
 
-  const rates: any = Array.isArray(instructor.rates) ? (instructor.rates as any)[0] : instructor.rates
   const stats: any = instructor.stats
   const hasEvaluations = (stats?.total_evaluations ?? 0) > 0
-  // El presupuesto se guarda en studios.budget_* (ProfileEditScreen)
-  const budgetRegular     = studio?.budget_regular ?? 0
-  const budgetReplacement = studio?.budget_replacement ?? 0
-  const tariff = (rate: number | undefined, budget: number) =>
-    rate == null || budget <= 0 ? null : rate <= budget ? 'ok' : 'sin_match'
-  const tariffRegular     = tariff(rates?.rate_regular, budgetRegular)
-  const tariffReplacement = tariff(rates?.rate_replacement, budgetReplacement)
-  const isFullMatch = tariffRegular !== 'sin_match' && tariffReplacement !== 'sin_match' && (tariffRegular === 'ok' || tariffReplacement === 'ok')
 
   const certifications = (instructor.certifications ?? []).filter((c: any) => c.review_status !== 'rejected')
   const availability = (instructor.availability ?? []).filter((a: any) => a.is_active !== false)
@@ -71,12 +62,6 @@ export default function InstructorProfileScreen({ navigation, route }: Props) {
                 <Text style={s.veriTxt}>✓ Verificado por {entity().la}</Text>
               </View>
             )}
-            {isFullMatch && (
-              <View style={s.matchBadge}>
-                <Feather name="check-circle" size={11} color={colors.okTx} />
-                <Text style={s.matchBadgeTxt}>Dentro de tu presupuesto</Text>
-              </View>
-            )}
           </View>
         }
       />
@@ -97,34 +82,6 @@ export default function InstructorProfileScreen({ navigation, route }: Props) {
             <Text style={s.kpiLbl}>Puntualidad</Text>
           </BlobCard>
         </View>
-
-        {/* Comparativa de tarifas */}
-        {rates && (budgetRegular > 0 || budgetReplacement > 0) && (
-          <BlobCard style={s.tariffCard} delay={500}>
-            <Text style={s.sectionTitle}>TARIFAS VS. TU PRESUPUESTO</Text>
-            {[
-              { type: 'Regular', ins: rates.rate_regular, budget: budgetRegular, status: tariffRegular },
-              { type: 'Reemplazo', ins: rates.rate_replacement, budget: budgetReplacement, status: tariffReplacement },
-            ].map(row => (
-              <View key={row.type} style={s.tariffRow}>
-                <View style={{ flex: 1 }}>
-                  <Text style={s.tariffType}>{row.type}</Text>
-                  <Text style={s.tariffBudget}>
-                    {row.budget > 0 ? `Tu presupuesto: $${row.budget.toLocaleString('es-AR')}` : 'Sin presupuesto cargado'}
-                  </Text>
-                </View>
-                <Text style={s.tariffVal}>{row.ins != null ? `$${Number(row.ins).toLocaleString('es-AR')}` : '—'}</Text>
-                {row.status ? <TariffMatchPill status={row.status} /> : null}
-              </View>
-            ))}
-          </BlobCard>
-        )}
-        {!rates && (
-          <View style={s.noteBox}>
-            <Feather name="info" size={13} color={colors.mid} />
-            <Text style={s.noteTxt}>Este instructor todavía no cargó sus tarifas.</Text>
-          </View>
-        )}
 
         {/* Tabs */}
         <View style={s.tabs}>

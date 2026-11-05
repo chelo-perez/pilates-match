@@ -26,6 +26,7 @@ const DAYS_SHORT: Record<string, string> = {
   lunes: 'Lun', martes: 'Mar', miercoles: 'Mié',
   jueves: 'Jue', viernes: 'Vie', sabado: 'Sáb', domingo: 'Dom',
 }
+const money = (n: number) => '$' + Math.round(Number(n)).toLocaleString('es-AR')
 const DAY_ORDER = ['lunes', 'martes', 'miercoles', 'jueves', 'viernes', 'sabado', 'domingo']
 
 const longDate = (d: string) => formatDate(d, { weekday: 'long', day: 'numeric', month: 'long' })
@@ -40,7 +41,7 @@ export default function InstructorMatchesScreen({ navigation }: any) {
   const [tab, setTab]               = useState<Tab>('pendientes')
   const [selected, setSelected]     = useState<any>(null)
   const [noteText, setNoteText]     = useState('')
-  const [actionType, setActionType] = useState<'accept' | 'reject' | null>(null)
+  const [actionType, setActionType] = useState<'accept' | 'reject' | 'counter' | null>(null)
   const [refreshing, setRefreshing] = useState(false)
 
   const { data: instructor, isLoading: loadingInstructor } = useMyInstructor()
@@ -93,11 +94,15 @@ export default function InstructorMatchesScreen({ navigation }: any) {
     enabled: !!instructorId,
   })
 
+  const [counter, setCounter] = useState(0)
+  const myRates: any = Array.isArray(instructor?.rates) ? (instructor?.rates as any)[0] : instructor?.rates
+  const myRateFor = (m: any) => Number(m.class_type === 'regular' ? myRates?.rate_regular : myRates?.rate_replacement) || null
+
   const respondMutation = useMutation({
-    mutationFn: async ({ matchId, status, note }: { matchId: string; status: string; note?: string }) => {
+    mutationFn: async ({ matchId, status, note, counterRate }: { matchId: string; status?: string; note?: string; counterRate?: number }) => {
       const { data, error } = await supabase
         .from('matches')
-        .update({ status, note_instructor: note || null, responded_at: new Date().toISOString() })
+        .update(counterRate ? { counter_rate: counterRate, note_instructor: note || null } : { status, note_instructor: note || null })
         .eq('id', matchId)
         .eq('status', 'pendiente')
         .select('id')
@@ -107,7 +112,7 @@ export default function InstructorMatchesScreen({ navigation }: any) {
     onSuccess: (_d, vars) => {
       qc.invalidateQueries({ queryKey: ['instructor-matches'] })
       closeModal()
-      showToast(vars.status === 'aceptado' ? 'Propuesta aceptada' : 'Propuesta rechazada')
+      showToast(vars.counterRate ? 'Contraoferta enviada' : vars.status === 'aceptado' ? 'Propuesta aceptada' : 'Propuesta rechazada')
     },
     onError: (e: any) => {
       showToast(errorText(e), 'error')
@@ -129,15 +134,21 @@ export default function InstructorMatchesScreen({ navigation }: any) {
     setRefreshing(false)
   }
 
-  const openAction = (match: any, type: 'accept' | 'reject') => {
+  const openAction = (match: any, type: 'accept' | 'reject' | 'counter') => {
     setSelected(match)
     setActionType(type)
     setNoteText('')
+    setCounter(myRateFor(match) ?? Number(match.offered_rate) ?? 0)
   }
   const closeModal = () => { setSelected(null); setActionType(null); setNoteText('') }
 
   const confirmAction = () => {
     if (!selected || !actionType) return
+    if (actionType === 'counter') {
+      if (counter < 1000) { showToast('Indicá el monto por clase', 'warning'); return }
+      respondMutation.mutate({ matchId: selected.id, counterRate: counter, note: noteText.trim() || undefined })
+      return
+    }
     respondMutation.mutate({
       matchId: selected.id,
       status:  actionType === 'accept' ? 'aceptado' : 'rechazado',
@@ -147,7 +158,7 @@ export default function InstructorMatchesScreen({ navigation }: any) {
 
   const goEvaluate = (m: any) => navigation.navigate('EvaluateStudio', {
     matchId: m.id, studioId: m.studio_id, studioName: m.studio?.name ?? 'Estudio',
-    classDate: m.class_date, classType: m.class_type,
+    classDate: m.class_date, classType: m.class_type, agreedRate: m.agreed_rate ?? null,
   })
 
   const pending = pendingQ.data ?? []
@@ -161,6 +172,9 @@ export default function InstructorMatchesScreen({ navigation }: any) {
     const studio    = match.studio
     const expired   = isExpired(match)
     const isPending = match.status === 'pendiente' && !expired
+    const waitingStudio = isPending && match.counter_rate != null // contraoferta enviada, espera al estudio
+    const myRate = myRateFor(match)
+    const offer = match.offered_rate != null ? Number(match.offered_rate) : null
     const statusKey = expired ? 'expirado' : match.status
     const status    = MATCH_STATUS[statusKey] ?? { label: statusKey, variant: 'neutral' }
     const accepted  = match.status === 'aceptado'
@@ -208,13 +222,30 @@ export default function InstructorMatchesScreen({ navigation }: any) {
               </Text>
             </View>
           )}
-          {match.agreed_rate ? (
-            <View style={styles.datetimeItem}>
-              <Feather name="dollar-sign" size={13} color={colors.sage} />
-              <Text style={styles.datetimeText}>${Number(match.agreed_rate).toLocaleString('es-AR')} por clase</Text>
-            </View>
-          ) : null}
         </View>
+
+        {/* Oferta del estudio vs. mi tarifa (la tarifa nunca se le muestra al estudio) */}
+        {accepted && match.agreed_rate ? (
+          <View style={[styles.offerBox, { backgroundColor: colors.okBg }]}>
+            <Feather name="check-circle" size={14} color={colors.okTx} />
+            <Text style={[styles.offerTxt, { color: colors.okTx }]}>Acordado: {money(match.agreed_rate)} por clase</Text>
+          </View>
+        ) : offer != null ? (
+          <View style={[styles.offerBox, { backgroundColor: myRate && offer < myRate ? colors.warnBg : colors.sageLighter }]}>
+            <Feather name="dollar-sign" size={14} color={myRate && offer < myRate ? colors.warnTx : colors.sage} />
+            <View style={{ flex: 1 }}>
+              <Text style={[styles.offerTxt, { color: myRate && offer < myRate ? colors.warnTx : colors.sage }]}>
+                {waitingStudio ? `Pediste ${money(match.counter_rate)} por clase` : `Te ofrecen ${money(offer)} por clase`}
+              </Text>
+              <Text style={styles.offerSub}>
+                {waitingStudio ? `Ofrecían ${money(offer)} · esperando respuesta del estudio`
+                  : !myRate ? 'Cargá tu tarifa para comparar'
+                  : offer >= myRate ? `Cubre tu tarifa de ${money(myRate)}`
+                  : `Por debajo de tu tarifa de ${money(myRate)}: podés proponer otro monto`}
+              </Text>
+            </View>
+          </View>
+        ) : null}
 
         {match.note_studio ? (
           <View style={styles.noteBox}>
@@ -263,12 +294,18 @@ export default function InstructorMatchesScreen({ navigation }: any) {
           </View>
         )}
 
-        {isPending && (
+        {isPending && !waitingStudio && (
           <View style={styles.actions}>
-            <Button label="Rechazar" variant="danger" onPress={() => openAction(match, 'reject')}
-              icon={<Feather name="x" size={16} color={colors.redTx} />} style={{ flex: 1 }} />
-            <Button label="Aceptar" onPress={() => openAction(match, 'accept')}
-              icon={<Feather name="check" size={16} color={colors.white} />} style={{ flex: 2 }} />
+            <View style={{ flexDirection: 'row', gap: spacing.sm }}>
+              <Button label="Rechazar" variant="danger" onPress={() => openAction(match, 'reject')}
+                icon={<Feather name="x" size={16} color={colors.redTx} />} style={{ flex: 1 }} />
+              <Button label="Aceptar" onPress={() => openAction(match, 'accept')}
+                icon={<Feather name="check" size={16} color={colors.white} />} style={{ flex: 2 }} />
+            </View>
+            {offer != null && (
+              <Button label="Proponer otro monto" variant="secondary" size="sm" onPress={() => openAction(match, 'counter')}
+                icon={<Feather name="edit-2" size={14} color={colors.sage} />} />
+            )}
           </View>
         )}
 
@@ -330,13 +367,23 @@ export default function InstructorMatchesScreen({ navigation }: any) {
         <View style={styles.modalOverlay}>
           <View style={styles.modalBox}>
             <Text style={styles.modalTitle}>
-              {actionType === 'accept' ? '¿Aceptar propuesta?' : '¿Rechazar propuesta?'}
+              {actionType === 'accept' ? '¿Aceptar propuesta?' : actionType === 'counter' ? 'Proponer otro monto' : '¿Rechazar propuesta?'}
             </Text>
             <Text style={styles.modalSub}>
               {actionType === 'accept'
-                ? `Confirmás la clase en ${selected?.studio?.name ?? 'el estudio'} el ${selected?.class_date ? longDate(selected.class_date) : ''}.`
+                ? `Confirmás la clase en ${selected?.studio?.name ?? 'el estudio'} el ${selected?.class_date ? longDate(selected.class_date) : ''}${selected?.offered_rate ? ` por ${money(selected.offered_rate)} la clase` : ''}.`
+                : actionType === 'counter'
+                ? `Ofrecen ${selected?.offered_rate ? money(selected.offered_rate) : '—'}. Podés proponer un monto una sola vez: el estudio lo acepta o rechaza.`
                 : 'El estudio va a ver en su historial que no podés tomar esta clase.'}
             </Text>
+            {actionType === 'counter' && (
+              <View style={styles.counterRow}>
+                <TouchableOpacity style={styles.counterBtn} onPress={() => setCounter(c => Math.max(0, c - 500))}><Feather name="minus" size={18} color={colors.sage} /></TouchableOpacity>
+                <TextInput style={styles.counterInput} value={counter ? String(counter) : ''} keyboardType="number-pad" maxLength={7}
+                  onChangeText={v => setCounter(parseInt(v.replace(/\D/g, ''), 10) || 0)} />
+                <TouchableOpacity style={styles.counterBtn} onPress={() => setCounter(c => c + 500)}><Feather name="plus" size={18} color={colors.sage} /></TouchableOpacity>
+              </View>
+            )}
 
             <Text style={styles.noteInputLabel}>NOTA PARA EL ESTUDIO (OPCIONAL)</Text>
             <TextInput
@@ -351,7 +398,7 @@ export default function InstructorMatchesScreen({ navigation }: any) {
 
             <View style={styles.modalActions}>
               <Button
-                label={actionType === 'accept' ? 'Confirmar' : 'Rechazar propuesta'}
+                label={actionType === 'accept' ? 'Confirmar' : actionType === 'counter' ? `Proponer ${counter ? money(counter) : ''}` : 'Rechazar propuesta'}
                 variant={actionType === 'reject' ? 'danger' : 'primary'}
                 onPress={confirmAction}
                 isLoading={respondMutation.isPending}
@@ -389,7 +436,13 @@ const styles = StyleSheet.create({
   expiry:            { ...typography.small, color: colors.mid, marginBottom: spacing.xs },
   statusRow:         { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, marginBottom: spacing.xs },
   respondedAt:       { ...typography.small, color: colors.light },
-  actions:           { flexDirection: 'row', gap: spacing.sm, marginTop: spacing.sm },
+  actions:           { gap: spacing.sm, marginTop: spacing.sm },
+  offerBox:          { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, ...radius.leaf, padding: spacing.sm, marginBottom: spacing.sm },
+  offerTxt:          { fontFamily: 'Nunito-Bold', fontSize: 13 },
+  offerSub:          { fontFamily: 'Nunito-Regular', fontSize: 12, color: colors.mid, marginTop: 1 },
+  counterRow:        { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, marginBottom: spacing.md },
+  counterBtn:        { width: 44, height: 48, ...radius.leafSm, backgroundColor: colors.sageLighter, alignItems: 'center', justifyContent: 'center' },
+  counterInput:      { flex: 1, height: 48, textAlign: 'center', fontFamily: 'Nunito-Bold', fontSize: 22, color: colors.sage, backgroundColor: colors.cream, ...radius.leafSm },
   evaluatedTxt:      { ...typography.small, color: colors.okTx, marginTop: spacing.xs },
   modalOverlay:      { flex: 1, backgroundColor: 'rgba(0,0,0,0.45)', justifyContent: 'flex-end' },
   modalBox:          { backgroundColor: colors.white, borderTopLeftRadius: 20, borderTopRightRadius: 20, padding: spacing.xl, paddingBottom: spacing.xxl },

@@ -57,6 +57,17 @@ export default function StudioDetailScreen({ navigation, route }: any) {
     enabled: !!studioId,
   })
 
+  // Lo que reportan los instructores después de cada clase (solo lo ve la entidad)
+  const { data: pay } = useQuery({
+    queryKey: ['studio-pay-report', studioId],
+    queryFn: async () => {
+      const { data } = await supabase.from('studio_evaluations').select('paid_as_agreed').eq('studio_id', studioId!).not('paid_as_agreed', 'is', null)
+      const rows = data ?? []
+      return { total: rows.length, bad: rows.filter((r: any) => r.paid_as_agreed === false).length }
+    },
+    enabled: !!studioId,
+  })
+
   const { data: notes = [] } = useQuery({
     queryKey: ['studio-detail', studioId, 'notes'],
     queryFn: async () => {
@@ -188,6 +199,16 @@ export default function StudioDetailScreen({ navigation, route }: any) {
         </BlobCard>
 
         <BlobCard style={s.card} delay={1800} blobColor="rgba(42,151,142,0.10)" blobColor2="rgba(42,151,142,0.06)">
+          <Text style={s.sectionTitle}>PAGOS A INSTRUCTORES</Text>
+          {pay && pay.total > 0 ? (
+            <Row icon={pay.bad > 0 ? 'alert-triangle' : 'check-circle'} label="Pagó lo acordado"
+              value={`${pay.total - pay.bad} de ${pay.total} clase${pay.total === 1 ? '' : 's'}${pay.bad > 0 ? ' ⚠' : ''}`} />
+          ) : (
+            <Text style={s.noMemberTxt}>Todavía no hay clases evaluadas por instructores.</Text>
+          )}
+        </BlobCard>
+
+        <BlobCard style={s.card} delay={450}>
           <Text style={s.sectionTitle}>PRESUPUESTO POR CLASE</Text>
           <Row icon="dollar-sign" label="Regular"
             value={studio.budget_regular ? '$' + studio.budget_regular.toLocaleString('es-AR') : 'Sin configurar'}

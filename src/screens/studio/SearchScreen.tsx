@@ -22,8 +22,6 @@ interface MatchedInstructor {
   full_name: string
   neighborhood: string | null
   avatar_url: string | null
-  rate_regular: number | null
-  rate_replacement: number | null
   score: number | null
   match_level: MatchLevel
   match_score: number  // 0-100
@@ -35,31 +33,18 @@ const money = (n: number) => `$${n.toLocaleString('es-AR')}`
 const specialtyName = (k: string) => (SPECIALTY_LABELS as Record<string, string>)[k] ?? k
 
 // Puntaje: tarifa regular 20 + tarifa reemplazo 20 + zona 30 + equipamiento 30
-function calcMatch(instructor: any, studio: any): Pick<MatchedInstructor, 'match_level' | 'match_score' | 'match_reasons' | 'missing_reasons'> {
-  const budgetReg = studio?.budget_regular ?? 0
-  const budgetRep = studio?.budget_replacement ?? 0
-  // Solo equipamiento que existe como especialidad (descarta valores viejos como "tower")
+function calcMatch(instructor: any, studio: any, workedTogether: boolean): Pick<MatchedInstructor, 'match_level' | 'match_score' | 'match_reasons' | 'missing_reasons'> {
+  // La tarifa del instructor es privada: no entra en el puntaje. El precio se ofrece en la propuesta.
   const studioEquip: string[] = (studio?.equipment ?? []).filter((e: string) => e in (SPECIALTY_LABELS as Record<string, string>))
   const instrZones: string[] = (instructor.zones ?? []).map((z: any) => z.neighborhood)
   const instrSpecialties: string[] = (instructor.specialties ?? []).map((s: any) => s.specialty)
-  const rateReg: number | null = instructor.rates?.rate_regular ?? null
-  const rateRep: number | null = instructor.rates?.rate_replacement ?? null
 
   const reasons: string[] = []
   const missing: string[] = []
   let points = 0
 
-  const checkRate = (label: string, rate: number | null, budget: number) => {
-    if (rate == null) { missing.push(`Sin tarifa de ${label} cargada`); return }
-    if (budget <= 0) return
-    if (rate <= budget) { points += 20; reasons.push(`${label[0].toUpperCase() + label.slice(1)} ${money(rate)}, dentro de tu presupuesto`) }
-    else missing.push(`${label[0].toUpperCase() + label.slice(1)} ${money(rate)}, más que tu presupuesto (${money(budget)})`)
-  }
-  checkRate('regular', rateReg, budgetReg)
-  checkRate('reemplazo', rateRep, budgetRep)
-
   if (instrZones.includes(studio?.neighborhood)) {
-    points += 30; reasons.push(`Trabaja en ${studio.neighborhood}`)
+    points += 40; reasons.push(`Trabaja en ${studio.neighborhood}`)
   } else if (instrZones.length > 0) {
     missing.push(`No trabaja en ${studio?.neighborhood}`)
   } else {
@@ -68,14 +53,17 @@ function calcMatch(instructor: any, studio: any): Pick<MatchedInstructor, 'match
 
   if (studioEquip.length > 0) {
     const matchingEquip = studioEquip.filter(e => instrSpecialties.includes(e))
-    points += (matchingEquip.length / studioEquip.length) * 30
+    points += (matchingEquip.length / studioEquip.length) * 40
     if (matchingEquip.length > 0) reasons.push(`Sabe usar ${matchingEquip.map(specialtyName).join(', ')}`)
     const missingEquip = studioEquip.filter(e => !instrSpecialties.includes(e))
     if (missingEquip.length > 0) missing.push(`No declaró ${missingEquip.map(specialtyName).join(', ')}`)
   }
 
+  // Señal ganada: ya dieron una clase juntos
+  if (workedTogether) { points += 20; reasons.push('Ya trabajaron juntos') }
+
   const match_score = Math.round(points)
-  const match_level: MatchLevel = match_score >= 90 ? 'full' : match_score >= 50 ? 'partial' : 'none'
+  const match_level: MatchLevel = match_score >= 80 ? 'full' : match_score >= 40 ? 'partial' : 'none'
   return { match_score, match_level, match_reasons: reasons, missing_reasons: missing }
 }
 
@@ -84,7 +72,7 @@ export default function SearchScreen({ navigation }: Props) {
   const [search, setSearch] = useState('')
   const [showAll, setShowAll] = useState(false)
 
-  const profileComplete = !!(studio?.budget_regular || studio?.budget_replacement) && (studio?.equipment?.length ?? 0) > 0
+  const profileComplete = (studio?.equipment?.length ?? 0) > 0 && !!studio?.neighborhood
 
   const { data: instructors = [], isLoading, isError, refetch, isRefetching } = useQuery({
     queryKey: ['instructor-match', studio?.id],
@@ -93,7 +81,6 @@ export default function SearchScreen({ navigation }: Props) {
         .from('instructors')
         .select(`
           id, full_name, neighborhood, avatar_url,
-          rates:instructor_rates(rate_regular, rate_replacement),
           specialties:instructor_specialties(specialty),
           zones:instructor_zones(neighborhood)
         `)
@@ -108,6 +95,15 @@ export default function SearchScreen({ navigation }: Props) {
     },
     enabled: !!studio?.id,
   })
+  // Instructores con los que el estudio ya dio una clase (propuesta aceptada)
+  const { data: workedWith = new Set<string>() } = useQuery({
+    queryKey: ['studio-worked-with', studio?.id],
+    queryFn: async () => {
+      const { data } = await supabase.from('matches').select('instructor_id').eq('studio_id', studio!.id).eq('status', 'aceptado')
+      return new Set((data ?? []).map((m: any) => m.instructor_id as string))
+    },
+    enabled: !!studio?.id,
+  })
 
   if (studioLoading) return <LoadingScreen />
 
@@ -117,9 +113,7 @@ export default function SearchScreen({ navigation }: Props) {
     neighborhood:     ins.neighborhood,
     avatar_url:       ins.avatar_url,
     score:            ins.score,
-    rate_regular:     ins.rates?.rate_regular ?? null,
-    rate_replacement: ins.rates?.rate_replacement ?? null,
-    ...calcMatch(ins, studio),
+    ...calcMatch(ins, studio, workedWith.has(ins.id)),
   }))
   .filter((ins) => !profileComplete || showAll || ins.match_level !== 'none')
   .filter((ins) => !search || ins.full_name.toLowerCase().includes(search.trim().toLowerCase()))
@@ -172,7 +166,7 @@ export default function SearchScreen({ navigation }: Props) {
         >
           <Feather name="alert-circle" size={16} color={colors.warnTx} />
           <View style={{ flex: 1 }}>
-            <Text style={s.incompleteTxt}>Completá tu perfil para ver la compatibilidad</Text>
+            <Text style={s.incompleteTxt}>Cargá el equipamiento de tu estudio para ver la compatibilidad</Text>
             <Text style={s.incompleteHint}>Cargá tu equipamiento y cuánto pagás por clase</Text>
           </View>
           <Feather name="chevron-right" size={16} color={colors.warnTx} />
@@ -249,17 +243,6 @@ export default function SearchScreen({ navigation }: Props) {
                 </View>
               </View>
 
-              <View style={s.ratesRow}>
-                <View style={s.rateBox}>
-                  <Text style={s.rateLabel}>REGULAR</Text>
-                  <Text style={s.rateVal}>{item.rate_regular ? money(item.rate_regular) : '—'}</Text>
-                </View>
-                <View style={s.rateBox}>
-                  <Text style={s.rateLabel}>REEMPLAZO</Text>
-                  <Text style={s.rateVal}>{item.rate_replacement ? money(item.rate_replacement) : '—'}</Text>
-                </View>
-              </View>
-
               {profileComplete && item.match_reasons.length > 0 && (
                 <View style={s.reasons}>
                   {item.match_reasons.map((r, i) => (
@@ -310,10 +293,7 @@ const s = StyleSheet.create({
   badge:          { borderTopLeftRadius: 8, borderTopRightRadius: 0, borderBottomLeftRadius: 0, borderBottomRightRadius: 8, paddingHorizontal: 8, paddingVertical: 3 },
   badgeTxt:       { fontFamily: 'Nunito-Bold', fontSize: 10 },
 
-  ratesRow:       { flexDirection: 'row', gap: spacing.sm, marginBottom: spacing.sm },
   rateBox:        { flex: 1, backgroundColor: colors.sageLighter, borderTopLeftRadius: 10, borderTopRightRadius: 0, borderBottomLeftRadius: 0, borderBottomRightRadius: 10, padding: spacing.sm },
-  rateLabel:      { ...typography.caption, marginBottom: 2 },
-  rateVal:        { fontFamily: 'Nunito-Bold', fontSize: 14, color: colors.sage },
 
   reasons:        { gap: 3 },
   reasonRow:      { flexDirection: 'row', alignItems: 'center', gap: 5 },

@@ -183,6 +183,7 @@ export const matchAPI = {
       start_time: dto.start_time,
       end_time: dto.end_time,
       note_studio: dto.note_studio ?? null,
+      offered_rate: dto.offered_rate,
       schedule_days: dto.class_type === 'regular' ? (dto.schedule_days ?? null) : null,
       schedule_from: dto.class_type === 'regular' ? (dto.schedule_from ?? null) : null,
       schedule_to: dto.class_type === 'regular' ? (dto.schedule_to ?? null) : null,
@@ -193,6 +194,13 @@ export const matchAPI = {
       throw error
     }
     return data
+  },
+
+  /** El estudio responde una contraoferta del instructor, o cancela una propuesta pendiente */
+  studioRespond: async (matchId: string, status: 'aceptado' | 'rechazado' | 'cancelado') => {
+    const { data, error } = await db.matches().update({ status }).eq('id', matchId).eq('status', 'pendiente').select('id')
+    if (error) throw error
+    if (!data?.length) throw new Error('Esta propuesta ya no está pendiente.')
   },
 
   getByStudio: async (studioId: string, status?: string) => {

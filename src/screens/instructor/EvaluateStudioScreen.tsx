@@ -42,7 +42,8 @@ const ISSUES = [
 
 export default function EvaluateStudioScreen({ navigation, route }: Props) {
   const { toast, showToast, hideToast } = useToast()
-  const { matchId, studioId, studioName, classDate, classType } = route?.params ?? {}
+  const { matchId, studioId, studioName, classDate, classType, agreedRate } = route?.params ?? {}
+  const [paidAsAgreed, setPaidAsAgreed] = useState<boolean | null>(null)
   const { data: instructor } = useMyInstructor()
   const qc   = useQueryClient()
 
@@ -87,6 +88,7 @@ export default function EvaluateStudioScreen({ navigation, route }: Props) {
           class_type:       classType,
           class_date:       classDate,
           comment:          comment.trim() || null,
+          paid_as_agreed:   agreedRate ? paidAsAgreed : null,
           ...scores,
           ...issues,
         })
@@ -108,6 +110,7 @@ export default function EvaluateStudioScreen({ navigation, route }: Props) {
   })
 
   const handleSubmit = () => {
+    if (agreedRate && paidAsAgreed === null) { showToast('Contanos si te pagaron lo acordado', 'warning'); return }
     const hasIssue = Object.values(issues).some(Boolean)
     if (hasIssue) {
       Alert.alert(
@@ -198,6 +201,19 @@ export default function EvaluateStudioScreen({ navigation, route }: Props) {
         </Card>
 
         {/* Reportar problema */}
+        {agreedRate ? (
+          <Card style={{ marginBottom: spacing.md }}>
+            <Text style={styles.sectionTitle}>¿TE PAGARON LO ACORDADO?</Text>
+            <Text style={styles.paidSub}>Acordaron {'$' + Number(agreedRate).toLocaleString('es-AR')} por clase. Tu respuesta no la ve el estudio.</Text>
+            <View style={{ flexDirection: 'row', gap: spacing.sm, marginTop: spacing.sm }}>
+              {[{ v: true, l: 'Sí, lo acordado' }, { v: false, l: 'No, me pagaron menos' }].map(o => (
+                <TouchableOpacity key={String(o.v)} style={[styles.paidOpt, paidAsAgreed === o.v && (o.v ? styles.paidOptYes : styles.paidOptNo)]} onPress={() => setPaidAsAgreed(o.v)}>
+                  <Text style={[styles.paidOptTxt, paidAsAgreed === o.v && { color: o.v ? colors.okTx : colors.redTx }]}>{o.l}</Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+          </Card>
+        ) : null}
         <Text style={styles.sectionTitle}>¿HUBO ALGÚN PROBLEMA?</Text>
         <Card style={{ marginBottom: spacing.md }}>
           <Text style={styles.issueNote}>
@@ -269,6 +285,11 @@ const styles = StyleSheet.create({
   avgCircle:    { width: 48, height: 48, borderRadius: 24, backgroundColor: colors.sageLight, alignItems: 'center', justifyContent: 'center' },
   avgNum:       { fontFamily: 'Nunito-SemiBold', fontSize: 18, color: colors.sage },
   issueNote:    { ...typography.small, color: colors.mid, marginBottom: spacing.sm, lineHeight: 18 },
+  paidSub:      { fontFamily: 'Nunito-Regular', fontSize: 12, color: colors.mid, marginTop: 4 },
+  paidOpt:      { flex: 1, paddingVertical: 12, paddingHorizontal: 8, ...radius.leaf, borderWidth: 1, borderColor: colors.border, alignItems: 'center' },
+  paidOptYes:   { borderColor: colors.okTx, backgroundColor: colors.okBg },
+  paidOptNo:    { borderColor: colors.redTx, backgroundColor: colors.redBg },
+  paidOptTxt:   { fontFamily: 'Nunito-Bold', fontSize: 12, color: colors.mid, textAlign: 'center' },
   issueRow:     { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, paddingVertical: spacing.sm, borderBottomWidth: 0.5, borderColor: colors.borderLight },
   checkbox:     { width: 20, height: 20, borderRadius: 4, borderWidth: 1.5, borderColor: colors.border, alignItems: 'center', justifyContent: 'center' },
   issueLabel:   { ...typography.body, color: colors.dark, flex: 1, fontSize: 13 },

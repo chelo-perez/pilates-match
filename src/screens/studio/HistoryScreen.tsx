@@ -1,11 +1,13 @@
 import React, { useState } from 'react'
 import { View, Text, StyleSheet, FlatList, TouchableOpacity } from 'react-native'
-import { useQuery } from '@tanstack/react-query'
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
+import { Alert } from 'react-native'
 import { useEvaluationHistory, useMyStudio } from '../../hooks'
 import { matchAPI } from '../../lib/api'
 import { formatDate } from '../../lib/dates'
 import { MATCH_STATUS } from '../../constants/labels'
-import { Avatar, Badge, ScoreDisplay, EmptyState, ErrorState, LoadingScreen, colors, spacing } from '../../components/ui'
+import { Avatar, Badge, Button, ScoreDisplay, EmptyState, ErrorState, LoadingScreen, colors, spacing, radius } from '../../components/ui'
+import { errorText } from '../../lib/errors'
 import HeroHeader, { HeaderPills } from '../../components/HeroHeader'
 import BlobCard from '../../components/BlobCard'
 import type { NativeStackScreenProps } from '@react-navigation/native-stack'
@@ -25,8 +27,11 @@ const STATUS_FILTERS: { key: StatusFilter; label: string }[] = [
 
 const fmtTime = (t?: string | null) => (t ? String(t).slice(0, 5) : '')
 
+const money = (n: number) => '$' + Math.round(Number(n)).toLocaleString('es-AR')
+
 export default function HistoryScreen({ navigation }: Props) {
   const { data: studio } = useMyStudio()
+  const qc = useQueryClient()
   const [view, setView] = useState<View_>('propuestas')
   const [status, setStatus] = useState<StatusFilter>('todas')
   const [classFilter, setClassFilter] = useState<'todos' | 'regular' | 'reemplazo'>('todos')
@@ -37,6 +42,14 @@ export default function HistoryScreen({ navigation }: Props) {
     enabled: !!studio?.id && view === 'propuestas',
   })
   const evalsQ = useEvaluationHistory(view === 'evaluaciones' ? studio?.id : undefined)
+  const respond = useMutation({
+    mutationFn: ({ id, status }: { id: string; status: 'aceptado' | 'rechazado' | 'cancelado' }) => matchAPI.studioRespond(id, status),
+    onSuccess: () => { qc.invalidateQueries({ queryKey: ['studio-matches'] }); qc.invalidateQueries({ queryKey: ['studio-membership'] }) },
+    onError: (e: any) => Alert.alert('No se pudo', errorText(e)),
+  })
+  const confirmCancel = (id: string) => Alert.alert('Cancelar propuesta', 'El instructor deja de verla. La propuesta ya contó para tu plan.', [
+    { text: 'Volver', style: 'cancel' }, { text: 'Cancelar propuesta', style: 'destructive', onPress: () => respond.mutate({ id, status: 'cancelado' }) },
+  ])
 
   const evals = (evalsQ.data ?? []) as any[]
   const filteredEvals = classFilter === 'todos' ? evals : evals.filter(e => e.class_type === classFilter)
@@ -122,10 +135,31 @@ export default function HistoryScreen({ navigation }: Props) {
                   </View>
                   <Badge label={st?.label ?? item.status} variant={st?.variant ?? 'neutral'} />
                 </View>
+                {item.status === 'aceptado' && item.agreed_rate ? (
+                  <Text style={s.offer}>Acordado: {money(item.agreed_rate)} por clase</Text>
+                ) : item.offered_rate ? (
+                  <Text style={s.offer}>Ofreciste {money(item.offered_rate)} por clase</Text>
+                ) : null}
                 {item.note_instructor ? (
                   <Text style={s.comment} numberOfLines={2}>Respuesta: "{item.note_instructor}"</Text>
                 ) : null}
-                <Text style={s.sentAt}>Enviada el {formatDate(new Date(item.created_at))}</Text>
+                {item.status === 'pendiente' && item.counter_rate ? (
+                  <View style={s.counterBox}>
+                    <Text style={s.counterTitle}>{item.instructor?.full_name?.split(' ')[0] ?? 'El instructor'} pide {money(item.counter_rate)} por clase</Text>
+                    <View style={{ flexDirection: 'row', gap: spacing.sm, marginTop: spacing.sm }}>
+                      <Button label="Rechazar" variant="danger" size="sm" style={{ flex: 1 }} isLoading={respond.isPending}
+                        onPress={() => respond.mutate({ id: item.id, status: 'rechazado' })} />
+                      <Button label={`Aceptar ${money(item.counter_rate)}`} size="sm" style={{ flex: 2 }} isLoading={respond.isPending}
+                        onPress={() => respond.mutate({ id: item.id, status: 'aceptado' })} />
+                    </View>
+                  </View>
+                ) : null}
+                <View style={s.footerRow}>
+                  <Text style={s.sentAt}>Enviada el {formatDate(new Date(item.created_at))}</Text>
+                  {item.status === 'pendiente' && !item.counter_rate ? (
+                    <TouchableOpacity onPress={() => confirmCancel(item.id)} hitSlop={8}><Text style={s.cancelTxt}>Cancelar</Text></TouchableOpacity>
+                  ) : null}
+                </View>
               </BlobCard>
             )
           }}
@@ -204,6 +238,11 @@ const s = StyleSheet.create({
   date:          { fontFamily: 'Nunito-Regular', fontSize: 11, color: colors.light },
   comment:       { fontFamily: 'Nunito-Regular', fontSize: 12, color: colors.mid, lineHeight: 17, marginBottom: spacing.sm, fontStyle: 'italic' },
   sentAt:        { fontFamily: 'Nunito-Regular', fontSize: 11, color: colors.light },
+  footerRow:     { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
+  cancelTxt:     { fontFamily: 'Nunito-Bold', fontSize: 12, color: colors.mid },
+  offer:         { fontFamily: 'Nunito-SemiBold', fontSize: 12, color: colors.sage, marginBottom: 4 },
+  counterBox:    { backgroundColor: colors.warnBg, ...radius.leaf, padding: spacing.sm, marginBottom: spacing.sm },
+  counterTitle:  { fontFamily: 'Nunito-Bold', fontSize: 13, color: colors.warnTx },
   breakdown:     { flexDirection: 'row', gap: spacing.sm, paddingTop: spacing.sm, borderTopWidth: 0.5, borderColor: colors.borderLight },
   breakdownItem: { flex: 1, alignItems: 'center' },
   breakdownLbl:  { fontFamily: 'Nunito-Regular', fontSize: 10, color: colors.light },

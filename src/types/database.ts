@@ -184,6 +184,9 @@ export interface Match {
   note_studio: string | null
   note_instructor: string | null
   agreed_rate: number | null
+  offered_rate: number | null
+  counter_rate: number | null
+  counter_at: string | null
   created_at: string
   responded_at: string | null
   expires_at: string | null
@@ -265,6 +268,8 @@ export interface CreateMatchDTO {
   start_time: string
   end_time: string
   note_studio?: string | null
+  /** Lo que el estudio paga por clase si el instructor acepta */
+  offered_rate: number
   // Solo para clase regular
   schedule_days?: DayOfWeek[] | null
   schedule_from?: string | null

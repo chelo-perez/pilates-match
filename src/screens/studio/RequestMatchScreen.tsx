@@ -1,12 +1,14 @@
 // src/screens/studio/RequestMatchScreen.tsx
-import React, { useState } from 'react'
+import React, { useEffect, useState } from 'react'
 import {
   View, Text, StyleSheet, ScrollView, TouchableOpacity,
   KeyboardAvoidingView, Platform, TextInput
 } from 'react-native'
 import DateTimePicker from '@react-native-community/datetimepicker'
+import { useQuery } from '@tanstack/react-query'
 import { useCanMatch, useCreateMatch, useInstructor, useMyStudio } from '../../hooks'
-import { Avatar, Button, colors, spacing, typography } from '../../components/ui'
+import { supabase } from '../../lib/supabase'
+import { Avatar, Button, colors, spacing, radius, typography } from '../../components/ui'
 import { toLocalISODate, toHHMM } from '../../lib/dates'
 import { humanizeError } from '../../lib/errors'
 import { Feather } from '@expo/vector-icons'
@@ -30,6 +32,7 @@ const DAYS = [
 ]
 
 const at = (h: number) => { const d = new Date(); d.setHours(h, 0, 0, 0); return d }
+const money = (n: number) => '$' + Math.round(n).toLocaleString('es-AR')
 const fmtDate = (d: Date) => d.toLocaleDateString('es-AR', { weekday: 'long', day: 'numeric', month: 'long' })
 
 // Selector de fecha/hora: en Android abre el diálogo nativo; en iOS queda abierto hasta tocar "Listo".
@@ -95,6 +98,19 @@ export default function RequestMatchScreen({ navigation, route }: Props) {
 
   const [note, setNote] = useState('')
 
+  // Oferta por clase: es lo que el estudio paga si el instructor acepta. La tarifa del instructor
+  // es privada; él compara la oferta con su tarifa y acepta, rechaza o contraoferta.
+  const [offer, setOffer] = useState(0)
+  const { data: ranges = [] } = useQuery({
+    queryKey: ['rate-ranges'],
+    queryFn: async () => { const { data } = await supabase.from('rate_ranges').select('class_type, min_ars, max_ars'); return data ?? [] },
+  })
+  const range: any = ranges.find((r: any) => r.class_type === classType)
+  useEffect(() => {
+    const budget = classType === 'regular' ? studio?.budget_regular : studio?.budget_replacement
+    setOffer(Number(budget) || Number(range?.max_ars) || Number(range?.min_ars) || 0)
+  }, [classType, studio?.id, range?.max_ars])
+
   const toggleDay = (key: string) =>
     setSelectedDays(prev => prev.includes(key) ? prev.filter(d => d !== key) : [...prev, key])
 
@@ -114,7 +130,8 @@ export default function RequestMatchScreen({ navigation, route }: Props) {
   const limitReached = canMatch === false
   const problem =
     classType === 'regular' && selectedDays.length === 0 ? 'Elegí al menos un día de la semana' :
-    !validRange ? 'La hora de fin tiene que ser posterior a la de inicio' : null
+    !validRange ? 'La hora de fin tiene que ser posterior a la de inicio' :
+    offer < 1000 ? 'Indicá cuánto pagás por clase' : null
 
   const handleSubmit = async () => {
     if (limitReached) { navigation.navigate('MembershipPaywall'); return }
@@ -128,6 +145,7 @@ export default function RequestMatchScreen({ navigation, route }: Props) {
         start_time: toHHMM(from),
         end_time: toHHMM(to),
         note_studio: note.trim() || undefined,
+        offered_rate: offer,
         ...(isRegular && {
           schedule_days: DAYS.map(d => d.key).filter(k => selectedDays.includes(k)),
           schedule_from: toHHMM(scheduleFrom),
@@ -301,6 +319,33 @@ export default function RequestMatchScreen({ navigation, route }: Props) {
           </>
         )}
 
+        {/* Oferta */}
+        <BlobCard style={s.card} delay={2000}>
+          <Text style={s.cardLabel}>CUÁNTO PAGÁS POR CLASE</Text>
+          <View style={s.offerRow}>
+            <TouchableOpacity style={s.offerBtn} onPress={() => setOffer(o => Math.max(0, o - 500))} accessibilityLabel="Bajar $500">
+              <Feather name="minus" size={18} color={colors.sage} />
+            </TouchableOpacity>
+            <TextInput
+              style={s.offerInput}
+              value={offer ? String(offer) : ''}
+              onChangeText={v => setOffer(parseInt(v.replace(/\D/g, ''), 10) || 0)}
+              keyboardType="number-pad" placeholder="0" placeholderTextColor={colors.light} maxLength={7}
+            />
+            <TouchableOpacity style={s.offerBtn} onPress={() => setOffer(o => o + 500)} accessibilityLabel="Subir $500">
+              <Feather name="plus" size={18} color={colors.sage} />
+            </TouchableOpacity>
+          </View>
+          {range ? (
+            <Text style={s.offerHint}>
+              Referencia de la red para {classType === 'regular' ? 'clase regular' : 'reemplazo'}: {money(range.min_ars)} – {money(range.max_ars)}
+            </Text>
+          ) : null}
+          <Text style={s.offerNote}>
+            Es lo que pagás si {instructorName} acepta. Su tarifa es privada: la compara con tu oferta y puede aceptar, rechazar o proponerte otro monto.
+          </Text>
+        </BlobCard>
+
         {/* Nota */}
         <BlobCard style={s.card} delay={2400}>
           <Text style={s.cardLabel}>NOTA PARA EL INSTRUCTOR (OPCIONAL)</Text>
@@ -322,8 +367,8 @@ export default function RequestMatchScreen({ navigation, route }: Props) {
           <Feather name="info" size={13} color={colors.sageMid} />
           <Text style={s.privacyTxt}>
             {classType === 'reemplazo'
-              ? 'El instructor va a ver la fecha, el horario y tu nota. Cada propuesta enviada cuenta para el límite mensual de tu plan.'
-              : 'La propuesta no compromete ningún pago. Cada propuesta enviada cuenta para el límite mensual de tu plan.'}
+              ? 'El instructor va a ver la fecha, el horario, tu oferta y tu nota. Cada propuesta enviada cuenta para el límite mensual de tu plan.'
+              : 'El instructor va a ver los días, el horario, tu oferta por clase y tu nota. Cada propuesta enviada cuenta para el límite mensual de tu plan.'}
           </Text>
         </View>
 
@@ -392,4 +437,9 @@ const s = StyleSheet.create({
 
   privacy:          { flexDirection: 'row', alignItems: 'flex-start', gap: 6, backgroundColor: colors.sageLighter, borderTopLeftRadius: 10, borderTopRightRadius: 0, borderBottomLeftRadius: 0, borderBottomRightRadius: 10, padding: spacing.md, marginBottom: spacing.md, borderWidth: 0.5, borderColor: colors.border },
   privacyTxt:       { fontFamily: 'Nunito-SemiBold', fontSize: 11, color: colors.mid, flex: 1, lineHeight: 17 },
+  offerRow:    { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, marginTop: 4 },
+  offerBtn:    { width: 44, height: 48, ...radius.leafSm, backgroundColor: colors.sageLighter, alignItems: 'center', justifyContent: 'center' },
+  offerInput:  { flex: 1, height: 48, textAlign: 'center', fontFamily: 'Nunito-Bold', fontSize: 22, color: colors.sage, backgroundColor: colors.cream, ...radius.leafSm },
+  offerHint:   { fontFamily: 'Nunito-SemiBold', fontSize: 12, color: colors.mid, marginTop: spacing.sm },
+  offerNote:   { fontFamily: 'Nunito-Regular', fontSize: 12, color: colors.light, lineHeight: 17, marginTop: 6 },
 })

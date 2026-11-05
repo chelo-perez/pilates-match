@@ -189,7 +189,7 @@ test('el estudio envía una propuesta y el límite Freemium frena la segunda', a
   assert.equal(ok(await c.rpc('can_studio_match', { p_studio_id: id }), 'can_studio_match'), true)
   const match = ok(await c.from('matches').insert({
     studio_id: id, instructor_id: S.instructor.id, class_type: 'regular',
-    class_date: '2030-01-10', start_time: '09:00', end_time: '10:00', note_studio: 'E2E',
+    class_date: '2030-01-10', start_time: '09:00', end_time: '10:00', note_studio: 'E2E', offered_rate: 18000,
     schedule_days: ['lunes', 'miercoles'], schedule_from: '09:00', schedule_to: '12:00',
   }).select().single(), 'crear match regular con días y horario')
   assert.deepEqual(match.schedule_days, ['lunes', 'miercoles'])
@@ -197,7 +197,7 @@ test('el estudio envía una propuesta y el límite Freemium frena la segunda', a
 
   assert.equal(ok(await c.rpc('can_studio_match', { p_studio_id: id }), 'can_studio_match'), false)
   const second = await c.from('matches').insert({
-    studio_id: id, instructor_id: S.instructor.id, class_date: '2030-01-11', start_time: '09:00', end_time: '10:00',
+    studio_id: id, instructor_id: S.instructor.id, class_date: '2030-01-11', start_time: '09:00', end_time: '10:00', offered_rate: 18000,
   })
   assert.equal(second.error?.message, 'MATCH_LIMIT_REACHED')
 })
@@ -214,15 +214,33 @@ test('el estudio no puede subirse el plan ni resetear el contador', async () => 
 
 // ── Instructor responde ────────────────────────────────────────────
 
-test('el instructor ve la propuesta y la acepta (MatchesScreen)', async () => {
+test('el instructor ve la propuesta con la oferta y contraoferta (MatchesScreen)', async () => {
   const { c } = S.instructor
-  const pending = ok(await c.from('matches').select('id, status, schedule_days').eq('status', 'pendiente'), 'matches pendientes')
-  assert.deepEqual(pending.find(m => m.id === S.matchId)?.schedule_days, ['lunes', 'miercoles'], 'el instructor ve los días pedidos')
-  assert.ok(pending.some(m => m.id === S.matchId), 'la propuesta tiene que aparecerle al instructor')
+  const pending = ok(await c.from('matches').select('id, status, schedule_days, offered_rate').eq('status', 'pendiente'), 'matches pendientes')
+  const mine = pending.find(m => m.id === S.matchId)
+  assert.deepEqual(mine?.schedule_days, ['lunes', 'miercoles'], 'el instructor ve los días pedidos')
+  assert.equal(mine?.offered_rate, 18000, 'el instructor ve la oferta por clase')
 
-  ok(await c.from('matches').update({ status: 'aceptado', note_instructor: 'Dale', responded_at: new Date().toISOString() }).eq('id', S.matchId), 'responder')
-  const m = ok(await c.from('matches').select('status').eq('id', S.matchId).single(), 'leer match')
-  assert.equal(m.status, 'aceptado', 'la respuesta tiene que guardarse')
+  // No puede cambiar nada de la propuesta salvo responderla
+  await c.from('matches').update({ class_date: '2031-01-01', offered_rate: 99000 }).eq('id', S.matchId)
+  const frozen = ok(await c.from('matches').select('class_date, offered_rate').eq('id', S.matchId).single(), 'leer')
+  assert.deepEqual(frozen, { class_date: '2030-01-10', offered_rate: 18000 })
+
+  ok(await c.from('matches').update({ counter_rate: 20000, note_instructor: 'Dale' }).eq('id', S.matchId), 'contraoferta')
+  const m = ok(await c.from('matches').select('status, counter_rate, agreed_rate').eq('id', S.matchId).single(), 'leer match')
+  assert.deepEqual(m, { status: 'pendiente', counter_rate: 20000, agreed_rate: null }, 'la contraoferta queda pendiente para el estudio')
+
+  const again = await c.from('matches').update({ status: 'aceptado' }).eq('id', S.matchId)
+  assert.match(again.error?.message ?? '', /esperando al estudio/, 'con contraoferta hecha, el instructor espera')
+})
+
+test('el estudio acepta la contraoferta y queda el monto acordado', async () => {
+  const { c } = S.studio
+  const seen = ok(await c.from('matches').select('counter_rate').eq('id', S.matchId).single(), 'ver contraoferta')
+  assert.equal(seen.counter_rate, 20000)
+  ok(await c.from('matches').update({ status: 'aceptado' }).eq('id', S.matchId), 'aceptar contraoferta')
+  const m = ok(await c.from('matches').select('status, agreed_rate').eq('id', S.matchId).single(), 'leer match')
+  assert.deepEqual(m, { status: 'aceptado', agreed_rate: 20000 })
 })
 
 test('el estudio ve la respuesta del instructor', async () => {
