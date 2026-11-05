@@ -1,4 +1,3 @@
--- PENDIENTE: no aplicada todavía.
 -- =====================================================================
 -- Match, paso 2: compatibilidad contra la clase concreta, en el servidor — 2026-11-06
 --  * search_instructors(): el estudio dice qué necesita (tipo, días, horario) y recibe
