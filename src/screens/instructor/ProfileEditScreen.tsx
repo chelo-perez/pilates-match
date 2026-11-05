@@ -19,6 +19,7 @@ import { useToast } from '../../hooks/useToast'
 import { Feather } from '@expo/vector-icons'
 import SaveButton from '../../components/SaveButton'
 import { entity } from '../../lib/entity'
+import DeleteAccount from '../../components/DeleteAccount'
 
 const SPECIALTIES = Object.entries(SPECIALTY_LABELS as Record<string, string>).map(([key, label]) => ({ key, label }))
 
@@ -376,6 +377,7 @@ export default function ProfileEditScreen() {
 
           <SaveButton label="Guardar perfil" onPress={() => saveMutation.mutate()} isPending={saveMutation.isPending} isSuccess={saveMutation.isSuccess} />
         </View>
+        <DeleteAccount />
       </ScrollView>
 
       <Modal visible={showNeighborhoodModal} animationType="slide" transparent onRequestClose={() => setShowNeighborhoodModal(false)}>

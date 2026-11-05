@@ -18,7 +18,7 @@ export default function PaymentsSection() {
   const qc = useQueryClient()
   const camaraId = useAuthStore(s => s.user?.camara_id) as string | undefined
   const { data: camara } = useCamara(camaraId)
-  const { data: prices = [] } = usePlanPrices(camaraId)
+  const { data: prices = [] } = usePlanPrices(camaraId, 'info')
   const { data: settlements = [] } = useSettlements()
   const [invoiceFor, setInvoiceFor] = useState<Settlement | null>(null)
   const [invoice, setInvoice] = useState('')

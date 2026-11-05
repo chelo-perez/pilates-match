@@ -16,6 +16,7 @@ import HeroHeader from '../../components/HeroHeader'
 import SaveButton from '../../components/SaveButton'
 import Toast from '../../components/Toast'
 import { useToast } from '../../hooks/useToast'
+import DeleteAccount from '../../components/DeleteAccount'
 
 // Deben coincidir con el enum specialty para poder compararse con los instructores
 const EQUIPMENT_OPTIONS = [
@@ -251,6 +252,7 @@ export default function StudioProfileEditScreen({ navigation }: any) {
           isPending={saveMutation.isPending}
           isSuccess={saveMutation.isSuccess}
         />
+        <DeleteAccount />
       </ScrollView>
 
       <Toast visible={toast.visible} message={toast.message} type={toast.type} onHide={hideToast} />

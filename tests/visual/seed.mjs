@@ -21,11 +21,18 @@ async function signUp(email, role, full_name) {
   return { c, user: data.user }
 }
 
+// La limpieza solo la puede correr una cuenta de prueba: el administrador de la red de prueba
+const cleanup = async () => {
+  const c = client()
+  const r = await c.auth.signInWithPassword({ email: 'qa-camara@qa.pilatesmatch.test', password: PASSWORD })
+  if (r.error) return { data: null, error: r.error }
+  return c.rpc('e2e_cleanup')
+}
 if (process.argv.includes('--cleanup')) {
-  const r = await client().rpc('e2e_cleanup'); console.log('borradas:', r.data, r.error?.message ?? ''); process.exit(0)
+  const r = await cleanup(); console.log('borradas:', r.data, r.error?.message ?? ''); process.exit(0)
 }
 
-await client().rpc('e2e_cleanup')
+await cleanup()
 
 const ins = await signUp(INSTRUCTOR_EMAIL, 'instructor', 'Lucía Fernández')
 const instructor = must(await ins.c.from('instructors').insert({

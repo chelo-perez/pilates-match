@@ -4,7 +4,7 @@
 // Reemplaza al recortador nativo de expo-image-picker (allowsEditing), que en Android 15
 // con pantalla edge-to-edge deja el botón de confirmar debajo de la barra de estado.
 import React, { useCallback, useMemo, useRef, useState } from 'react'
-import { View, Text, Modal, Image, Animated, PanResponder, StyleSheet, TouchableOpacity, useWindowDimensions, ActivityIndicator } from 'react-native'
+import { View, Text, Modal, Image, Animated, PanResponder, StyleSheet, TouchableOpacity, useWindowDimensions, ActivityIndicator, Platform } from 'react-native'
 import Slider from '@react-native-community/slider'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { Feather } from '@expo/vector-icons'
@@ -30,8 +30,12 @@ export function usePhotoCropper(title = 'Ajustá tu foto') {
   const resolver = useRef<((uri: string | null) => void) | null>(null)
 
   const pickPhoto = useCallback(async (): Promise<string | null> => {
-    const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync()
-    if (status !== 'granted') throw new UserError('Necesitamos acceso a tu galería para elegir la foto')
+    // En Android se usa el selector de fotos del sistema: no hace falta permiso de galería
+    // (Google Play restringe READ_MEDIA_IMAGES para apps que eligen una foto de vez en cuando)
+    if (Platform.OS === 'ios') {
+      const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync()
+      if (status !== 'granted') throw new UserError('Necesitamos acceso a tus fotos para elegir la imagen')
+    }
     const result = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ['images'], allowsEditing: false, quality: 1 })
     const a = result.canceled ? null : result.assets?.[0]
     if (!a) return null

@@ -37,9 +37,19 @@ const ok = ({ data, error }, what) => { assert.ifError(error ? new Error(`${what
 // Estado compartido entre pruebas (corren en orden)
 const S = {}
 
-before(async () => { await anon.rpc('e2e_cleanup') })
+// La limpieza solo la puede correr una cuenta de prueba: el administrador de la red de prueba (QA)
+const cleaner = client()
+const cleanup = async () => {
+  if (!(await cleaner.auth.getSession()).data.session) {
+    const r = await cleaner.auth.signInWithPassword({ email: 'qa-camara@qa.pilatesmatch.test', password: PASSWORD })
+    if (r.error) return { data: null, error: r.error }
+  }
+  return cleaner.rpc('e2e_cleanup')
+}
+
+before(async () => { await cleanup() })
 after(async () => {
-  const { data, error } = await anon.rpc('e2e_cleanup')
+  const { data, error } = await cleanup()
   if (error) console.error('No se pudo limpiar:', error.message)
   else console.log(`Limpieza: ${data} cuentas de prueba borradas`)
 })

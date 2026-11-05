@@ -20,7 +20,7 @@ export default function PlatformCamaraEditScreen({ navigation, route }: any) {
   const isNew = !camaraId
   const qc = useQueryClient()
   const { data: camara, isLoading } = useCamara(camaraId)
-  const { data: prices = [] } = usePlanPrices(camaraId)
+  const { data: prices = [] } = usePlanPrices(camaraId, 'info')
 
   const [f, setF] = useState({
     name: '', entity_type: 'Cámara', entity_article: 'la' as 'la' | 'el', sector: '', business_label: '', instructor_label: '', pct: '25', cuit: '', email: '', active: true,

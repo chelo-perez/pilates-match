@@ -15,6 +15,7 @@ import SaveButton from '../../components/SaveButton'
 import Toast from '../../components/Toast'
 import { useToast } from '../../hooks/useToast'
 import { entity } from '../../lib/entity'
+import DeleteAccount from '../../components/DeleteAccount'
 
 export default function CamaraProfileEditScreen({ navigation }: any) {
   const { pickPhoto, cropModal } = usePhotoCropper('Ajustá el logo')
@@ -196,6 +197,7 @@ export default function CamaraProfileEditScreen({ navigation }: any) {
         />
 
         {user?.camara_id ? <View style={{ marginTop: spacing.lg }}><CamaraTeam camaraId={user.camara_id} camaraName={camara?.name} /></View> : null}
+        <DeleteAccount />
       </ScrollView>
 
       <Toast visible={toast.visible} message={toast.message} type={toast.type} onHide={hideToast} />
