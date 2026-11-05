@@ -250,7 +250,7 @@ export default function ProfileEditScreen() {
       <ScrollView contentContainerStyle={{ paddingBottom: 120 }}>
         <HeroHeader
           title={instructor.full_name ?? 'Mi perfil'}
-          subtitle={uploading ? 'Subiendo foto...' : 'Tocá la foto para cambiarla'}
+          subtitle={uploading ? 'Subiendo foto...' : statusInfo.label}
           centered
           avatarUri={instructor.avatar_url}
           avatarFallback={instructor.full_name ?? 'I'}
@@ -260,12 +260,6 @@ export default function ProfileEditScreen() {
               <Feather name="log-out" size={13} color={colors.white} />
               <Text style={s.logoutPillTxt}>Salir</Text>
             </TouchableOpacity>
-          }
-          bottomElement={
-            <View style={s.veriBadge}>
-              {uploading ? <ActivityIndicator size="small" color={colors.white} /> : null}
-              <Text style={s.veriText}>{statusInfo.label}</Text>
-            </View>
           }
         />
 

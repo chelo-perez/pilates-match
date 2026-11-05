@@ -26,76 +26,57 @@ export default function HeroHeader({
   // El encabezado cierra recto en todas las pantallas (sin la punta de "hoja")
 
   return (
-    <View style={[s.hero, { paddingTop: insets.top + 12 }]}>
+    <View style={[s.hero, { paddingTop: insets.top + 10 }]}>
       <View style={s.blob1} />
       <View style={s.blob2} />
 
       <View style={s.inner}>
 
+        {onBack ? (
+          <View style={s.topRow}>
+            <TouchableOpacity style={s.back} onPress={onBack} accessibilityRole="button" accessibilityLabel={`Volver a ${backLabel}`} hitSlop={10}>
+              <Feather name="chevron-left" size={16} color="rgba(255,255,255,0.7)" />
+              <Text style={s.backTxt}>{backLabel}</Text>
+            </TouchableOpacity>
+            {rightElement ?? <View />}
+          </View>
+        ) : null}
+
         {centered ? (
-          /* ── Modo centrado ── */
-          <>
-            {/* Fila superior: back izq + logout der */}
-            {(onBack || rightElement) && (
-              <View style={s.topRow}>
-                {onBack ? (
-                  <TouchableOpacity style={s.back} onPress={onBack} accessibilityRole="button" accessibilityLabel={`Volver a ${backLabel}`} hitSlop={10}>
-                    <Feather name="chevron-left" size={16} color="rgba(255,255,255,0.7)" />
-                    <Text style={s.backTxt}>{backLabel}</Text>
-                  </TouchableOpacity>
-                ) : <View />}
-                {rightElement ?? <View />}
-              </View>
-            )}
-            {/* Avatar + nombre centrado */}
-            <View style={s.centeredContent}>
-              <TouchableOpacity
-                style={s.avatarWrap}
-                onPress={onAvatarPress}
-                disabled={!onAvatarPress}
-                activeOpacity={0.85}
-              >
-                {avatarUri ? (
-                  <Image source={{ uri: avatarUri }} style={s.avatarImg} />
-                ) : (
-                  <View style={s.avatarFallback}>
-                    <Text style={s.avatarLetter}>{(avatarFallback ?? title)[0]?.toUpperCase()}</Text>
-                  </View>
-                )}
-                {onAvatarPress && (
-                  <View style={s.cameraIcon}>
-                    <Feather name="camera" size={12} color={colors.white} />
-                  </View>
-                )}
-              </TouchableOpacity>
-              <Text style={s.centeredTitle}>{title}</Text>
-              {subtitle ? <Text style={s.centeredSubtitle}>{subtitle}</Text> : null}
-              {bottomElement}
+          /* ── Perfil: foto chica + nombre en una fila (antes, foto grande centrada) ── */
+          <View style={s.profileRow}>
+            <TouchableOpacity style={s.avatarWrap} onPress={onAvatarPress} disabled={!onAvatarPress} activeOpacity={0.85}
+              accessibilityRole={onAvatarPress ? 'button' : undefined} accessibilityLabel={onAvatarPress ? 'Cambiar foto' : undefined}>
+              {avatarUri ? (
+                <Image source={{ uri: avatarUri }} style={s.avatarImg} />
+              ) : (
+                <View style={s.avatarFallback}>
+                  <Text style={s.avatarLetter}>{(avatarFallback ?? title)[0]?.toUpperCase()}</Text>
+                </View>
+              )}
+              {onAvatarPress && (
+                <View style={s.cameraIcon}>
+                  <Feather name="camera" size={9} color={colors.white} />
+                </View>
+              )}
+            </TouchableOpacity>
+            <View style={{ flex: 1, minWidth: 0 }}>
+              <Text style={s.profileTitle} numberOfLines={2}>{title}</Text>
+              {subtitle ? <Text style={s.subtitle} numberOfLines={1}>{subtitle}</Text> : null}
             </View>
-          </>
+            {!onBack && rightElement ? <View style={s.rightInline}>{rightElement}</View> : null}
+          </View>
         ) : (
-          /* ── Modo estándar ── */
-          <>
-            {(onBack || rightElement) && (
-              <View style={s.topRow}>
-                {onBack ? (
-                  <TouchableOpacity style={s.back} onPress={onBack} accessibilityRole="button" accessibilityLabel={`Volver a ${backLabel}`} hitSlop={10}>
-                    <Feather name="chevron-left" size={16} color="rgba(255,255,255,0.7)" />
-                    <Text style={s.backTxt}>{backLabel}</Text>
-                  </TouchableOpacity>
-                ) : <View />}
-                {rightElement ?? <View />}
-              </View>
-            )}
-            <View style={s.titleRow}>
-              <View style={{ flex: 1 }}>
-                <Text style={s.title}>{title}</Text>
-                {subtitle ? <Text style={s.subtitle}>{subtitle}</Text> : null}
-              </View>
+          /* ── Estándar: título; sin "Volver", los botones van al lado del título ── */
+          <View style={s.titleRow}>
+            <View style={{ flex: 1, minWidth: 0 }}>
+              <Text style={s.title}>{title}</Text>
+              {subtitle ? <Text style={s.subtitle}>{subtitle}</Text> : null}
             </View>
-            {bottomElement}
-          </>
+            {!onBack && rightElement ? <View style={s.rightInline}>{rightElement}</View> : null}
+          </View>
         )}
+        {bottomElement}
 
       </View>
 
@@ -112,18 +93,18 @@ const s = StyleSheet.create({
   back:            { flexDirection: 'row', alignItems: 'center', gap: 4, opacity: 0.75 },
   backTxt:         { fontFamily: 'Nunito-Bold', fontSize: 12, color: colors.white },
   // Standard mode
-  titleRow:        { flexDirection: 'row', alignItems: 'flex-start' },
+  titleRow:        { flexDirection: 'row', alignItems: 'center' },
   title:           { fontFamily: 'Nunito-Bold', fontSize: 22, color: colors.white, letterSpacing: -0.3, marginBottom: 3 },
   subtitle:        { fontFamily: 'Nunito-SemiBold', fontSize: 12, color: 'rgba(255,255,255,0.65)' },
-  // Centered mode
-  centeredContent: { alignItems: 'center', paddingTop: 2, paddingBottom: 2 },
-  avatarWrap:      { width: 64, height: 64, borderRadius: 32, marginBottom: 8, position: 'relative' },
-  avatarImg:       { width: 64, height: 64, borderRadius: 32, borderWidth: 2, borderColor: 'rgba(255,255,255,0.3)' },
-  avatarFallback:  { width: 64, height: 64, borderRadius: 32, backgroundColor: 'rgba(255,255,255,0.18)', borderWidth: 2, borderColor: 'rgba(255,255,255,0.3)', alignItems: 'center', justifyContent: 'center' },
-  avatarLetter:    { fontFamily: 'Nunito-Bold', fontSize: 24, color: colors.white },
-  cameraIcon:      { position: 'absolute', bottom: 0, right: 0, width: 20, height: 20, borderRadius: 10, backgroundColor: colors.sage, alignItems: 'center', justifyContent: 'center', borderWidth: 2, borderColor: colors.white },
-  centeredTitle:   { fontFamily: 'Nunito-Bold', fontSize: 20, color: colors.white, letterSpacing: -0.3, textAlign: 'center' },
-  centeredSubtitle:{ fontFamily: 'Nunito-SemiBold', fontSize: 12, color: 'rgba(255,255,255,0.7)', textAlign: 'center', marginTop: 2 },
+  rightInline:     { marginLeft: spacing.sm },
+  // Perfil (foto + nombre en fila)
+  profileRow:      { flexDirection: 'row', alignItems: 'center', gap: spacing.sm + 4 },
+  avatarWrap:      { width: 52, height: 52, borderRadius: 26, position: 'relative' },
+  avatarImg:       { width: 52, height: 52, borderRadius: 26, borderWidth: 2, borderColor: 'rgba(255,255,255,0.3)' },
+  avatarFallback:  { width: 52, height: 52, borderRadius: 26, backgroundColor: 'rgba(255,255,255,0.18)', borderWidth: 2, borderColor: 'rgba(255,255,255,0.3)', alignItems: 'center', justifyContent: 'center' },
+  avatarLetter:    { fontFamily: 'Nunito-Bold', fontSize: 20, color: colors.white },
+  cameraIcon:      { position: 'absolute', bottom: -2, right: -2, width: 18, height: 18, borderRadius: 9, backgroundColor: colors.sage, alignItems: 'center', justifyContent: 'center', borderWidth: 2, borderColor: colors.forest },
+  profileTitle:    { fontFamily: 'Nunito-Bold', fontSize: 19, lineHeight: 24, color: colors.white, letterSpacing: -0.2 },
 })
 
 /** Pestañas en forma de píldora para el pie del encabezado (bottomElement). */

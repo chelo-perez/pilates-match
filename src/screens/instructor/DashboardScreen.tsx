@@ -118,14 +118,6 @@ export default function InstructorDashboardScreen({ navigation }: any) {
           avatarFallback={firstName}
           onAvatarPress={() => navigation.navigate('InstructorPerfil')}
           rightElement={<NotificationBell />}
-          bottomElement={
-            isVerified ? (
-              <View style={s.verifiedTag}>
-                <Feather name="check" size={11} color={colors.goldLight} />
-                <Text style={s.verifiedTxt}>VERIFICADO</Text>
-              </View>
-            ) : null
-          }
         />
         <View style={{ height: spacing.md }} />
 
