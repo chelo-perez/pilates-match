@@ -58,6 +58,7 @@ import InstructorAvailabilityScreen from '../screens/instructor/AvailabilityScre
 import InstructorProfileEditScreen from '../screens/instructor/ProfileEditScreen'
 import InstructorRatesScreen from '../screens/instructor/RatesScreen'
 import EvaluateStudioScreen from '../screens/instructor/EvaluateStudioScreen'
+import InstructorStudiosScreen from '../screens/instructor/StudiosScreen'
 
 // Studio
 import StudioHomeScreen from '../screens/studio/HomeScreen'
@@ -285,6 +286,7 @@ export default function RootNavigator() {
       <>
         <Stack.Screen name="InstructorTabs" component={InstructorTabs} />
         <Stack.Screen name="EvaluateStudio" component={EvaluateStudioScreen} />
+        <Stack.Screen name="InstructorStudios" component={InstructorStudiosScreen} />
         <Stack.Screen name="Notifications" component={NotificationsScreen} />
       </>
     )

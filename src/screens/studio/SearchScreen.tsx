@@ -26,6 +26,7 @@ interface MatchedInstructor {
   score: number | null
   total_evaluations: number
   worked_together: boolean
+  interested: boolean
   match_level: MatchLevel
   match_score: number  // 0-100
   match_reasons: string[]
@@ -58,15 +59,29 @@ export default function SearchScreen({ navigation }: Props) {
     enabled: !!studio?.id,
   })
 
+  // Instructores que marcaron "me interesa" en este estudio: suben en la lista
+  const { data: interested = new Set<string>() } = useQuery({
+    queryKey: ['studio-interests', studio?.id],
+    queryFn: async () => {
+      const { data } = await supabase.from('instructor_interests').select('instructor_id').eq('studio_id', studio!.id)
+      return new Set((data ?? []).map((i: any) => i.instructor_id as string))
+    },
+    enabled: !!studio?.id,
+  })
+
   if (studioLoading) return <LoadingScreen />
 
-  const matched: MatchedInstructor[] = results.map((r: any): MatchedInstructor => ({
+  const matched: MatchedInstructor[] = results.map((r: any): MatchedInstructor => {
+    const likes = interested.has(r.id)
+    const score = Math.min(100, r.match_score + (likes ? 10 : 0))
+    return {
     id: r.id, full_name: r.full_name, neighborhood: r.neighborhood, avatar_url: r.avatar_url,
     score: r.avg_score != null ? Number(r.avg_score) : null, total_evaluations: r.total_evaluations ?? 0,
-    worked_together: !!r.worked_together,
-    match_score: r.match_score, match_level: r.match_score >= 75 ? 'full' : r.match_score >= 40 ? 'partial' : 'none',
-    match_reasons: r.match_reasons ?? [], missing_reasons: r.missing_reasons ?? [],
-  }))
+    worked_together: !!r.worked_together, interested: likes,
+    match_score: score, match_level: score >= 75 ? 'full' : score >= 40 ? 'partial' : 'none',
+    match_reasons: [...(likes ? ['Le interesa tu estudio'] : []), ...(r.match_reasons ?? [])], missing_reasons: r.missing_reasons ?? [],
+  }})
+  .sort((a, b) => b.match_score - a.match_score || (b.score ?? 0) - (a.score ?? 0))
   .filter((ins) => !profileComplete || showAll || ins.match_level !== 'none')
   .filter((ins) => !search || ins.full_name.toLowerCase().includes(search.trim().toLowerCase()))
 

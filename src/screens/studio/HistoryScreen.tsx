@@ -1,6 +1,7 @@
 import React, { useState } from 'react'
 import { View, Text, StyleSheet, FlatList, TouchableOpacity } from 'react-native'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
+import { Feather } from '@expo/vector-icons'
 import { Alert } from 'react-native'
 import { useEvaluationHistory, useMyStudio } from '../../hooks'
 import { matchAPI } from '../../lib/api'
@@ -8,6 +9,7 @@ import { formatDate } from '../../lib/dates'
 import { MATCH_STATUS } from '../../constants/labels'
 import { Avatar, Badge, Button, ScoreDisplay, EmptyState, ErrorState, LoadingScreen, colors, spacing, radius } from '../../components/ui'
 import { errorText } from '../../lib/errors'
+import { useSearchNeed } from '../../store/searchNeed'
 import HeroHeader, { HeaderPills } from '../../components/HeroHeader'
 import BlobCard from '../../components/BlobCard'
 import type { NativeStackScreenProps } from '@react-navigation/native-stack'
@@ -32,6 +34,12 @@ const money = (n: number) => '$' + Math.round(Number(n)).toLocaleString('es-AR')
 export default function HistoryScreen({ navigation }: Props) {
   const { data: studio } = useMyStudio()
   const qc = useQueryClient()
+  const setNeed = useSearchNeed(st => st.set)
+  // Vuelve a proponer la misma clase al mismo instructor
+  const again = (m: any) => {
+    setNeed({ classType: m.class_type, days: m.schedule_days ?? [], from: String(m.schedule_from ?? m.start_time).slice(0, 5), to: String(m.schedule_to ?? m.end_time).slice(0, 5) })
+    navigation.navigate('RequestMatch', { instructorId: m.instructor_id, instructorName: m.instructor?.full_name })
+  }
   const [view, setView] = useState<View_>('propuestas')
   const [status, setStatus] = useState<StatusFilter>('todas')
   const [classFilter, setClassFilter] = useState<'todos' | 'regular' | 'reemplazo'>('todos')
@@ -153,6 +161,10 @@ export default function HistoryScreen({ navigation }: Props) {
                         onPress={() => respond.mutate({ id: item.id, status: 'aceptado' })} />
                     </View>
                   </View>
+                ) : null}
+                {item.status === 'aceptado' ? (
+                  <Button label="Volver a proponer" variant="secondary" size="sm" onPress={() => again(item)}
+                    icon={<Feather name="repeat" size={13} color={colors.sage} />} style={{ marginBottom: spacing.sm, alignSelf: 'flex-start' }} />
                 ) : null}
                 <View style={s.footerRow}>
                   <Text style={s.sentAt}>Enviada el {formatDate(new Date(item.created_at))}</Text>

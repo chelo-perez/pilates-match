@@ -158,6 +158,16 @@ export default function InstructorDashboardScreen({ navigation }: any) {
           />
         </View>
 
+        {/* Estudios de la red: "me interesa" */}
+        <TouchableOpacity style={s.studiosCard} onPress={() => navigation.navigate('InstructorStudios')} activeOpacity={0.85}>
+          <View style={s.studiosIcon}><Feather name="heart" size={16} color={colors.sage} /></View>
+          <View style={{ flex: 1 }}>
+            <Text style={s.studiosTitle}>Estudios de tu red</Text>
+            <Text style={s.studiosSub}>Marcá dónde te gustaría trabajar: te ven primero</Text>
+          </View>
+          <Feather name="chevron-right" size={18} color={colors.sage} />
+        </TouchableOpacity>
+
         {/* Tarifas */}
         <BlobCard style={s.section} delay={1500}>
           <View style={s.sectionHeader}>
@@ -246,6 +256,10 @@ const s = StyleSheet.create({
   statusLink:      { fontFamily: 'Nunito-Bold', fontSize: 12, marginTop: 8 },
 
   section:         { marginHorizontal: spacing.md, marginBottom: spacing.md, padding: spacing.md },
+  studiosCard:     { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, marginHorizontal: spacing.md, marginBottom: spacing.md, backgroundColor: colors.sageLight, ...radius.leaf, padding: spacing.md },
+  studiosIcon:     { width: 36, height: 36, borderRadius: 18, backgroundColor: colors.white, alignItems: 'center', justifyContent: 'center' },
+  studiosTitle:    { fontFamily: 'Nunito-Bold', fontSize: 14, color: colors.sage },
+  studiosSub:      { fontFamily: 'Nunito-Regular', fontSize: 12, color: colors.mid, marginTop: 1 },
   sectionHeader:   { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: spacing.md },
   sectionTitle:    { ...typography.caption },
   editLink:        { fontFamily: 'Nunito-Bold', fontSize: 12, color: colors.sage },

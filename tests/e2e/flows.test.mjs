@@ -180,6 +180,16 @@ test('la búsqueda se calcula en el servidor para la clase pedida (SearchScreen)
   assert.ok(asInstructor.error, 'solo los estudios pueden buscar')
 })
 
+test('el instructor marca "me interesa" y el estudio lo ve (StudiosScreen / SearchScreen)', async () => {
+  const { c, id } = S.instructor
+  ok(await c.from('instructor_interests').insert({ instructor_id: id, studio_id: S.studio.id }), 'me interesa')
+  const other = await c.from('instructor_interests').insert({ instructor_id: '00000000-0000-0000-0000-000000000001', studio_id: S.studio.id })
+  assert.ok(other.error, 'no puede marcar en nombre de otro instructor')
+  const seen = ok(await S.studio.c.from('instructor_interests').select('instructor_id').eq('studio_id', S.studio.id), 'el estudio lee')
+  assert.ok(seen.some(r => r.instructor_id === id), 'el estudio ve quién se interesó')
+  ok(await c.from('instructor_interests').delete().eq('instructor_id', id).eq('studio_id', S.studio.id), 'quitar marca')
+})
+
 test('el instructor ve la reputación agregada del estudio, no sus evaluaciones', async () => {
   const r = ok(await S.instructor.c.rpc('studio_reputation', { p_studio_id: S.studio.id }), 'studio_reputation')
   assert.ok('classes' in r && 'paid_total' in r)

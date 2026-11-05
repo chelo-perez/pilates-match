@@ -8,6 +8,7 @@ export function openNotificationTarget(nav: any, role: string | undefined, data:
     else if (screen === 'inicio') nav.navigate('InstructorTabs', { screen: 'InstructorInicio' })
   } else if (role === 'estudio') {
     if (screen === 'historial') nav.navigate('EstudioHome', { screen: 'HistoryList' })
+    else if (screen === 'buscar') nav.navigate('EstudioHome', { screen: 'Search' })
     else if (screen === 'inicio') nav.navigate('EstudioHome', { screen: 'EstudioInicio' })
   } else if (role === 'super_admin') {
     if (screen === 'liquidaciones') nav.navigate('PlatformTabs', { screen: 'Liquidaciones' })
