@@ -3,6 +3,7 @@
 // vive acá; RootNavigator solo lee el store.
 
 import { Alert, Linking } from 'react-native'
+import { Platform } from 'react-native'
 import * as AuthSession from 'expo-auth-session'
 import { supabase } from './supabase'
 import { queryClient } from './queryClient'
@@ -71,6 +72,12 @@ export async function syncAuthUser(userId: string) {
 // ── Redirecciones (OAuth y "olvidé mi contraseña") ──────────
 /** URL de vuelta a la app. Tiene que estar en Auth → URL Configuration → Redirect URLs de Supabase. */
 export function authRedirectUrl(path?: string) {
+  if (Platform.OS === 'web' && typeof window !== 'undefined') {
+    // La web puede vivir en una subcarpeta (www.masfacil.com.ar/trabajo): se vuelve a esa base.
+    // No hace falta el path: la recuperación de contraseña llega con type=recovery en la URL.
+    const base = window.location.pathname.startsWith('/trabajo') ? '/trabajo' : ''
+    return `${window.location.origin}${base}`
+  }
   return AuthSession.makeRedirectUri({ scheme: 'trabajomasfacil', path })
 }
 
