@@ -18,18 +18,20 @@ export function myNetwork<Q>(q: Q): Q {
 export interface Camara {
   id: string; name: string; slug: string; sector: string; business_label: string; instructor_label: string
   revenue_share_pct: number; entity_type?: string; entity_article?: 'la' | 'el'; cuit: string | null; contact_email: string | null; is_active: boolean; logo_url: string | null
-  billing_model?: 'subscriptions' | 'per_member'; min_billable_members?: number
+  billing_model?: 'subscriptions' | 'per_member'; min_billable_members?: number; price_index?: 'fixed' | 'avg_hour'
 }
 /** Factura mensual de la plataforma a una entidad con cobro por socio */
 export interface Invoice {
   id: string; camara_id: string; period: string; billable_members: number; amount_ars: number
-  detail: { from: number; to: number | null; price: number; qty: number; subtotal: number }[]
+  detail: { from: number; to: number | null; price: number; factor?: number; qty: number; subtotal: number }[]
+  avg_hour?: number | null
   status: 'pendiente' | 'enviada' | 'pagada'; invoice_number: string | null; sent_at: string | null; paid_at: string | null; payment_reference: string | null
   camara?: { name: string } | null
 }
 export interface BillingPreview {
   members: number; min_members: number; billed_members: number; amount_ars: number
-  rows: Invoice['detail']; tiers: { from: number; price: number }[]
+  rows: Invoice['detail']; tiers: { from: number; price: number; factor: number }[]
+  price_index?: 'fixed' | 'avg_hour'; avg_hour?: number | null; current_avg_hour?: number | null
 }
 export const INVOICE_STATUS: Record<Invoice['status'], { label: string; bg: string; tx: string }> = {
   pendiente: { label: 'A emitir',  bg: colors.warnBg,    tx: colors.warnTx },

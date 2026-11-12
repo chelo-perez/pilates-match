@@ -1,4 +1,3 @@
--- PENDIENTE
 -- Cobro por socio: la entidad contrata la app para su red y paga cada mes por
 -- cada socio con cuenta (precio por escalas). El socio tiene 5 avisos cubiertos
 -- por mes incluidos y puede pasar a Premium si necesita más.

@@ -4,7 +4,8 @@ import { View, Text, StyleSheet, ScrollView, Switch, Alert, KeyboardAvoidingView
 import { useQueryClient } from '@tanstack/react-query'
 import { supabase } from '../../lib/supabase'
 import { errorText, UserError } from '../../lib/errors'
-import { useCamara } from '../../lib/platform'
+import { useBillingPreview, useCamara } from '../../lib/platform'
+import { formatARS } from '../../lib/payments'
 import { useQuery } from '@tanstack/react-query'
 import { ENTITY_TYPES } from '../../lib/entity'
 import { usePlanPrices } from '../../lib/payments'
@@ -26,20 +27,21 @@ export default function PlatformCamaraEditScreen({ navigation, route }: any) {
   const [f, setF] = useState({
     name: '', entity_type: 'Cámara', entity_article: 'la' as 'la' | 'el', sector: '', business_label: '', instructor_label: '', pct: '25', cuit: '', email: '', active: true,
     starter: '', premium: '',
-    billing_model: 'subscriptions' as 'subscriptions' | 'per_member', min_members: '0',
+    billing_model: 'subscriptions' as 'subscriptions' | 'per_member', min_members: '0', price_index: 'fixed' as 'fixed' | 'avg_hour',
   })
+  const { data: preview } = useBillingPreview(camaraId)
   // Escalas marginales del cobro por socio: desde qué socio rige cada precio
-  const [tiers, setTiers] = useState<{ from: string; price: string }[]>([{ from: '1', price: '' }])
+  const [tiers, setTiers] = useState<{ from: string; price: string; factor: string }[]>([{ from: '1', price: '', factor: '1' }])
   const { data: savedTiers = [] } = useQuery({
     queryKey: ['member-tiers', camaraId],
     queryFn: async () => {
-      const { data } = await supabase.from('member_price_tiers').select('from_count, price_ars').eq('camara_id', camaraId!).order('from_count')
-      return (data ?? []) as { from_count: number; price_ars: number }[]
+      const { data } = await supabase.from('member_price_tiers').select('from_count, price_ars, hour_factor').eq('camara_id', camaraId!).order('from_count')
+      return (data ?? []) as { from_count: number; price_ars: number; hour_factor: number }[]
     },
     enabled: !!camaraId,
   })
   useEffect(() => {
-    if (savedTiers.length) setTiers(savedTiers.map(t => ({ from: String(t.from_count), price: String(Math.round(t.price_ars)) })))
+    if (savedTiers.length) setTiers(savedTiers.map(t => ({ from: String(t.from_count), price: String(Math.round(t.price_ars)), factor: String(Number(t.hour_factor ?? 1)).replace('.', ',') })))
   }, [JSON.stringify(savedTiers)])
   const [saving, setSaving] = useState(false)
   const [saved, setSaved] = useState(false)
@@ -52,6 +54,7 @@ export default function PlatformCamaraEditScreen({ navigation, route }: any) {
       instructor_label: camara.instructor_label ?? '', pct: String(camara.revenue_share_pct ?? ''), cuit: camara.cuit ?? '',
       email: camara.contact_email ?? '', active: camara.is_active,
       billing_model: camara.billing_model === 'per_member' ? 'per_member' : 'subscriptions', min_members: String(camara.min_billable_members ?? 0),
+      price_index: camara.price_index === 'avg_hour' ? 'avg_hour' : 'fixed',
     }))
   }, [camara?.id])
   useEffect(() => {
@@ -67,8 +70,11 @@ export default function PlatformCamaraEditScreen({ navigation, route }: any) {
       if (!f.business_label.trim()) throw new UserError('Poné cómo se llama el negocio (ej: Gimnasio).')
       if (isNaN(pct) || pct < 0 || pct > 100) throw new UserError('El porcentaje tiene que estar entre 0 y 100.')
       const perMember = f.billing_model === 'per_member'
-      const tierRows = tiers.map(t => ({ from_count: parseInt(digits(t.from), 10), price_ars: parseInt(digits(t.price), 10) }))
-        .filter(t => t.from_count > 0 && t.price_ars >= 0 && !isNaN(t.price_ars))
+      const byHour = f.price_index === 'avg_hour'
+      const tierRows = tiers.map(t => ({
+        from_count: parseInt(digits(t.from), 10), price_ars: parseInt(digits(t.price), 10) || 0,
+        hour_factor: Number(String(t.factor).replace(',', '.')) || 0,
+      })).filter(t => t.from_count > 0 && (byHour ? t.hour_factor > 0 : t.price_ars > 0))
       if (perMember) {
         if (!tierRows.length) throw new UserError('Cargá al menos una escala de precio por socio.')
         if (!tierRows.some(t => t.from_count === 1)) throw new UserError('La primera escala tiene que empezar en el socio 1.')
@@ -78,7 +84,7 @@ export default function PlatformCamaraEditScreen({ navigation, route }: any) {
         name: f.name.trim(), entity_type: f.entity_type.trim() || 'Organización', entity_article: f.entity_article, sector: f.sector.trim() || slugify(f.business_label), business_label: f.business_label.trim(),
         instructor_label: f.instructor_label.trim() || 'Instructor/a', revenue_share_pct: pct,
         cuit: f.cuit.trim() || null, contact_email: f.email.trim().toLowerCase() || null, is_active: f.active,
-        billing_model: f.billing_model, min_billable_members: Math.max(0, parseInt(digits(f.min_members), 10) || 0),
+        billing_model: f.billing_model, min_billable_members: Math.max(0, parseInt(digits(f.min_members), 10) || 0), price_index: f.price_index,
       }
       let id = camaraId
       if (isNew) {
@@ -172,17 +178,39 @@ export default function PlatformCamaraEditScreen({ navigation, route }: any) {
             {f.billing_model === 'per_member' ? (
               <>
                 <Text style={s.hint}>
-                  La entidad contrata la app para su red y paga cada mes por cada socio con cuenta creada. Los socios tienen 5 avisos cubiertos por mes;
+                  La entidad contrata la app para su red y paga cada mes por cada sede socia con cuenta creada (cada sede busca en su propio barrio). Los socios tienen 5 avisos cubiertos por mes;
                   Premium queda como upgrade que paga el estudio. Starter no se ofrece.
                 </Text>
-                <Text style={s.label}>ESCALAS (PRECIO POR SOCIO Y POR MES)</Text>
+                <Text style={s.label}>PRECIO POR SEDE</Text>
+                <View style={s.chips}>
+                  {([['avg_hour', 'Según la hora profe promedio'], ['fixed', 'Monto fijo']] as const).map(([k, l]) => {
+                    const on = f.price_index === k
+                    return (
+                      <TouchableOpacity key={k} style={[s.chip, on && s.chipOn]} onPress={() => set('price_index')(k)}>
+                        <Text style={[s.chipTxt, on && s.chipTxtOn]}>{l}</Text>
+                      </TouchableOpacity>
+                    )
+                  })}
+                </View>
+                {f.price_index === 'avg_hour' ? (
+                  <Text style={s.hint}>
+                    Cada escala es un factor de la hora profe promedio de la red (lo acordado en las clases cubiertas de los últimos 90 días; si hay pocas, las tarifas de los instructores verificados).
+                    {preview?.current_avg_hour ? ` Hoy el promedio es ${formatARS(Number(preview.current_avg_hour))}.` : ' Todavía no hay promedio: mientras tanto rige el monto fijo de cada escala.'}
+                  </Text>
+                ) : null}
+                <Text style={s.label}>ESCALAS (POR SEDE CON CUENTA, POR MES)</Text>
                 {tiers.map((t, i) => (
                   <View key={i} style={s.tierRow}>
-                    <View style={{ width: 96 }}>
-                      <Input label="DESDE EL SOCIO" value={t.from} onChangeText={v => setTiers(ts => ts.map((x, j) => j === i ? { ...x, from: v } : x))} keyboardType="number-pad" editable={i > 0} />
+                    <View style={{ width: 90 }}>
+                      <Input label="DESDE LA SEDE" value={t.from} onChangeText={v => setTiers(ts => ts.map((x, j) => j === i ? { ...x, from: v } : x))} keyboardType="number-pad" editable={i > 0} />
                     </View>
+                    {f.price_index === 'avg_hour' ? (
+                      <View style={{ width: 90 }}>
+                        <Input label="× HORA PROFE" value={t.factor} onChangeText={v => setTiers(ts => ts.map((x, j) => j === i ? { ...x, factor: v } : x))} keyboardType="decimal-pad" placeholder="1" />
+                      </View>
+                    ) : null}
                     <View style={{ flex: 1 }}>
-                      <Input label="ARS POR SOCIO" value={t.price} onChangeText={v => setTiers(ts => ts.map((x, j) => j === i ? { ...x, price: v } : x))} keyboardType="number-pad" placeholder="Ej: 5000" />
+                      <Input label={f.price_index === 'avg_hour' ? 'ARS SI NO HAY PROMEDIO' : 'ARS POR SEDE'} value={t.price} onChangeText={v => setTiers(ts => ts.map((x, j) => j === i ? { ...x, price: v } : x))} keyboardType="number-pad" placeholder="Ej: 17000" />
                     </View>
                     {i > 0 ? (
                       <TouchableOpacity onPress={() => setTiers(ts => ts.filter((_, j) => j !== i))} hitSlop={10} style={s.tierDel}>
@@ -191,11 +219,16 @@ export default function PlatformCamaraEditScreen({ navigation, route }: any) {
                     ) : <View style={s.tierDel} />}
                   </View>
                 ))}
-                <TouchableOpacity onPress={() => setTiers(ts => [...ts, { from: '', price: '' }])} style={{ alignSelf: 'flex-start', paddingVertical: 4, marginBottom: spacing.sm }}>
+                <TouchableOpacity onPress={() => setTiers(ts => [...ts, { from: '', price: '', factor: '1' }])} style={{ alignSelf: 'flex-start', paddingVertical: 4, marginBottom: spacing.sm }}>
                   <Text style={s.addTxt}>+ Agregar escala</Text>
                 </TouchableOpacity>
-                <Text style={s.hint}>Ejemplo: $5.000 desde el socio 1, $4.000 desde el 51 y $3.000 desde el 101. Con 75 socios se cobran 50 × $5.000 + 25 × $4.000.</Text>
-                <Input label="MÍNIMO DE SOCIOS A FACTURAR (0 = SIN MÍNIMO)" value={f.min_members} onChangeText={set('min_members')} keyboardType="number-pad" />
+                <Text style={s.hint}>
+                  {f.price_index === 'avg_hour'
+                    ? 'Ejemplo: factor 1 desde la sede 1 y 0,85 desde la 51. Con hora profe de $17.000 y 75 sedes: 50 × $17.000 + 25 × $14.500.'
+                    : 'Ejemplo: $17.000 desde la sede 1 y $14.500 desde la 51. Con 75 sedes se cobran 50 × $17.000 + 25 × $14.500.'}
+                  {preview ? ` Hoy: ${preview.members} sedes con cuenta, ${formatARS(Number(preview.amount_ars))} por mes.` : ''}
+                </Text>
+                <Input label="MÍNIMO DE SEDES A FACTURAR (0 = SIN MÍNIMO)" value={f.min_members} onChangeText={set('min_members')} keyboardType="number-pad" />
                 <Input label="PREMIUM PARA SOCIOS (SIN LÍMITE) — ARS, VACÍO = NO SE OFRECE" value={f.premium} onChangeText={set('premium')} keyboardType="number-pad" placeholder="Ej: 30000" />
               </>
             ) : (

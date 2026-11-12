@@ -90,7 +90,8 @@ export default function PlatformSettlementsScreen() {
                 <Text style={s.name} numberOfLines={2}>{inv.camara?.name ?? 'Entidad'}</Text>
                 <View style={[s.badge, { backgroundColor: b.bg }]}><Text style={[s.badgeTxt, { color: b.tx }]}>{b.label}</Text></View>
               </View>
-              <Row l="Socios con cuenta al cierre" v={String(inv.billable_members)} />
+              <Row l="Sedes con cuenta al cierre" v={String(inv.billable_members)} />
+              {inv.avg_hour ? <Row l="Hora profe promedio usada" v={formatARS(Number(inv.avg_hour))} /> : null}
               {(inv.detail ?? []).map((r, i) => (
                 <Row key={i} l={`${r.qty} × ${formatARS(Number(r.price))}${r.to == null ? ` (desde el ${r.from})` : ` (${r.from}–${r.to})`}`} v={formatARS(Number(r.subtotal))} />
               ))}

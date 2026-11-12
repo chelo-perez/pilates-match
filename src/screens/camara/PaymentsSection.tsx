@@ -58,13 +58,13 @@ export default function PaymentsSection() {
   if (perMember) {
     const premium = prices.find(p => p.plan_type === 'premium' && p.active)
     const tierLabel = (t: { from: number; to: number | null; price: number }) =>
-      t.to == null ? `Del socio ${t.from} en adelante` : t.from === 1 ? `Hasta ${t.to} socios` : `Del ${t.from} al ${t.to}`
+      t.to == null ? `De la sede ${t.from} en adelante` : t.from === 1 ? `Hasta ${t.to} sedes` : `De la ${t.from} a la ${t.to}`
     return (
       <View>
         <View style={s.kpis}>
           <View style={s.kpi}>
             <Text style={s.kpiNum}>{preview ? preview.members : '—'}</Text>
-            <Text style={s.kpiLbl}>Socios con cuenta{'\n'}en la app hoy</Text>
+            <Text style={s.kpiLbl}>Sedes socias con{'\n'}cuenta en la app hoy</Text>
           </View>
           <View style={s.kpi}>
             <Text style={s.kpiNum}>{preview ? formatARS(Number(preview.amount_ars)) : '—'}</Text>
@@ -75,15 +75,15 @@ export default function PaymentsSection() {
         <View style={s.card}>
           <Text style={s.caption}>CÓMO SE CALCULA</Text>
           <Text style={s.hint}>
-            Pagás por cada socio con cuenta creada en la app, con el precio de cada escala. Cada socio tiene 5 avisos cubiertos por mes incluidos
+            Pagás por cada sede socia con cuenta creada en la app, con el precio de cada escala{preview?.price_index === 'avg_hour' ? `, atado a la hora profe promedio de tu red${preview.avg_hour ? ` (hoy ${formatARS(Number(preview.avg_hour))})` : ''}` : ''}. Cada sede tiene 5 avisos cubiertos por mes incluidos
             {premium ? `, y el que necesita más puede pasar a Premium (${formatARS(premium.price_ars)}/mes, lo paga el estudio).` : '.'}
-            {' '}Se factura el día 1 con los socios con cuenta al cierre del mes{preview?.min_members ? `, con un mínimo de ${preview.min_members} socios` : ''}.
+            {' '}Se factura el día 1 con las sedes con cuenta al cierre del mes{preview?.min_members ? `, con un mínimo de ${preview.min_members} sedes` : ''}.
           </Text>
           {preview?.rows?.length ? preview.rows.map((r, i) => (
             <View key={i} style={s.row}>
               <View style={{ flex: 1 }}>
                 <Text style={s.name}>{tierLabel(r)}</Text>
-                <Text style={s.desc}>{r.qty} × {formatARS(Number(r.price))}</Text>
+                <Text style={s.desc}>{r.qty} × {formatARS(Number(r.price))}{preview?.price_index === 'avg_hour' && r.factor != null ? ` (${Number(r.factor).toLocaleString('es-AR')} × hora profe)` : ''}</Text>
               </View>
               <Text style={s.amount}>{formatARS(Number(r.subtotal))}</Text>
             </View>
@@ -101,7 +101,7 @@ export default function PaymentsSection() {
               <View key={inv.id} style={s.row}>
                 <View style={{ flex: 1 }}>
                   <Text style={s.name}>{monthLabel(inv.period)}</Text>
-                  <Text style={s.desc}>{inv.billable_members} socios con cuenta{inv.invoice_number ? ` · Factura ${inv.invoice_number}` : ''}</Text>
+                  <Text style={s.desc}>{inv.billable_members} sedes con cuenta{inv.avg_hour ? ` · hora profe ${formatARS(Number(inv.avg_hour))}` : ''}{inv.invoice_number ? ` · Factura ${inv.invoice_number}` : ''}</Text>
                   <View style={[s.badge, { backgroundColor: badge.bg }]}><Text style={[s.badgeTxt, { color: badge.tx }]}>{badge.label}</Text></View>
                 </View>
                 <Text style={s.amount}>{formatARS(Number(inv.amount_ars))}</Text>
