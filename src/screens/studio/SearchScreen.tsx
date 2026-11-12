@@ -2,7 +2,7 @@
 // Motor de match: muestra instructores compatibles con el perfil del estudio
 import React, { useState } from 'react'
 import { View, Text, StyleSheet, FlatList, TouchableOpacity, TextInput, Switch, Modal, Alert } from 'react-native'
-import { useQuery } from '@tanstack/react-query'
+import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { supabase } from '../../lib/supabase'
 import { useMyStudio } from '../../hooks'
 import { Avatar, EmptyState, ErrorState, LoadingScreen, colors, spacing, radius, typography } from '../../components/ui'
@@ -40,6 +40,7 @@ interface MatchedInstructor {
 // Puntaje: tarifa regular 20 + tarifa reemplazo 20 + zona 30 + equipamiento 30
 export default function SearchScreen({ navigation }: Props) {
   const { data: studio, isLoading: studioLoading } = useMyStudio()
+  const qc = useQueryClient()
   const [search, setSearch] = useState('')
   const [showAll, setShowAll] = useState(false)
 
@@ -115,6 +116,7 @@ export default function SearchScreen({ navigation }: Props) {
         offered: offer, note: pubNote.trim() || undefined,
       })
       setPublishing(false)
+      qc.invalidateQueries({ queryKey: ['studio-quota'] })
       navigation.navigate('StudioOpenClasses')
     } catch (e: any) {
       setPublishing(false)

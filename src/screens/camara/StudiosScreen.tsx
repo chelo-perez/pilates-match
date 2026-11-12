@@ -71,8 +71,8 @@ export default function CamaraStudiosScreen({ navigation, route }: any) {
     Alert.alert(
       nowMember ? 'Quitar de socios' : 'Hacer socio',
       (nowMember
-        ? `"${studio.name}" deja de ser socio y pasa al plan Freemium (1 propuesta por mes).`
-        : `"${studio.name}" pasa al plan Socio (5 propuestas por mes) por 12 meses.`) + paidWarning,
+        ? `"${studio.name}" deja de ser socio y pasa al plan Freemium (1 aviso cubierto por mes).`
+        : `"${studio.name}" pasa al plan Socio (5 avisos cubiertos por mes) por 12 meses.`) + paidWarning,
       [
         { text: 'Cancelar', style: 'cancel' },
         {

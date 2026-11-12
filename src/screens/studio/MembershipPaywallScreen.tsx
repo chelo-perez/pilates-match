@@ -10,7 +10,7 @@ import BlobCard from '../../components/BlobCard'
 import HeroHeader from '../../components/HeroHeader'
 import type { NativeStackScreenProps } from '@react-navigation/native-stack'
 import { usePlanPrices } from '../../lib/payments'
-import { contactCamaraForPlan, limitText, nextResetLabel, useCamaraContact, useStudioMembership } from './studioQueries'
+import { contactCamaraForPlan, limitText, nextResetLabel, useCamaraContact, useStudioMembership, useStudioQuota } from './studioQueries'
 import { entity } from '../../lib/entity'
 
 type Props = NativeStackScreenProps<any, 'MembershipPaywall'>
@@ -18,15 +18,21 @@ type Props = NativeStackScreenProps<any, 'MembershipPaywall'>
 export default function MembershipPaywallScreen({ navigation }: Props) {
   const { data: studio } = useMyStudio()
   const { data: prices = [] } = usePlanPrices((studio as any)?.camara_id)
-  const online = prices.some(p => p.active)
   const { data: membership, isLoading } = useStudioMembership(studio?.id)
   const { data: contact } = useCamaraContact((studio as any)?.camara_id)
+  const { data: quota } = useStudioQuota(studio?.id)
+  const perMember = contact?.billing_model === 'per_member'
+  const isMember = !!(studio as any)?.is_member
+  // Con cobro por socio solo los socios pueden pagar Premium; los demás se asocian
+  const online = perMember ? isMember && prices.some(p => p.active && p.plan_type === 'premium') : prices.some(p => p.active)
+  const plans = perMember ? PLANS.filter(p => p.key !== 'starter') : PLANS
 
   if (isLoading) return <LoadingScreen />
 
   const plan    = PLANS.find(p => p.key === (membership?.plan_type ?? 'freemium')) ?? PLANS[0]
   const limit: number | null = membership ? (membership.matches_limit ?? null) : plan.limit
-  const used    = membership ? usedThisMonth(membership) : 0
+  const used    = quota?.covered ?? (membership ? usedThisMonth(membership) : 0)
+  const inProgress = (quota?.pending ?? 0) + (quota?.open ?? 0)
   const inactive = membership && membership.status !== 'activa'
 
   const title = !membership
@@ -34,11 +40,13 @@ export default function MembershipPaywallScreen({ navigation }: Props) {
     : inactive
       ? `Tu plan está ${membership.status}`
       : limit != null && used >= limit
-        ? `Usaste ${limit === 1 ? 'la propuesta' : `las ${limit} propuestas`} de este mes`
-        : 'Ampliá tu plan'
+        ? `Ya cubriste ${limit === 1 ? 'el aviso' : `los ${limit} avisos`} de este mes`
+        : limit != null && used + inProgress >= limit
+          ? 'Tenés avisos en curso que ocupan tu cupo'
+          : 'Ampliá tu plan'
   const subtitle = inactive || !membership
     ? `Para enviar propuestas, ${entity().la} tiene que activar tu plan.`
-    : `Tu plan ${plan.label} incluye ${limitText(limit).toLowerCase()}. El contador vuelve a cero el ${nextResetLabel()}.`
+    : `Tu plan ${plan.label} incluye ${limitText(limit).toLowerCase()}: ${used} cubierto${used === 1 ? '' : 's'}${inProgress ? ` y ${inProgress} en curso (propuestas pendientes o clases abiertas)` : ''}. El contador vuelve a cero el ${nextResetLabel()}.`
 
   return (
     <View style={styles.container}>
@@ -53,16 +61,16 @@ export default function MembershipPaywallScreen({ navigation }: Props) {
           <Text style={styles.sub}>{subtitle}</Text>
         </BlobCard>
 
-        <Text style={styles.caption}>PROPUESTAS POR MES SEGÚN EL PLAN</Text>
+        <Text style={styles.caption}>AVISOS CUBIERTOS POR MES SEGÚN EL PLAN</Text>
         <View style={styles.table}>
-          {PLANS.map((p, i) => {
+          {plans.map((p, i) => {
             const isCurrent = p.key === plan.key
             return (
               <View key={p.key} style={[styles.tableRow, i % 2 === 1 && styles.tableRowAlt, isCurrent && styles.tableRowCurrent]}>
                 <Text style={[styles.tdName, isCurrent && { color: colors.sage }]}>
                   {p.label}{isCurrent ? ' (tu plan)' : ''}
                 </Text>
-                <Text style={styles.tdVal}>{p.limit == null ? 'Ilimitadas' : p.limit}</Text>
+                <Text style={styles.tdVal}>{p.limit == null ? 'Sin límite' : p.limit}</Text>
               </View>
             )
           })}
@@ -71,14 +79,16 @@ export default function MembershipPaywallScreen({ navigation }: Props) {
         <View style={styles.infoBox}>
           <Feather name="info" size={14} color={colors.sage} />
           <Text style={styles.infoText}>
-            {online
-              ? 'Podés pasar a un plan pago ahora mismo con Mercado Pago, y seguir enviando propuestas apenas se acredite el pago.'
-              : `El cambio de plan y el pago se coordinan directamente con ${entity().la}. Cuando lo actualice, vas a poder seguir enviando propuestas.`}
+            {perMember && !isMember
+              ? `${entity().La} paga la app por sus socios: al asociarte pasás al plan Socio, con 5 avisos cubiertos por mes, sin costo extra en la app.`
+              : online
+                ? 'Podés pasar a Premium ahora mismo con Mercado Pago y seguir cubriendo clases apenas se acredite el pago.'
+                : `El cambio de plan y el pago se coordinan directamente con ${entity().la}. Cuando lo actualice, vas a poder seguir enviando propuestas.`}
           </Text>
         </View>
 
         <Button
-          label={online ? 'Ver planes y pagar' : `Pedile ${entity().a} que actualice tu plan`}
+          label={perMember && !isMember ? `Quiero asociarme ${entity().a}` : online ? 'Ver planes y pagar' : `Pedile ${entity().a} que actualice tu plan`}
           onPress={() => online ? navigation.navigate('Membership' as any) : contactCamaraForPlan(contact, studio?.name)}
           fullWidth
           size="lg"

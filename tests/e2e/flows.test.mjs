@@ -231,7 +231,10 @@ test('el estudio no puede subirse el plan ni resetear el contador', async () => 
   await c.from('memberships').update({ matches_limit: null, matches_used_month: 0 }).eq('studio_id', id)
   await c.from('studios').update({ is_member: true }).eq('id', id)
   const m = ok(await c.from('memberships').select('matches_limit, matches_used_month').eq('studio_id', id).single(), 'leer membresía')
-  assert.deepEqual(m, { matches_limit: 1, matches_used_month: 1 })
+  // La propuesta pendiente reserva lugar pero todavía no cuenta como aviso cubierto
+  assert.deepEqual(m, { matches_limit: 1, matches_used_month: 0 })
+  const q = ok(await c.rpc('studio_quota', { p_studio: id }), 'cuota')
+  assert.deepEqual({ limit: q.limit, covered: q.covered, pending: q.pending, available: q.available }, { limit: 1, covered: 0, pending: 1, available: 0 })
   const s = ok(await c.from('studios').select('is_member').eq('id', id).single(), 'leer estudio')
   assert.equal(s.is_member, false)
 })
@@ -265,6 +268,9 @@ test('el estudio acepta la contraoferta y queda el monto acordado', async () => 
   ok(await c.from('matches').update({ status: 'aceptado' }).eq('id', S.matchId), 'aceptar contraoferta')
   const m = ok(await c.from('matches').select('status, agreed_rate').eq('id', S.matchId).single(), 'leer match')
   assert.deepEqual(m, { status: 'aceptado', agreed_rate: 20000 })
+  // Recién ahora la clase está cubierta: se descuenta del plan
+  const q = ok(await c.rpc('studio_quota', { p_studio: S.studio.id }), 'cuota')
+  assert.deepEqual({ covered: q.covered, pending: q.pending, available: q.available }, { covered: 1, pending: 0, available: 0 })
 })
 
 test('el estudio ve la respuesta del instructor', async () => {
@@ -273,7 +279,7 @@ test('el estudio ve la respuesta del instructor', async () => {
   assert.deepEqual(m, { status: 'aceptado', note_instructor: 'Dale' })
 })
 
-test('clase abierta: publicar cuenta para el plan, el instructor se anota y el estudio elige', async () => {
+test('clase abierta: publicar reserva lugar, el instructor se anota, el estudio elige y recién ahí cuenta', async () => {
   const pub = (c) => c.rpc('publish_open_class', { p_class_type: 'reemplazo', p_class_date: '2030-01-14', p_start: '09:00:00', p_end: '10:00:00',
     p_days: null, p_from: null, p_to: null, p_offered: 15000, p_note: 'E2E abierta' })
   const limited = await pub(S.studio.c)
@@ -281,8 +287,8 @@ test('clase abierta: publicar cuenta para el plan, el instructor se anota y el e
   // La entidad de prueba le da más propuestas al estudio
   ok(await cleaner.from('memberships').update({ matches_limit: 5 }).eq('studio_id', S.studio.id), 'subir plan')
   const openId = ok(await pub(S.studio.c), 'publicar')
-  const after = ok(await S.studio.c.from('memberships').select('matches_used_month').eq('studio_id', S.studio.id).single(), 'leer plan')
-  assert.equal(after.matches_used_month, 2, 'publicar consumió una propuesta')
+  const after = ok(await S.studio.c.rpc('studio_quota', { p_studio: S.studio.id }), 'leer cuota')
+  assert.deepEqual({ covered: after.covered, open: after.open, available: after.available }, { covered: 1, open: 1, available: 3 }, 'publicar reserva lugar sin consumir')
 
   const seen = ok(await S.instructor.c.from('open_classes').select('id, offered_rate, status').eq('status', 'abierta'), 'el instructor ve clases abiertas')
   assert.ok(seen.some(c => c.id === openId && c.offered_rate === 15000))
@@ -297,6 +303,8 @@ test('clase abierta: publicar cuenta para el plan, el instructor se anota y el e
   assert.deepEqual(m, { status: 'aceptado', agreed_rate: 15000, offered_rate: 15000 })
   const oc = ok(await S.studio.c.from('open_classes').select('status, chosen_instructor_id').eq('id', openId).single(), 'clase cubierta')
   assert.deepEqual(oc, { status: 'cubierta', chosen_instructor_id: S.instructor.id })
+  const used = ok(await S.studio.c.from('memberships').select('matches_used_month').eq('studio_id', S.studio.id).single(), 'leer plan')
+  assert.equal(used.matches_used_month, 2, 'elegir instructor consumió el aviso')
   const gone = ok(await S.instructor.c.from('open_classes').select('id').eq('status', 'abierta'), 'ya no está abierta')
   assert.ok(!gone.some(c => c.id === openId))
 })

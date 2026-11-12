@@ -52,7 +52,7 @@ export default function HistoryScreen({ navigation }: Props) {
   const evalsQ = useEvaluationHistory(view === 'evaluaciones' ? studio?.id : undefined)
   const respond = useMutation({
     mutationFn: ({ id, status }: { id: string; status: 'aceptado' | 'rechazado' | 'cancelado' }) => matchAPI.studioRespond(id, status),
-    onSuccess: () => { qc.invalidateQueries({ queryKey: ['studio-matches'] }); qc.invalidateQueries({ queryKey: ['studio-membership'] }) },
+    onSuccess: () => { qc.invalidateQueries({ queryKey: ['studio-matches'] }); qc.invalidateQueries({ queryKey: ['studio-membership'] }); qc.invalidateQueries({ queryKey: ['studio-quota'] }) },
     onError: (e: any) => Alert.alert('No se pudo', errorText(e)),
   })
   const confirmCancel = (id: string) => Alert.alert('Cancelar propuesta', 'El instructor deja de verla. La propuesta ya contó para tu plan.', [

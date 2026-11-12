@@ -4,6 +4,10 @@
 - Eliminar la cuenta desde la app: botón en el perfil de instructor, estudio y entidad. Requiere la migración `delete_my_account`.
 - Permisos de Android reducidos a notificaciones. Las fotos se eligen con el selector del sistema, sin permiso de galería.
 - Versión de producción: el número de versión sube solo (`autoIncrement`), el canal de actualizaciones es `production` y hay un perfil para subir con `eas submit`.
+- Modelo de cobro (se elige por red en el panel de la plataforma):
+  - **Por socio**: la entidad contrata la app para su red y paga cada mes por cada socio con cuenta, con precio por escalas y mínimo opcional. Los socios tienen 5 avisos cubiertos por mes; Premium es un upgrade que paga el estudio. Starter no se ofrece. Requiere la migración `20261107_cobro_por_socio`. La factura se genera sola el día 1 (`build-camara-invoices`) y la plataforma la emite y la marca cobrada desde Liquidaciones.
+  - **Suscripciones**: cada estudio paga su plan y la entidad recibe un porcentaje (liquidaciones).
+  - En los dos casos la cuota se consume al cubrir la clase (propuesta aceptada o instructor elegido en una clase abierta); las propuestas pendientes y las clases abiertas reservan lugar.
 - Pagos según la política de Google Play:
   - La versión de Play Store **no muestra precios ni el botón de Mercado Pago**.
   - El estudio paga desde la versión web, y el plan se activa solo en el celular (webhook de Mercado Pago).

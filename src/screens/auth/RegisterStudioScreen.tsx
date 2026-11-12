@@ -185,7 +185,7 @@ export default function RegisterStudioScreen({ navigation }: Props) {
           <>
             <View style={styles.infoBox}>
               <Text style={styles.infoText}>
-                Si tu estudio es socio {entity().de}, ingresá el código que te dieron: {entity().la} lo valida y activa tu plan de socio. Si no tenés código, dejalo vacío: empezás con el plan Freemium (1 propuesta por mes) y podés asociarte más adelante.
+                Si tu estudio es socio {entity().de}, ingresá el código que te dieron: {entity().la} lo valida y activa tu plan de socio. Si no tenés código, dejalo vacío: empezás con el plan Freemium (1 aviso cubierto por mes) y podés asociarte más adelante.
               </Text>
             </View>
             <View style={styles.codeRow}>

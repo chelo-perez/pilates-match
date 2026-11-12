@@ -1,11 +1,13 @@
-// Dueño de la plataforma: liquidaciones del mes a cada entidad (cobrado, su parte, factura y pago).
+// Dueño de la plataforma, mes por mes:
+// - Facturas a las entidades con cobro por socio (socios con cuenta × escalas): emitir y marcar pagas.
+// - Liquidaciones a las entidades con suscripciones (cobrado, su parte, factura y pago).
 import React, { useState } from 'react'
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Modal, Alert } from 'react-native'
 import { useQueryClient } from '@tanstack/react-query'
 import { Feather } from '@expo/vector-icons'
 import { errorText } from '../../lib/errors'
 import { formatARS } from '../../lib/payments'
-import { isoMonth, monthLabel, monthStart, rpc, SETTLEMENT_STATUS, Settlement, useSettlements } from '../../lib/platform'
+import { INVOICE_STATUS, Invoice, isoMonth, monthLabel, monthStart, rpc, SETTLEMENT_STATUS, Settlement, useInvoices, useSettlements } from '../../lib/platform'
 import HeroHeader from '../../components/HeroHeader'
 import { Button, EmptyState, Input, colors, spacing, radius, typography } from '../../components/ui'
 
@@ -15,14 +17,33 @@ export default function PlatformSettlementsScreen() {
   const d = monthStart(); d.setMonth(d.getMonth() + offset)
   const period = isoMonth(d)
   const { data: list = [], isFetching } = useSettlements(period)
+  const { data: invoices = [] } = useInvoices(period)
   const [paying, setPaying] = useState<Settlement | null>(null)
   const [ref, setRef] = useState('')
   const [busy, setBusy] = useState(false)
+  // Facturas por socio: emitir (número) o marcar paga (referencia)
+  const [invAction, setInvAction] = useState<{ inv: Invoice; kind: 'send' | 'paid' } | null>(null)
+  const [invText, setInvText] = useState('')
 
-  const refresh = () => qc.invalidateQueries({ queryKey: ['settlements'] })
+  const refresh = () => { qc.invalidateQueries({ queryKey: ['settlements'] }); qc.invalidateQueries({ queryKey: ['invoices'] }) }
   const build = async () => {
-    try { setBusy(true); await rpc('platform_build_settlements', { p_period: period }); refresh() }
+    try {
+      setBusy(true)
+      await rpc('platform_build_settlements', { p_period: period })
+      await rpc('platform_build_invoices', { p_period: period })
+      refresh()
+    }
     catch (e) { Alert.alert('No pudimos calcular el mes', errorText(e)) }
+    finally { setBusy(false) }
+  }
+  const runInvAction = async () => {
+    if (!invAction) return
+    try {
+      setBusy(true)
+      if (invAction.kind === 'send') await rpc('mark_invoice_sent', { p_id: invAction.inv.id, p_invoice: invText })
+      else await rpc('mark_invoice_paid', { p_id: invAction.inv.id, p_reference: invText })
+      setInvAction(null); refresh()
+    } catch (e) { Alert.alert('No pudimos actualizar la factura', errorText(e)) }
     finally { setBusy(false) }
   }
   const markPaid = async () => {
@@ -35,6 +56,8 @@ export default function PlatformSettlementsScreen() {
   const collected = list.reduce((a, s) => a + Number(s.collected_ars), 0)
   const shares = list.reduce((a, s) => a + Number(s.share_ars), 0)
   const owed = list.filter(s => s.status !== 'pagada').reduce((a, s) => a + Number(s.share_ars), 0)
+  const invoiced = invoices.reduce((a, i) => a + Number(i.amount_ars), 0)
+  const toCollect = invoices.filter(i => i.status !== 'pagada').reduce((a, i) => a + Number(i.amount_ars), 0)
 
   return (
     <View style={{ flex: 1, backgroundColor: colors.cream }}>
@@ -53,13 +76,39 @@ export default function PlatformSettlementsScreen() {
       />
       <ScrollView contentContainerStyle={s.content}>
         <View style={s.kpis}>
-          <KPI n={formatARS(collected)} l="Cobrado" />
-          <KPI n={formatARS(collected - shares)} l="Queda para la plataforma" />
+          <KPI n={formatARS(invoiced + collected - shares)} l="Ingreso de la plataforma" />
+          <KPI n={formatARS(toCollect)} l="Falta cobrar a entidades" warn={toCollect > 0} />
           <KPI n={formatARS(owed)} l="Falta pagar a entidades" warn={owed > 0} />
         </View>
 
-        {list.length === 0 ? (
-          <EmptyState icon="file-text" title="Sin liquidación para este mes" message="Se calcula sola el día 1 de cada mes. También podés calcularla ahora." />
+        {invoices.length ? <Text style={s.section}>COBRO POR SOCIO</Text> : null}
+        {invoices.map(inv => {
+          const b = INVOICE_STATUS[inv.status]
+          return (
+            <View key={inv.id} style={s.card}>
+              <View style={s.head}>
+                <Text style={s.name} numberOfLines={2}>{inv.camara?.name ?? 'Entidad'}</Text>
+                <View style={[s.badge, { backgroundColor: b.bg }]}><Text style={[s.badgeTxt, { color: b.tx }]}>{b.label}</Text></View>
+              </View>
+              <Row l="Socios con cuenta al cierre" v={String(inv.billable_members)} />
+              {(inv.detail ?? []).map((r, i) => (
+                <Row key={i} l={`${r.qty} × ${formatARS(Number(r.price))}${r.to == null ? ` (desde el ${r.from})` : ` (${r.from}–${r.to})`}`} v={formatARS(Number(r.subtotal))} />
+              ))}
+              <Row l="Total a facturar" v={formatARS(Number(inv.amount_ars))} strong />
+              {inv.invoice_number ? <Row l="Factura" v={inv.invoice_number} /> : null}
+              {inv.payment_reference ? <Row l="Referencia del pago" v={inv.payment_reference} /> : null}
+              {inv.status === 'pendiente' && Number(inv.amount_ars) > 0 ? (
+                <Button label="Emití la factura: cargar número" onPress={() => { setInvText(''); setInvAction({ inv, kind: 'send' }) }} fullWidth style={{ marginTop: spacing.sm }} />
+              ) : inv.status === 'enviada' ? (
+                <Button label="Marcar como cobrada" onPress={() => { setInvText(''); setInvAction({ inv, kind: 'paid' }) }} fullWidth style={{ marginTop: spacing.sm }} />
+              ) : null}
+            </View>
+          )
+        })}
+
+        {list.length ? <Text style={s.section}>SUSCRIPCIONES · LIQUIDACIONES</Text> : null}
+        {list.length === 0 && invoices.length === 0 ? (
+          <EmptyState icon="file-text" title="Sin cierre para este mes" message="Se calcula solo el día 1 de cada mes. También podés calcularlo ahora." />
         ) : list.map(st => {
           const b = SETTLEMENT_STATUS[st.status]
           return (
@@ -79,9 +128,24 @@ export default function PlatformSettlementsScreen() {
           )
         })}
 
-        <Button label={list.length ? 'Recalcular este mes' : 'Calcular este mes'} variant="secondary" onPress={build} isLoading={busy || isFetching} fullWidth style={{ marginTop: spacing.sm }} />
-        <Text style={s.note}>Recalcular no cambia las liquidaciones que la entidad ya facturó.</Text>
+        <Button label={list.length || invoices.length ? 'Recalcular este mes' : 'Calcular este mes'} variant="secondary" onPress={build} isLoading={busy || isFetching} fullWidth style={{ marginTop: spacing.sm }} />
+        <Text style={s.note}>Recalcular no cambia las liquidaciones ya facturadas ni las facturas ya emitidas.</Text>
       </ScrollView>
+
+      <Modal visible={!!invAction} transparent animationType="fade" onRequestClose={() => setInvAction(null)}>
+        <View style={s.overlay}>
+          <View style={s.sheet}>
+            <Text style={s.sheetTitle}>{invAction?.kind === 'send' ? 'Factura a' : 'Cobro de'} {invAction?.inv.camara?.name}</Text>
+            <Text style={s.sheetSub}>{invAction ? `${formatARS(Number(invAction.inv.amount_ars))} · ${monthLabel(invAction.inv.period)}` : ''}</Text>
+            <Input label={invAction?.kind === 'send' ? 'NÚMERO DE FACTURA' : 'REFERENCIA DEL COBRO (OPCIONAL)'} value={invText} onChangeText={setInvText}
+              placeholder={invAction?.kind === 'send' ? 'Ej: 0001-00001234' : ''} autoCapitalize="characters" />
+            <Button label={invAction?.kind === 'send' ? 'Avisar a la entidad' : 'Confirmar cobro'} onPress={runInvAction} isLoading={busy} fullWidth size="lg" />
+            <TouchableOpacity onPress={() => setInvAction(null)} style={{ alignItems: 'center', paddingVertical: spacing.md }}>
+              <Text style={s.link}>Cancelar</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
 
       <Modal visible={!!paying} transparent animationType="fade" onRequestClose={() => setPaying(null)}>
         <View style={s.overlay}>
@@ -115,6 +179,7 @@ const s = StyleSheet.create({
   kpi:        { flex: 1, backgroundColor: colors.white, ...radius.leaf, padding: spacing.sm + 2, borderWidth: 0.5, borderColor: colors.borderLight },
   kpiN:       { fontFamily: 'Nunito-Bold', fontSize: 16, color: colors.gold },
   kpiL:       { fontFamily: 'Nunito-SemiBold', fontSize: 10, lineHeight: 13, color: colors.mid, marginTop: 2 },
+  section:    { ...typography.caption, marginBottom: spacing.sm, marginTop: spacing.xs },
   card:       { backgroundColor: colors.white, ...radius.leaf, padding: spacing.md, borderWidth: 0.5, borderColor: colors.borderLight, marginBottom: spacing.sm },
   head:       { flexDirection: 'row', alignItems: 'flex-start', gap: spacing.sm, marginBottom: spacing.sm },
   name:       { flex: 1, fontFamily: 'Nunito-Bold', fontSize: 14, color: colors.dark },

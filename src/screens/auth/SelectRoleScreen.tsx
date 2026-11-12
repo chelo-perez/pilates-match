@@ -26,7 +26,7 @@ const ROLES: { key: Role; icon: 'activity' | 'home'; title: string; desc: string
     icon: 'home',
     title: 'Tengo un estudio',
     desc: 'Busco instructores verificados para clases regulares y reemplazos',
-    note: 'Empezás con el plan Freemium: 1 propuesta por mes sin costo',
+    note: 'Empezás con el plan Freemium: 1 aviso cubierto por mes sin costo',
   },
   {
     key: 'instructor',

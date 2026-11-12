@@ -5,6 +5,7 @@ import { useQueryClient } from '@tanstack/react-query'
 import { supabase } from '../../lib/supabase'
 import { errorText, UserError } from '../../lib/errors'
 import { useCamara } from '../../lib/platform'
+import { useQuery } from '@tanstack/react-query'
 import { ENTITY_TYPES } from '../../lib/entity'
 import { usePlanPrices } from '../../lib/payments'
 import HeroHeader from '../../components/HeroHeader'
@@ -25,7 +26,21 @@ export default function PlatformCamaraEditScreen({ navigation, route }: any) {
   const [f, setF] = useState({
     name: '', entity_type: 'Cámara', entity_article: 'la' as 'la' | 'el', sector: '', business_label: '', instructor_label: '', pct: '25', cuit: '', email: '', active: true,
     starter: '', premium: '',
+    billing_model: 'subscriptions' as 'subscriptions' | 'per_member', min_members: '0',
   })
+  // Escalas marginales del cobro por socio: desde qué socio rige cada precio
+  const [tiers, setTiers] = useState<{ from: string; price: string }[]>([{ from: '1', price: '' }])
+  const { data: savedTiers = [] } = useQuery({
+    queryKey: ['member-tiers', camaraId],
+    queryFn: async () => {
+      const { data } = await supabase.from('member_price_tiers').select('from_count, price_ars').eq('camara_id', camaraId!).order('from_count')
+      return (data ?? []) as { from_count: number; price_ars: number }[]
+    },
+    enabled: !!camaraId,
+  })
+  useEffect(() => {
+    if (savedTiers.length) setTiers(savedTiers.map(t => ({ from: String(t.from_count), price: String(Math.round(t.price_ars)) })))
+  }, [JSON.stringify(savedTiers)])
   const [saving, setSaving] = useState(false)
   const [saved, setSaved] = useState(false)
   const set = (k: keyof typeof f) => (v: any) => setF(p => ({ ...p, [k]: v }))
@@ -36,6 +51,7 @@ export default function PlatformCamaraEditScreen({ navigation, route }: any) {
       ...p, name: camara.name ?? '', entity_type: camara.entity_type ?? 'Cámara', entity_article: camara.entity_article ?? 'la', sector: camara.sector ?? '', business_label: camara.business_label ?? '',
       instructor_label: camara.instructor_label ?? '', pct: String(camara.revenue_share_pct ?? ''), cuit: camara.cuit ?? '',
       email: camara.contact_email ?? '', active: camara.is_active,
+      billing_model: camara.billing_model === 'per_member' ? 'per_member' : 'subscriptions', min_members: String(camara.min_billable_members ?? 0),
     }))
   }, [camara?.id])
   useEffect(() => {
@@ -50,10 +66,19 @@ export default function PlatformCamaraEditScreen({ navigation, route }: any) {
       if (!f.name.trim()) throw new UserError('Poné el nombre de la entidad.')
       if (!f.business_label.trim()) throw new UserError('Poné cómo se llama el negocio (ej: Gimnasio).')
       if (isNaN(pct) || pct < 0 || pct > 100) throw new UserError('El porcentaje tiene que estar entre 0 y 100.')
+      const perMember = f.billing_model === 'per_member'
+      const tierRows = tiers.map(t => ({ from_count: parseInt(digits(t.from), 10), price_ars: parseInt(digits(t.price), 10) }))
+        .filter(t => t.from_count > 0 && t.price_ars >= 0 && !isNaN(t.price_ars))
+      if (perMember) {
+        if (!tierRows.length) throw new UserError('Cargá al menos una escala de precio por socio.')
+        if (!tierRows.some(t => t.from_count === 1)) throw new UserError('La primera escala tiene que empezar en el socio 1.')
+        if (new Set(tierRows.map(t => t.from_count)).size !== tierRows.length) throw new UserError('Dos escalas empiezan en el mismo socio.')
+      }
       const row = {
         name: f.name.trim(), entity_type: f.entity_type.trim() || 'Organización', entity_article: f.entity_article, sector: f.sector.trim() || slugify(f.business_label), business_label: f.business_label.trim(),
         instructor_label: f.instructor_label.trim() || 'Instructor/a', revenue_share_pct: pct,
         cuit: f.cuit.trim() || null, contact_email: f.email.trim().toLowerCase() || null, is_active: f.active,
+        billing_model: f.billing_model, min_billable_members: Math.max(0, parseInt(digits(f.min_members), 10) || 0),
       }
       let id = camaraId
       if (isNew) {
@@ -65,15 +90,24 @@ export default function PlatformCamaraEditScreen({ navigation, route }: any) {
         const { error } = await supabase.from('camaras').update(row).eq('id', id!)
         if (error) throw error
       }
-      // Precios: vacío = el plan no se puede contratar en esa red
+      // Escalas por socio (se reemplazan completas)
+      if (!isNew || perMember) {
+        const { error: delErr } = await supabase.from('member_price_tiers').delete().eq('camara_id', id!)
+        if (delErr) throw delErr
+        if (perMember) {
+          const { error: insErr } = await supabase.from('member_price_tiers').insert(tierRows.map(t => ({ ...t, camara_id: id })))
+          if (insErr) throw insErr
+        }
+      }
+      // Precios: vacío = el plan no se puede contratar en esa red (con cobro por socio, Starter no existe)
       for (const plan of ['starter', 'premium'] as const) {
-        const n = parseInt(digits(f[plan]), 10)
+        const n = perMember && plan === 'starter' ? 0 : parseInt(digits(f[plan]), 10)
         const { error } = n > 0
           ? await supabase.from('plan_prices').upsert({ camara_id: id, plan_type: plan, price_ars: n, active: true, updated_at: new Date().toISOString() })
           : await supabase.from('plan_prices').delete().eq('camara_id', id!).eq('plan_type', plan)
         if (error) throw error
       }
-      await Promise.all(['platform-camaras', 'camara', 'plan-prices', 'active-camaras', 'platform-counts']
+      await Promise.all(['platform-camaras', 'camara', 'plan-prices', 'active-camaras', 'platform-counts', 'member-tiers', 'billing-preview', 'camara-contact']
         .map(k => qc.invalidateQueries({ queryKey: [k] })))
       if (isNew) navigation.replace('PlatformCamaraEdit', { camaraId: id })
       else {
@@ -124,10 +158,54 @@ export default function PlatformCamaraEditScreen({ navigation, route }: any) {
 
           <View style={s.card}>
             <Text style={s.caption}>COBROS</Text>
-            <Input label="PARTE DE LA ENTIDAD (%)" value={f.pct} onChangeText={set('pct')} keyboardType="decimal-pad" />
-            <Text style={s.hint}>Precio mensual que pagan los estudios de esta red. Dejalo vacío si el plan no se ofrece.</Text>
-            <Input label="STARTER (5 PROPUESTAS/MES) — ARS" value={f.starter} onChangeText={set('starter')} keyboardType="number-pad" placeholder="Ej: 15000" />
-            <Input label="PREMIUM (SIN LÍMITE) — ARS" value={f.premium} onChangeText={set('premium')} keyboardType="number-pad" placeholder="Ej: 30000" />
+            <Text style={s.label}>MODELO</Text>
+            <View style={s.chips}>
+              {([['per_member', 'La entidad paga por socio'], ['subscriptions', 'Cada estudio paga su plan']] as const).map(([k, l]) => {
+                const on = f.billing_model === k
+                return (
+                  <TouchableOpacity key={k} style={[s.chip, on && s.chipOn]} onPress={() => set('billing_model')(k)}>
+                    <Text style={[s.chipTxt, on && s.chipTxtOn]}>{l}</Text>
+                  </TouchableOpacity>
+                )
+              })}
+            </View>
+            {f.billing_model === 'per_member' ? (
+              <>
+                <Text style={s.hint}>
+                  La entidad contrata la app para su red y paga cada mes por cada socio con cuenta creada. Los socios tienen 5 avisos cubiertos por mes;
+                  Premium queda como upgrade que paga el estudio. Starter no se ofrece.
+                </Text>
+                <Text style={s.label}>ESCALAS (PRECIO POR SOCIO Y POR MES)</Text>
+                {tiers.map((t, i) => (
+                  <View key={i} style={s.tierRow}>
+                    <View style={{ width: 96 }}>
+                      <Input label="DESDE EL SOCIO" value={t.from} onChangeText={v => setTiers(ts => ts.map((x, j) => j === i ? { ...x, from: v } : x))} keyboardType="number-pad" editable={i > 0} />
+                    </View>
+                    <View style={{ flex: 1 }}>
+                      <Input label="ARS POR SOCIO" value={t.price} onChangeText={v => setTiers(ts => ts.map((x, j) => j === i ? { ...x, price: v } : x))} keyboardType="number-pad" placeholder="Ej: 5000" />
+                    </View>
+                    {i > 0 ? (
+                      <TouchableOpacity onPress={() => setTiers(ts => ts.filter((_, j) => j !== i))} hitSlop={10} style={s.tierDel}>
+                        <Text style={s.tierDelTxt}>✕</Text>
+                      </TouchableOpacity>
+                    ) : <View style={s.tierDel} />}
+                  </View>
+                ))}
+                <TouchableOpacity onPress={() => setTiers(ts => [...ts, { from: '', price: '' }])} style={{ alignSelf: 'flex-start', paddingVertical: 4, marginBottom: spacing.sm }}>
+                  <Text style={s.addTxt}>+ Agregar escala</Text>
+                </TouchableOpacity>
+                <Text style={s.hint}>Ejemplo: $5.000 desde el socio 1, $4.000 desde el 51 y $3.000 desde el 101. Con 75 socios se cobran 50 × $5.000 + 25 × $4.000.</Text>
+                <Input label="MÍNIMO DE SOCIOS A FACTURAR (0 = SIN MÍNIMO)" value={f.min_members} onChangeText={set('min_members')} keyboardType="number-pad" />
+                <Input label="PREMIUM PARA SOCIOS (SIN LÍMITE) — ARS, VACÍO = NO SE OFRECE" value={f.premium} onChangeText={set('premium')} keyboardType="number-pad" placeholder="Ej: 30000" />
+              </>
+            ) : (
+              <>
+                <Input label="PARTE DE LA ENTIDAD (%)" value={f.pct} onChangeText={set('pct')} keyboardType="decimal-pad" />
+                <Text style={s.hint}>Precio mensual que pagan los estudios de esta red. Dejalo vacío si el plan no se ofrece.</Text>
+                <Input label="STARTER (5 AVISOS CUBIERTOS/MES) — ARS" value={f.starter} onChangeText={set('starter')} keyboardType="number-pad" placeholder="Ej: 15000" />
+                <Input label="PREMIUM (SIN LÍMITE) — ARS" value={f.premium} onChangeText={set('premium')} keyboardType="number-pad" placeholder="Ej: 30000" />
+              </>
+            )}
           </View>
 
           <Button label={saved ? '✓ Cambios guardados' : isNew ? 'Crear red' : 'Guardar cambios'} onPress={save} isLoading={saving}
@@ -154,5 +232,9 @@ const s = StyleSheet.create({
   chipTxtOn: { color: colors.white },
   switchRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   switchTxt: { fontFamily: 'Nunito-Regular', fontSize: 13, color: colors.dark },
+  tierRow:   { flexDirection: 'row', alignItems: 'flex-start', gap: spacing.sm },
+  tierDel:   { width: 28, height: 28, alignItems: 'center', justifyContent: 'center', marginTop: 30 },
+  tierDelTxt:{ fontFamily: 'Nunito-Bold', fontSize: 14, color: colors.mid },
+  addTxt:    { fontFamily: 'Nunito-Bold', fontSize: 13, color: colors.sage },
   savedTxt:  { fontFamily: 'Nunito-SemiBold', fontSize: 12, color: colors.okTx, textAlign: 'center', marginTop: spacing.sm },
 })

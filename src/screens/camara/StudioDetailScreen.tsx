@@ -10,6 +10,8 @@ import { LoadingScreen, ErrorState, Button, colors, spacing, radius, typography 
 import { Feather } from '@expo/vector-icons'
 import BlobCard from '../../components/BlobCard'
 import HeroHeader from '../../components/HeroHeader'
+import { useCamara } from '../../lib/platform'
+import { useAuthStore } from '../../store'
 import Toast from '../../components/Toast'
 import { useToast } from '../../hooks/useToast'
 import { applyPlan, membershipOf, planDurationLabel, PlanKey, STUDIO_KEYS } from './planUtils'
@@ -18,10 +20,10 @@ import { SPECIALTY_LABELS } from '../../constants/labels'
 
 // Estilo visual por plan (la definición de límites vive en constants/plans)
 const PLAN_STYLE: Record<string, { desc: string; color: string; bg: string }> = {
-  freemium: { desc: '1 propuesta por mes',        color: colors.mid,    bg: colors.sageLighter },
-  starter:  { desc: '5 propuestas por mes',       color: colors.sage,   bg: colors.sageLight },
-  socio:    { get desc() { return `5 propuestas por mes + socio ${entity().de}` }, color: colors.blueTx, bg: colors.blueBg },
-  premium:  { desc: 'Propuestas ilimitadas',      color: colors.gold,   bg: colors.goldLight },
+  freemium: { desc: '1 aviso cubierto por mes',        color: colors.mid,    bg: colors.sageLighter },
+  starter:  { desc: '5 avisos cubiertos por mes',       color: colors.sage,   bg: colors.sageLight },
+  socio:    { get desc() { return `5 avisos cubiertos por mes + socio ${entity().de}` }, color: colors.blueTx, bg: colors.blueBg },
+  premium:  { desc: 'Avisos cubiertos sin límite',      color: colors.gold,   bg: colors.goldLight },
 }
 
 const longDate = (d?: string | null) => (d ? formatDate(d, { day: 'numeric', month: 'long', year: 'numeric' }) : '—')
@@ -39,6 +41,7 @@ function Row({ icon, label, value, valueColor }: { icon: string; label: string; 
 export default function StudioDetailScreen({ navigation, route }: any) {
   const studioId: string | undefined = route?.params?.studioId
   const qc = useQueryClient()
+  const { data: myCamara } = useCamara(useAuthStore(st => st.user?.camara_id) as string | undefined)
   const { toast, showToast, hideToast } = useToast()
   const [showPlanModal, setShowPlanModal] = useState(false)
   const [selectedPlan, setSelectedPlan] = useState<PlanKey>('freemium')
@@ -118,6 +121,7 @@ export default function StudioDetailScreen({ navigation, route }: any) {
   const membership = membershipOf(studio)
   const planKey    = (membership?.plan_type ?? 'freemium') as PlanKey
   const planDef: any = PLANS.find((p: any) => p.key === planKey) ?? PLANS[0]
+  const perMember = myCamara?.billing_model === 'per_member' // con cobro por socio no existe Starter
   const planStyle  = PLAN_STYLE[planKey] ?? PLAN_STYLE.freemium
   const isBlocked  = membership?.status === 'cancelada'
   const isExpired  = membership?.status === 'vencida'
@@ -187,8 +191,8 @@ export default function StudioDetailScreen({ navigation, route }: any) {
                 valueColor={isBlocked || isExpired ? colors.redTx : colors.okTx} />
               <Row icon="calendar" label="Inicio" value={longDate(membership.start_date)} />
               {planKey !== 'freemium' ? <Row icon="clock" label="Vencimiento" value={longDate(membership.end_date)} /> : null}
-              <Row icon="activity" label="Propuestas"
-                value={matchLimit !== null ? `${matchUsed} de ${matchLimit} este mes` : `${matchUsed} este mes (ilimitadas)`} />
+              <Row icon="activity" label="Avisos cubiertos"
+                value={matchLimit !== null ? `${matchUsed} de ${matchLimit} este mes` : `${matchUsed} este mes (sin límite)`} />
             </>
           ) : (
             <View style={s.noMember}>
@@ -245,7 +249,7 @@ export default function StudioDetailScreen({ navigation, route }: any) {
           <View style={s.actionIcon}><Feather name="refresh-cw" size={16} color={colors.sage} /></View>
           <View style={{ flex: 1 }}>
             <Text style={s.actionLabel}>Cambiar plan</Text>
-            <Text style={s.actionDesc}>Asignar Freemium, Starter, Socio o Premium</Text>
+            <Text style={s.actionDesc}>{perMember ? 'Asignar Freemium, Socio o Premium' : 'Asignar Freemium, Starter, Socio o Premium'}</Text>
           </View>
           <Feather name="chevron-right" size={16} color={colors.border} />
         </TouchableOpacity>
@@ -280,7 +284,7 @@ export default function StudioDetailScreen({ navigation, route }: any) {
               <Text style={s.modalTitle}>Cambiar plan</Text>
               <Text style={s.modalSub}>Elegí el nuevo plan para {studio.name}. El contador de propuestas del mes vuelve a cero.</Text>
 
-              {PLANS.map((p: any) => {
+              {PLANS.filter((p: any) => !(perMember && p.key === 'starter')).map((p: any) => {
                 const st = PLAN_STYLE[p.key] ?? PLAN_STYLE.freemium
                 const active = selectedPlan === p.key
                 return (

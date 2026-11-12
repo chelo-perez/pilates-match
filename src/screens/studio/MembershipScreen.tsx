@@ -12,7 +12,7 @@ import { formatDate } from '../../lib/dates'
 import { Feather } from '@expo/vector-icons'
 import BlobCard from '../../components/BlobCard'
 import HeroHeader from '../../components/HeroHeader'
-import { contactCamaraForPlan, limitText, nextResetLabel, useCamaraContact, useStudioMembership } from './studioQueries'
+import { contactCamaraForPlan, limitText, nextResetLabel, useCamaraContact, useStudioMembership, useStudioQuota } from './studioQueries'
 import { entity } from '../../lib/entity'
 
 // Solo beneficios que la app ofrece hoy
@@ -21,6 +21,12 @@ const EXTRA_FEATURES: Record<string, string[]> = {
   starter:  ['Directorio de instructores verificados', 'Historial de tus propuestas'],
   get socio() { return [`Sos socio ${entity().de}: lo vas a ver en tu perfil`, 'Directorio e historial completos'] },
   premium:  ['Directorio e historial completos'],
+}
+// Con cobro por socio: la entidad paga la app por sus socios; Starter no se ofrece y Premium es el upgrade
+const PER_MEMBER_FEATURES: Record<string, string[]> = {
+  freemium: ['Directorio de instructores verificados'],
+  get socio() { return [`Incluido en tu cuota ${entity().de}`, 'Clases abiertas y directorio completos'] },
+  premium:  ['Para los estudios que cubren más clases', 'Lo pagás vos, aparte de la cuota'],
 }
 
 const STATUS_LABEL: Record<string, { label: string; ok: boolean }> = {
@@ -35,18 +41,24 @@ export default function MembershipScreen({ navigation }: any) {
   const { data: contact } = useCamaraContact((studio as any)?.camara_id)
   const { data: prices = [] } = usePlanPrices((studio as any)?.camara_id)
   const { data: sub } = useStudioSubscription(studio?.id)
+  const { data: quota } = useStudioQuota(studio?.id)
   const session = useAuthStore(st => st.session)
   const qc = useQueryClient()
   const [buying, setBuying] = useState<PaidPlan | null>(null)
   const [payerEmail, setPayerEmail] = useState('')
   const [busy, setBusy] = useState(false)
 
-  const priceOf = (k: string) => prices.find(p => p.plan_type === k && p.active)?.price_ars ?? null
-  const onlinePayments = prices.some(p => p.active)
+  const perMember = contact?.billing_model === 'per_member'
+  const isMember = !!(studio as any)?.is_member
+  // Con cobro por socio solo se puede comprar Premium, y solo siendo socio
+  const priceOf = (k: string) => (perMember && (k !== 'premium' || !isMember)) ? null : prices.find(p => p.plan_type === k && p.active)?.price_ars ?? null
+  const onlinePayments = perMember ? isMember && !!priceOf('premium') : prices.some(p => p.active)
+  const visiblePlans = perMember ? PLANS.filter(p => p.key !== 'starter') : PLANS
+  const features = perMember ? PER_MEMBER_FEATURES : EXTRA_FEATURES
 
   const refresh = () => {
     // El webhook de Mercado Pago puede tardar unos segundos en activar el plan
-    const run = () => ['studio-membership', 'studio-subscription', 'studio-memberships'].forEach(k => qc.invalidateQueries({ queryKey: [k] }))
+    const run = () => ['studio-membership', 'studio-quota', 'studio-subscription', 'studio-memberships'].forEach(k => qc.invalidateQueries({ queryKey: [k] }))
     run(); setTimeout(run, 4000); setTimeout(run, 12000)
   }
 
@@ -80,7 +92,8 @@ export default function MembershipScreen({ navigation }: any) {
   const planKey    = membership?.plan_type ?? 'freemium'
   const currentPlan = PLANS.find(p => p.key === planKey) ?? PLANS[0]
   const matchLimit: number | null = membership ? (membership.matches_limit ?? null) : currentPlan.limit
-  const matchUsed  = membership ? usedThisMonth(membership) : 0
+  const matchUsed  = quota?.covered ?? (membership ? usedThisMonth(membership) : 0)
+  const inProgress = (quota?.pending ?? 0) + (quota?.open ?? 0)
   const status     = STATUS_LABEL[membership?.status ?? ''] ?? { label: 'Sin plan', ok: false }
   const price      = membership?.price_ars ?? null
 
@@ -88,7 +101,7 @@ export default function MembershipScreen({ navigation }: any) {
     <View style={{ flex: 1, backgroundColor: colors.cream }}>
       <HeroHeader
         title="Mi plan"
-        subtitle="Cuántas propuestas podés enviar por mes"
+        subtitle="Cuántas clases podés cubrir por mes"
         onBack={() => navigation.goBack()}
         backLabel="Inicio"
       />
@@ -111,12 +124,17 @@ export default function MembershipScreen({ navigation }: any) {
               <View style={[s.usageFill, {
                 width: matchLimit ? `${Math.min(100, (matchUsed / matchLimit) * 100)}%` : '0%',
               }]} />
+              {matchLimit && inProgress ? <View style={[s.usageFill, s.usageReserved, {
+                width: `${Math.min(100 - Math.min(100, (matchUsed / matchLimit) * 100), (inProgress / matchLimit) * 100)}%`,
+              }]} /> : null}
             </View>
             <Text style={s.usageTxt}>
               {matchLimit != null
-                ? `${matchUsed} de ${matchLimit} propuesta${matchLimit === 1 ? '' : 's'} usada${matchLimit === 1 ? '' : 's'} este mes`
-                : `${matchUsed} propuesta${matchUsed === 1 ? '' : 's'} enviada${matchUsed === 1 ? '' : 's'} este mes (sin límite)`}
+                ? `${matchUsed} de ${matchLimit} aviso${matchLimit === 1 ? '' : 's'} cubierto${matchLimit === 1 ? '' : 's'} este mes`
+                : `${matchUsed} aviso${matchUsed === 1 ? '' : 's'} cubierto${matchUsed === 1 ? '' : 's'} este mes (sin límite)`}
+              {inProgress ? ` · ${inProgress} en curso` : ''}
             </Text>
+            <Text style={s.metaTxt}>Un aviso se cuenta cuando la clase queda cubierta. Las propuestas pendientes y las clases abiertas reservan lugar hasta resolverse.</Text>
             {matchLimit != null && <Text style={s.metaTxt}>El contador vuelve a cero el {nextResetLabel()}.</Text>}
             {membership?.end_date && <Text style={s.metaTxt}>Vigente hasta el {formatDate(membership.end_date)}</Text>}
             {price ? <Text style={s.metaTxt}>Abono: ${Number(price).toLocaleString('es-AR')} por mes</Text> : null}
@@ -129,7 +147,7 @@ export default function MembershipScreen({ navigation }: any) {
 
           <Text style={[s.caption, { marginBottom: spacing.sm }]}>PLANES</Text>
 
-          {PLANS.map((plan, idx) => {
+          {visiblePlans.map((plan, idx) => {
             const isCurrent = plan.key === currentPlan.key
             return (
               <BlobCard key={plan.key} style={[s.planCard, isCurrent && s.planCardCurrent]} delay={idx * 500}>
@@ -140,7 +158,7 @@ export default function MembershipScreen({ navigation }: any) {
                   )}
                 </View>
                 {priceOf(plan.key) ? <Text style={s.planPrice}>{formatARS(priceOf(plan.key)!)}<Text style={s.planPer}> por mes</Text></Text> : null}
-                {[limitText(plan.limit), ...(EXTRA_FEATURES[plan.key] ?? [])].map((f, fi) => (
+                {[limitText(plan.limit), ...(features[plan.key] ?? [])].map((f, fi) => (
                   <View key={fi} style={s.featureRow}>
                     <Feather name="check" size={14} color={colors.sage} />
                     <Text style={s.featureTxt}>{f}</Text>
@@ -164,14 +182,18 @@ export default function MembershipScreen({ navigation }: any) {
           <View style={s.infoBox}>
             <Feather name="info" size={14} color={colors.sage} />
             <Text style={s.infoTxt}>
-              {onlinePayments
-                ? 'Pagás con Mercado Pago con débito automático todos los meses. Podés cancelar cuando quieras: el plan sigue hasta el final del período pagado. El plan Socio se gestiona con ' + entity().la + '.'
-                : `Los planes los gestiona ${entity().la}: el pago y el cambio de plan se coordinan directamente. Cuando lo actualice, lo vas a ver acá.`}
+              {perMember
+                ? isMember
+                  ? `${entity().La} paga la app por sus socios: tu plan Socio no tiene costo para vos.${onlinePayments ? ' Si necesitás cubrir más clases, Premium se paga con Mercado Pago, con débito automático, y podés cancelarlo cuando quieras.' : ''}`
+                  : `La app la contrata ${entity().la} para sus socios. Asociate y pasás al plan Socio sin pagar nada extra en la app.`
+                : onlinePayments
+                  ? 'Pagás con Mercado Pago con débito automático todos los meses. Podés cancelar cuando quieras: el plan sigue hasta el final del período pagado. El plan Socio se gestiona con ' + entity().la + '.'
+                  : `Los planes los gestiona ${entity().la}: el pago y el cambio de plan se coordinan directamente. Cuando lo actualice, lo vas a ver acá.`}
             </Text>
           </View>
 
           <Button
-            label={onlinePayments ? `Consultar ${entity().a}` : `Pedile ${entity().a} que actualice tu plan`}
+            label={perMember && !isMember ? `Quiero asociarme ${entity().a}` : onlinePayments ? `Consultar ${entity().a}` : `Pedile ${entity().a} que actualice tu plan`}
             variant={onlinePayments ? 'outline' : undefined}
             onPress={() => contactCamaraForPlan(contact, studio?.name)}
             fullWidth
@@ -214,7 +236,9 @@ const s = StyleSheet.create({
   statusTag:        { borderTopLeftRadius: 8, borderTopRightRadius: 0, borderBottomLeftRadius: 0, borderBottomRightRadius: 8, paddingHorizontal: 10, paddingVertical: 4 },
   statusTxt:        { fontFamily: 'Nunito-Bold', fontSize: 11 },
   usageBar:         { height: 6, backgroundColor: colors.sageLighter, borderRadius: 3, overflow: 'hidden', marginBottom: 6 },
+  usageBarInner:    { flexDirection: 'row' },
   usageFill:        { height: '100%' as any, borderRadius: 3, backgroundColor: colors.sage },
+  usageReserved:    { backgroundColor: colors.goldBright, position: 'absolute', right: 0 },
   usageTxt:         { fontFamily: 'Nunito-SemiBold', fontSize: 12, color: colors.mid },
   metaTxt:          { fontFamily: 'Nunito-Regular', fontSize: 11, color: colors.light, marginTop: 4 },
   planCard:         { padding: spacing.md, marginBottom: spacing.sm },

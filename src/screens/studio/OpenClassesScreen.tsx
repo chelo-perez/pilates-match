@@ -18,7 +18,7 @@ export default function StudioOpenClassesScreen({ navigation }: any) {
   const { data: studio } = useMyStudio()
   const qc = useQueryClient()
   const { data: classes = [], isLoading, isError, refetch, isRefetching } = useStudioOpenClasses(studio?.id)
-  const refresh = () => { qc.invalidateQueries({ queryKey: ['open-classes'] }); qc.invalidateQueries({ queryKey: ['studio-matches'] }); qc.invalidateQueries({ queryKey: ['studio-membership'] }) }
+  const refresh = () => { qc.invalidateQueries({ queryKey: ['open-classes'] }); qc.invalidateQueries({ queryKey: ['studio-matches'] }); qc.invalidateQueries({ queryKey: ['studio-membership'] }); qc.invalidateQueries({ queryKey: ['studio-quota'] }) }
 
   const pick = useMutation({
     mutationFn: ({ id, instructorId }: { id: string; instructorId: string }) => pickApplicant(id, instructorId),

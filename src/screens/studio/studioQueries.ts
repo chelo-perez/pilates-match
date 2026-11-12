@@ -58,7 +58,22 @@ export interface CamaraContact {
   name: string | null
   email: string | null
   phone: string | null
+  /** 'per_member': la entidad paga la app por sus socios; los planes pagos solo son upgrade */
+  billing_model: 'subscriptions' | 'per_member'
 }
+
+/** Cuota del mes: avisos cubiertos, lo que está en curso y el lugar que queda */
+export interface StudioQuota { active: boolean; limit: number | null; covered: number; pending: number; open: number; available: number | null }
+export const useStudioQuota = (studioId: string | undefined) =>
+  useQuery({
+    queryKey: ['studio-quota', studioId],
+    queryFn: async (): Promise<StudioQuota | null> => {
+      const { data, error } = await supabase.rpc('studio_quota', { p_studio: studioId })
+      if (error) return null
+      return (data ?? null) as StudioQuota | null
+    },
+    enabled: !!studioId,
+  })
 
 export const useCamaraContact = (camaraId: string | null | undefined) =>
   useQuery({
@@ -66,18 +81,19 @@ export const useCamaraContact = (camaraId: string | null | undefined) =>
     queryFn: async (): Promise<CamaraContact> => {
       const { data, error } = await supabase
         .from('camaras')
-        .select('name, contact_email, contact_phone, phone')
+        .select('name, contact_email, contact_phone, phone, billing_model')
         .eq('id', camaraId!)
         .maybeSingle()
       if (error) {
         // Si no se puede leer, se usa el contacto general (no bloquea la pantalla)
         console.warn('useCamaraContact', error)
-        return { name: null, email: null, phone: null }
+        return { name: null, email: null, phone: null, billing_model: 'subscriptions' }
       }
       return {
         name: data?.name ?? null,
         email: data?.contact_email ?? null,
         phone: data?.contact_phone ?? data?.phone ?? null,
+        billing_model: data?.billing_model === 'per_member' ? 'per_member' : 'subscriptions',
       }
     },
     enabled: !!camaraId,
@@ -144,7 +160,7 @@ export function nextDateForDays(days: string[], from = new Date()): Date {
 
 // ── Planes ──────────────────────────────────────────────────
 export const limitText = (limit: number | null | undefined) =>
-  limit == null ? 'Propuestas ilimitadas' : `${limit} propuesta${limit === 1 ? '' : 's'} por mes`
+  limit == null ? 'Avisos cubiertos sin límite' : `${limit} aviso${limit === 1 ? '' : 's'} cubierto${limit === 1 ? '' : 's'} por mes`
 
 export const nextResetLabel = () => {
   const d = new Date()

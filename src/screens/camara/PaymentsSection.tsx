@@ -1,13 +1,16 @@
-// Reportes de la Cámara: lo que pagaron sus estudios, su parte y las liquidaciones.
-// La plataforma cobra los abonos y cada mes le paga a la Cámara su porcentaje:
-// la Cámara carga acá el número de su factura y después ve el pago.
+// Reportes de la Cámara: su cuenta con la plataforma.
+// - Cobro por socio: la entidad paga cada mes por sus socios con cuenta (precio por escalas).
+//   Acá ve cuántos son hoy, el estimado del mes y las facturas de la plataforma.
+// - Suscripciones: la plataforma cobra los abonos y le paga a la entidad su porcentaje;
+//   la entidad carga acá el número de su factura y después ve el pago.
 import React, { useState } from 'react'
 import { View, Text, StyleSheet, TouchableOpacity, Modal, Alert } from 'react-native'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { supabase } from '../../lib/supabase'
 import { errorText } from '../../lib/errors'
 import { formatARS, usePlanPrices } from '../../lib/payments'
-import { monthLabel, rpc, SETTLEMENT_STATUS, Settlement, useCamara, useSettlements } from '../../lib/platform'
+import { INVOICE_STATUS, monthLabel, rpc, SETTLEMENT_STATUS, Settlement, useBillingPreview, useCamara, useInvoices, useSettlements } from '../../lib/platform'
+import { entity } from '../../lib/entity'
 import { useAuthStore } from '../../store'
 import { Button, Input, colors, spacing, radius, typography } from '../../components/ui'
 
@@ -19,7 +22,10 @@ export default function PaymentsSection() {
   const camaraId = useAuthStore(s => s.user?.camara_id) as string | undefined
   const { data: camara } = useCamara(camaraId)
   const { data: prices = [] } = usePlanPrices(camaraId, 'info')
+  const perMember = camara?.billing_model === 'per_member'
   const { data: settlements = [] } = useSettlements()
+  const { data: preview } = useBillingPreview(camaraId, perMember)
+  const { data: invoices = [] } = useInvoices()
   const [invoiceFor, setInvoiceFor] = useState<Settlement | null>(null)
   const [invoice, setInvoice] = useState('')
   const [saving, setSaving] = useState(false)
@@ -47,6 +53,64 @@ export default function PaymentsSection() {
       setInvoiceFor(null)
     } catch (e) { Alert.alert('No pudimos cargar la factura', errorText(e)) }
     finally { setSaving(false) }
+  }
+
+  if (perMember) {
+    const premium = prices.find(p => p.plan_type === 'premium' && p.active)
+    const tierLabel = (t: { from: number; to: number | null; price: number }) =>
+      t.to == null ? `Del socio ${t.from} en adelante` : t.from === 1 ? `Hasta ${t.to} socios` : `Del ${t.from} al ${t.to}`
+    return (
+      <View>
+        <View style={s.kpis}>
+          <View style={s.kpi}>
+            <Text style={s.kpiNum}>{preview ? preview.members : '—'}</Text>
+            <Text style={s.kpiLbl}>Socios con cuenta{'\n'}en la app hoy</Text>
+          </View>
+          <View style={s.kpi}>
+            <Text style={s.kpiNum}>{preview ? formatARS(Number(preview.amount_ars)) : '—'}</Text>
+            <Text style={s.kpiLbl}>Estimado del mes{'\n'}si cierra así</Text>
+          </View>
+        </View>
+
+        <View style={s.card}>
+          <Text style={s.caption}>CÓMO SE CALCULA</Text>
+          <Text style={s.hint}>
+            Pagás por cada socio con cuenta creada en la app, con el precio de cada escala. Cada socio tiene 5 avisos cubiertos por mes incluidos
+            {premium ? `, y el que necesita más puede pasar a Premium (${formatARS(premium.price_ars)}/mes, lo paga el estudio).` : '.'}
+            {' '}Se factura el día 1 con los socios con cuenta al cierre del mes{preview?.min_members ? `, con un mínimo de ${preview.min_members} socios` : ''}.
+          </Text>
+          {preview?.rows?.length ? preview.rows.map((r, i) => (
+            <View key={i} style={s.row}>
+              <View style={{ flex: 1 }}>
+                <Text style={s.name}>{tierLabel(r)}</Text>
+                <Text style={s.desc}>{r.qty} × {formatARS(Number(r.price))}</Text>
+              </View>
+              <Text style={s.amount}>{formatARS(Number(r.subtotal))}</Text>
+            </View>
+          )) : <Text style={s.empty}>Las escalas de precio todavía no están cargadas.</Text>}
+        </View>
+
+        <View style={s.card}>
+          <Text style={s.caption}>FACTURAS DE LA PLATAFORMA</Text>
+          <Text style={s.hint}>Cada mes cerrado genera una factura a nombre {entity().de}. Acá ves el detalle y si ya está paga.</Text>
+          {invoices.length === 0 ? (
+            <Text style={s.empty}>Todavía no hay meses cerrados.</Text>
+          ) : invoices.map(inv => {
+            const badge = INVOICE_STATUS[inv.status]
+            return (
+              <View key={inv.id} style={s.row}>
+                <View style={{ flex: 1 }}>
+                  <Text style={s.name}>{monthLabel(inv.period)}</Text>
+                  <Text style={s.desc}>{inv.billable_members} socios con cuenta{inv.invoice_number ? ` · Factura ${inv.invoice_number}` : ''}</Text>
+                  <View style={[s.badge, { backgroundColor: badge.bg }]}><Text style={[s.badgeTxt, { color: badge.tx }]}>{badge.label}</Text></View>
+                </View>
+                <Text style={s.amount}>{formatARS(Number(inv.amount_ars))}</Text>
+              </View>
+            )
+          })}
+        </View>
+      </View>
+    )
   }
 
   return (

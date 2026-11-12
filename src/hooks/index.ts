@@ -122,6 +122,7 @@ export const useCreateMatch = () => {
       qc.invalidateQueries({ queryKey: ['studio-history-recent'] })
       qc.invalidateQueries({ queryKey: ['studio-matches'] })
       qc.invalidateQueries({ queryKey: ['studio-membership'] })
+      qc.invalidateQueries({ queryKey: ['studio-quota'] })
       qc.invalidateQueries({ queryKey: ['studio-stats'] })
     },
   })

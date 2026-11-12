@@ -3,7 +3,7 @@ import type { Membership } from '../types/database'
 
 export type PlanKey = 'freemium' | 'starter' | 'socio' | 'premium'
 
-/** limit: propuestas por mes (null = ilimitado). Solo 'socio' marca is_member. */
+/** limit: avisos cubiertos por mes (null = ilimitado). Se consume al cubrir la clase. Solo 'socio' marca is_member. */
 export const PLANS: { key: PlanKey; label: string; limit: number | null }[] = [
   { key: 'freemium', label: 'Freemium',     limit: 1 },
   { key: 'starter',  label: 'Starter',      limit: 5 },
@@ -15,7 +15,7 @@ export function planLabel(key: string | null | undefined): string {
   return PLANS.find(p => p.key === key)?.label ?? 'Freemium'
 }
 
-/** Propuestas usadas este mes: 0 si el último reinicio es de un mes anterior. */
+/** Avisos cubiertos este mes: 0 si el último reinicio es de un mes anterior. */
 export function usedThisMonth(m: Pick<Membership, 'matches_used_month' | 'last_reset_date'> | null | undefined): number {
   if (!m) return 0
   if (m.last_reset_date) {
