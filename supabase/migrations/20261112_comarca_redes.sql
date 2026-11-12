@@ -1,4 +1,3 @@
--- PENDIENTE
 -- Co-marca por red: colores, tipografías y logos de cada red.
 -- La app la lee con network_brand (también sin sesión, para el link de la red).
 
