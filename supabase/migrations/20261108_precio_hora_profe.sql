@@ -1,4 +1,3 @@
--- PENDIENTE
 -- Precio por sede atado a la hora profe: cada escala puede ser un monto fijo o un
 -- factor de la hora profe promedio de la red (ej. 1,0 = una hora profe por sede).
 -- El promedio sale de lo acordado en las clases cubiertas de los últimos 90 días;
