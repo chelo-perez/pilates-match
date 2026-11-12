@@ -122,11 +122,15 @@ export function brandFontFiles() {
     'Nunito-Bold':     jost ? require('../../assets/fonts/Jost_700Bold.ttf')     : require('../../assets/fonts/Nunito-Bold.ttf'),
     'Brand-Title':     activeBrand?.fonts?.title === 'dm-serif'
       ? require('../../assets/fonts/DMSerifDisplay_400Regular.ttf') : require('../../assets/fonts/Nunito-Bold.ttf'),
+    'Brand-Title-Italic': activeBrand?.fonts?.title === 'dm-serif'
+      ? require('../../assets/fonts/DMSerifDisplay_400Regular_Italic.ttf') : require('../../assets/fonts/Nunito-Bold.ttf'),
   }
 }
 
 /** Fuente de los títulos grandes (encabezados, login) */
 export const titleFont = activeBrand?.fonts?.title ? 'Brand-Title' : 'Nunito-Bold'
+/** Palabra destacada de un título (cursiva serif en el color de acento, como la web de la red) */
+export const titleItalicFont = activeBrand?.fonts?.title ? 'Brand-Title-Italic' : 'Nunito-Bold'
 /** Las serif de display se ven mejor un poco más grandes y sin el espaciado negativo */
 export const titleTweak = activeBrand?.fonts?.title ? { fontSize: 24, letterSpacing: 0 } : null
 

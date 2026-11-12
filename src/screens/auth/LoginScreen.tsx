@@ -8,7 +8,8 @@ import { humanizeError } from '../../lib/errors'
 import { authRedirectUrl, handleAuthRedirect } from '../../lib/auth'
 import Toast from '../../components/Toast'
 import NetworkLockup from '../../components/NetworkLockup'
-import { activeBrand } from '../../lib/brand'
+import { activeBrand, titleFont, titleItalicFont } from '../../lib/brand'
+import { Image } from 'react-native'
 import { useToast } from '../../hooks/useToast'
 import { colors, radius, spacing, typography } from '../../components/ui'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
@@ -86,7 +87,8 @@ export default function LoginScreen({ navigation }: any) {
 
   return (
     <View style={[s.root, { paddingTop: insets.top }]}>
-      {/* Blobs decorativos */}
+      {/* Blobs decorativos (con co-marca, también el isologo de la red como marca de agua) */}
+      {activeBrand?.logos?.markDark ? <Image source={{ uri: activeBrand.logos.markDark }} style={s.watermark} resizeMode="contain" /> : null}
       <View style={s.blob1} />
       <View style={s.blob2} />
       <View style={s.blob3} />
@@ -94,7 +96,11 @@ export default function LoginScreen({ navigation }: any) {
       {/* Marca + propuesta de valor, agrupadas; las acciones van abajo, al alcance del pulgar */}
       <View style={s.brand}>
         <NetworkLockup size="md" style={s.logo} />
-        <Text style={s.headline}>Estudios e instructores{'\n'}de Pilates, conectados</Text>
+        {activeBrand ? (
+          <Text style={[s.headline, s.headlineBrand]}>Estudios e instructores{'\n'}de Pilates, <Text style={s.headlineEm}>conectados.</Text></Text>
+        ) : (
+          <Text style={s.headline}>Estudios e instructores{'\n'}de Pilates, conectados</Text>
+        )}
         <Text style={s.subline}>{activeBrand
           ? `Reemplazos y clases regulares con profesionales verificados por ${activeBrand.shortName}`
           : 'Reemplazos y clases regulares con profesionales verificados'}</Text>
@@ -200,7 +206,9 @@ export default function LoginScreen({ navigation }: any) {
 }
 
 const s = StyleSheet.create({
-  root:         { flex: 1, backgroundColor: colors.forestDeep, alignItems: 'center', justifyContent: 'space-between' },
+  // Con co-marca, el color principal de la red (como su web); si no, el petróleo oscuro de siempre
+  root:         { flex: 1, backgroundColor: activeBrand ? colors.forest : colors.forestDeep, alignItems: 'center', justifyContent: 'space-between' },
+  watermark:    { position: 'absolute', width: 520, height: 520, right: -170, top: '18%', opacity: 0.07 },
 
   // Blobs decorativos
   blob1:        { position: 'absolute', width: 300, height: 300, borderRadius: 150, backgroundColor: colors.goldBright + '10', top: -80, right: -80 },
@@ -210,9 +218,11 @@ const s = StyleSheet.create({
   brand:        { flex: 1, width: '100%', alignItems: 'center', justifyContent: 'center', paddingHorizontal: 36, paddingBottom: 24 },
   logo:         { marginBottom: 36 },
   headline:     { fontFamily: 'Nunito-Bold', fontSize: 24, lineHeight: 31, color: colors.white, textAlign: 'center', marginBottom: 12 },
+  headlineBrand:{ fontFamily: titleFont, fontSize: 30, lineHeight: 34, letterSpacing: 0, marginHorizontal: -12 },
+  headlineEm:   { fontFamily: titleItalicFont, color: colors.goldBright },
   subline:      { fontFamily: 'Nunito-Regular', fontSize: 14, lineHeight: 20, color: 'rgba(255,255,255,0.62)', textAlign: 'center', maxWidth: 300 },
 
-  buttons:      { width: '100%', paddingHorizontal: 28, gap: 12, marginBottom: 8 },
+  buttons:      { width: '100%', maxWidth: 460, paddingHorizontal: 28, gap: 12, marginBottom: 8 },
 
   googleBtn:    { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 12, backgroundColor: colors.white, ...radius.leaf, paddingVertical: 16, elevation: 4, shadowColor: colors.black, shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.2, shadowRadius: 8 },
   googleTxt:    { fontFamily: 'Nunito-Bold', fontSize: 15, color: colors.dark },

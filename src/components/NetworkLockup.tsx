@@ -4,7 +4,7 @@ import React from 'react'
 import { View, Text, Image, StyleSheet, StyleProp, ViewStyle } from 'react-native'
 import { colors } from './ui'
 import BrandLogo from './BrandLogo'
-import { activeBrand, titleFont } from '../lib/brand'
+import { activeBrand } from '../lib/brand'
 
 export default function NetworkLockup({ size = 'lg', style }: { size?: 'lg' | 'md'; style?: StyleProp<ViewStyle> }) {
   const b = activeBrand
@@ -24,7 +24,8 @@ export default function NetworkLockup({ size = 'lg', style }: { size?: 'lg' | 'm
 
 const s = StyleSheet.create({
   wrap:    { alignItems: 'center' },
-  name:    { fontFamily: titleFont, color: colors.white, letterSpacing: 2, marginTop: 10 },
+  // Como el logotipo de la red: sans en mayúsculas, bien espaciada
+  name:    { fontFamily: 'Nunito-Medium', color: colors.white, letterSpacing: 6, marginTop: 12, paddingLeft: 6 },
   withRow: { flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 14, opacity: 0.85 },
   with:    { fontFamily: 'Nunito-SemiBold', fontSize: 12, color: 'rgba(255,255,255,0.7)' },
 })

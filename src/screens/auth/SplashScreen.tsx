@@ -2,6 +2,7 @@
 import React, { useEffect, useRef } from 'react'
 import { View, Animated, StyleSheet } from 'react-native'
 import { colors } from '../../components/ui'
+import { activeBrand } from '../../lib/brand'
 import NetworkLockup from '../../components/NetworkLockup'
 
 
@@ -63,7 +64,7 @@ const s = StyleSheet.create({
     ...StyleSheet.absoluteFillObject,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: colors.forestDeep,
+    backgroundColor: activeBrand ? colors.forest : colors.forestDeep,
     zIndex: 999,
   },
   blob1: { position: 'absolute', width: 300, height: 300, borderRadius: 150, backgroundColor: colors.goldBright + '10', top: -80, right: -80 },
