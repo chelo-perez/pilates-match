@@ -11,6 +11,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { View, Text } from 'react-native'
 import { StatusBar } from 'expo-status-bar'
 import { NavigationContainer, createNavigationContainerRef } from '@react-navigation/native'
+import { useNetworkBrandSync } from '../lib/brandSync'
 import { createNativeStackNavigator } from '@react-navigation/native-stack'
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs'
 import { useQuery } from '@tanstack/react-query'
@@ -260,6 +261,8 @@ function useNotificationRouting(role: string | undefined) {
 export default function RootNavigator() {
   const { user, session, isLoading, needsOnboarding, registering, profileError, passwordRecovery } = useAuthStore()
   useNotificationRouting(user?.role)
+  // Co-marca: colores, tipografías y logos de la red del usuario
+  useNetworkBrandSync()
   // Cómo se llama la entidad que coordina la red de la persona ("la Cámara", "el Colegio"...)
   useLoadEntity(user?.id, user?.role, (user as any)?.camara_id)
 

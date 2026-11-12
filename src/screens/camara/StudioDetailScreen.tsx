@@ -202,7 +202,7 @@ export default function StudioDetailScreen({ navigation, route }: any) {
           )}
         </BlobCard>
 
-        <BlobCard style={s.card} delay={1800} blobColor="rgba(42,151,142,0.10)" blobColor2="rgba(42,151,142,0.06)">
+        <BlobCard style={s.card} delay={1800} blobColor={colors.gold + '1a'} blobColor2={colors.gold + '0f'}>
           <Text style={s.sectionTitle}>PAGOS A INSTRUCTORES</Text>
           {pay && pay.total > 0 ? (
             <Row icon={pay.bad > 0 ? 'alert-triangle' : 'check-circle'} label="Pagó lo acordado"

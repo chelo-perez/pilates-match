@@ -6,6 +6,7 @@ import { useQuery } from '@tanstack/react-query'
 import { Feather } from '@expo/vector-icons'
 import { supabase } from '../lib/supabase'
 import { colors, spacing, radius, typography } from './ui'
+import { activeBrand } from '../lib/brand'
 
 export interface CamaraOption { id: string; name: string; business_label: string; instructor_label: string }
 
@@ -25,8 +26,12 @@ interface Props { value: string | null; onChange: (id: string) => void; kind: 'e
 
 export default function CamaraSelect({ value, onChange, kind, label }: Props) {
   const { data: camaras = [] } = useActiveCamaras()
-  // Preselecciona la primera para que nunca quede vacío
-  useEffect(() => { if (!value && camaras.length) onChange(camaras[0].id) }, [camaras.length])
+  // Preselecciona la red del link o de la co-marca; si no, la primera, para que nunca quede vacío
+  useEffect(() => {
+    if (value || !camaras.length) return
+    const branded = camaras.find(c => c.id === activeBrand?.camaraId)
+    onChange((branded ?? camaras[0]).id)
+  }, [camaras.length])
   if (camaras.length <= 1) return null
 
   return (

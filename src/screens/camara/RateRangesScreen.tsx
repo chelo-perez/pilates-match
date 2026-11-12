@@ -124,7 +124,7 @@ export default function RateRangesScreen() {
               <Text style={[s.halfLabel, { color: colors.gold }]}>MÍNIMO</Text>
               <Stepper value={repMin} onChange={setRepMin} max={repMax - 1} accent={colors.gold} />
             </View>
-            <View style={[s.divider, { backgroundColor: 'rgba(42,151,142,0.2)' }]} />
+            <View style={[s.divider, { backgroundColor: colors.gold + '33' }]} />
             <View style={s.half}>
               <Text style={[s.halfLabel, { color: colors.gold }]}>MÁXIMO</Text>
               <Stepper value={repMax} onChange={setRepMax} min={repMin + 1} accent={colors.gold} />
@@ -157,7 +157,7 @@ const s = StyleSheet.create({
   content:       { padding: spacing.md, paddingBottom: 100 },
   intro:         { fontFamily: 'Nunito-SemiBold', fontSize: 13, color: colors.mid, lineHeight: 19, marginBottom: spacing.md },
   rangeCard:     { backgroundColor: colors.white, ...radius.leaf, padding: spacing.md, marginBottom: spacing.md, borderWidth: 0.5, borderColor: colors.border, ...shadows.card },
-  rangeCardGold: { borderColor: 'rgba(42,151,142,0.3)', backgroundColor: colors.goldLight },
+  rangeCardGold: { borderColor: colors.gold + '4c', backgroundColor: colors.goldLight },
   rangeHeader:   { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: spacing.md },
   rangeTitle:    { fontFamily: 'Nunito-Bold', fontSize: 17, color: colors.sage },
   rangeSummary:  { fontFamily: 'Nunito-Bold', fontSize: 13, color: colors.sage },

@@ -6,6 +6,7 @@ import {
   ActivityIndicator, TextInput, TextInputProps, StyleProp, ViewStyle, TextStyle,
 } from 'react-native'
 import { Feather } from '@expo/vector-icons'
+import { applyBrandColors } from '../../lib/brand'
 
 // ── Tokens de marca ───────────────────────────────────────────
 export const colors = {
@@ -51,6 +52,9 @@ export const colors = {
   border2:     '#DDDDDD',
   borderLight2:'#EEEEEE',
 }
+// Co-marca: si el dispositivo tiene guardada la marca de una red, sus colores pisan estos
+// tokens antes de que se calcule cualquier estilo (ver src/lib/brand.ts)
+applyBrandColors(colors as any)
 
 export const spacing = {
   xs: 4, sm: 8, md: 16, lg: 24, xl: 32, xxl: 40, xxxl: 48,

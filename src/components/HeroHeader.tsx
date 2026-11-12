@@ -3,6 +3,7 @@ import { View, Text, Image, TouchableOpacity, StyleSheet } from 'react-native'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { Feather } from '@expo/vector-icons'
 import { colors, spacing } from './ui'
+import { activeBrand, titleFont, titleTweak } from '../lib/brand'
 
 interface HeroHeaderProps {
   title: string
@@ -27,7 +28,10 @@ export default function HeroHeader({
 
   return (
     <View style={[s.hero, { paddingTop: insets.top + 10 }]}>
-      <View style={s.blob1} />
+      {/* Con co-marca, el isologo de la red como marca de agua; si no, los círculos de siempre */}
+      {activeBrand?.logos?.markDark ? (
+        <Image source={{ uri: activeBrand.logos.markDark }} style={s.watermark} resizeMode="contain" accessibilityIgnoresInvertColors />
+      ) : <View style={s.blob1} />}
       <View style={s.blob2} />
 
       <View style={s.inner}>
@@ -70,7 +74,7 @@ export default function HeroHeader({
           /* ── Estándar: título; sin "Volver", los botones van al lado del título ── */
           <View style={s.titleRow}>
             <View style={{ flex: 1, minWidth: 0 }}>
-              <Text style={s.title}>{title}</Text>
+              <Text style={[s.title, titleTweak]}>{title}</Text>
               {subtitle ? <Text style={s.subtitle}>{subtitle}</Text> : null}
             </View>
             {!onBack && rightElement ? <View style={s.rightInline}>{rightElement}</View> : null}
@@ -94,7 +98,8 @@ const s = StyleSheet.create({
   backTxt:         { fontFamily: 'Nunito-Bold', fontSize: 12, color: colors.white },
   // Standard mode
   titleRow:        { flexDirection: 'row', alignItems: 'center' },
-  title:           { fontFamily: 'Nunito-Bold', fontSize: 22, color: colors.white, letterSpacing: -0.3, marginBottom: 3 },
+  watermark:       { position: 'absolute', width: 190, height: 190, top: -48, right: -46, opacity: 0.13 },
+  title:           { fontFamily: titleFont, fontSize: 22, color: colors.white, letterSpacing: -0.3, marginBottom: 3 },
   subtitle:        { fontFamily: 'Nunito-SemiBold', fontSize: 12, color: 'rgba(255,255,255,0.65)' },
   rightInline:     { marginLeft: spacing.sm },
   // Perfil (foto + nombre en fila)

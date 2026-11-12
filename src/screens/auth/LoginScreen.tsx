@@ -7,7 +7,8 @@ import { supabase } from '../../lib/supabase'
 import { humanizeError } from '../../lib/errors'
 import { authRedirectUrl, handleAuthRedirect } from '../../lib/auth'
 import Toast from '../../components/Toast'
-import BrandLogo from '../../components/BrandLogo'
+import NetworkLockup from '../../components/NetworkLockup'
+import { activeBrand } from '../../lib/brand'
 import { useToast } from '../../hooks/useToast'
 import { colors, radius, spacing, typography } from '../../components/ui'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
@@ -92,9 +93,11 @@ export default function LoginScreen({ navigation }: any) {
 
       {/* Marca + propuesta de valor, agrupadas; las acciones van abajo, al alcance del pulgar */}
       <View style={s.brand}>
-        <BrandLogo width={168} style={s.logo} />
+        <NetworkLockup size="md" style={s.logo} />
         <Text style={s.headline}>Estudios e instructores{'\n'}de Pilates, conectados</Text>
-        <Text style={s.subline}>Reemplazos y clases regulares con profesionales verificados</Text>
+        <Text style={s.subline}>{activeBrand
+          ? `Reemplazos y clases regulares con profesionales verificados por ${activeBrand.shortName}`
+          : 'Reemplazos y clases regulares con profesionales verificados'}</Text>
       </View>
 
       <View style={s.buttons}>
@@ -200,8 +203,8 @@ const s = StyleSheet.create({
   root:         { flex: 1, backgroundColor: colors.forestDeep, alignItems: 'center', justifyContent: 'space-between' },
 
   // Blobs decorativos
-  blob1:        { position: 'absolute', width: 300, height: 300, borderRadius: 150, backgroundColor: 'rgba(143,214,207,0.06)', top: -80, right: -80 },
-  blob2:        { position: 'absolute', width: 200, height: 200, borderRadius: 100, backgroundColor: 'rgba(44,101,102,0.4)', bottom: 100, left: -60 },
+  blob1:        { position: 'absolute', width: 300, height: 300, borderRadius: 150, backgroundColor: colors.goldBright + '10', top: -80, right: -80 },
+  blob2:        { position: 'absolute', width: 200, height: 200, borderRadius: 100, backgroundColor: colors.sage + '66', bottom: 100, left: -60 },
   blob3:        { position: 'absolute', width: 150, height: 150, borderRadius: 75, backgroundColor: 'rgba(255,255,255,0.03)', top: '40%', right: -40 },
 
   brand:        { flex: 1, width: '100%', alignItems: 'center', justifyContent: 'center', paddingHorizontal: 36, paddingBottom: 24 },

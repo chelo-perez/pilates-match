@@ -9,17 +9,14 @@ import AnimatedSplash from './src/screens/auth/SplashScreen'
 import { queryClient } from './src/lib/queryClient'
 import { subscribeAuth, subscribeDeepLinks } from './src/lib/auth'
 import { colors } from './src/components/ui'
+import { brandFontFiles } from './src/lib/brand'
 
 SplashScreen.preventAutoHideAsync()
 
 export default function App() {
   const [showSplash, setShowSplash] = React.useState(true)
-  const [fontsLoaded] = useFonts({
-    'Nunito-Regular':  require('./assets/fonts/Nunito-Regular.ttf'),
-    'Nunito-Medium':   require('./assets/fonts/Nunito-Medium.ttf'),
-    'Nunito-SemiBold': require('./assets/fonts/Nunito-SemiBold.ttf'),
-    'Nunito-Bold':     require('./assets/fonts/Nunito-Bold.ttf'),
-  })
+  // Tipografías de la red (o Nunito): ver src/lib/brand.ts
+  const [fontsLoaded] = useFonts(brandFontFiles())
 
   useEffect(() => {
     if (fontsLoaded) SplashScreen.hideAsync()
