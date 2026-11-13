@@ -1,5 +1,6 @@
 import React, { useState } from 'react'
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from 'react-native'
+import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { useCanMatch, useInstructor, useMyStudio } from '../../hooks'
 import { Button, EmptyState, ErrorState, LoadingScreen, colors, spacing, typography } from '../../components/ui'
 import { SPECIALTY_LABELS } from '../../constants/labels'
@@ -23,6 +24,7 @@ const num = (v: any): number | null => (v == null || v === '' ? null : Number(v)
 const fmt1 = (v: any) => { const n = num(v); return n == null ? '—' : n.toFixed(1) }
 
 export default function InstructorProfileScreen({ navigation, route }: Props) {
+  const insets = useSafeAreaInsets()
   const { instructorId } = (route.params || {}) as any
   const [tab, setTab] = useState<Tab>('perfil')
   const { data: instructor, isLoading, isError, refetch } = useInstructor(instructorId)
@@ -66,7 +68,7 @@ export default function InstructorProfileScreen({ navigation, route }: Props) {
         }
       />
 
-      <ScrollView showsVerticalScrollIndicator={false}>
+      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: spacing.md }}>
         {/* KPI stats */}
         <View style={s.kpiRow}>
           <BlobCard style={s.kpiCard} delay={0}>
@@ -214,27 +216,27 @@ export default function InstructorProfileScreen({ navigation, route }: Props) {
           )}
         </View>
 
-        {/* CTA */}
-        <View style={s.ctaInner}>
-          {limitReached && (
-            <View style={[s.noteBox, { marginHorizontal: 0, backgroundColor: colors.warnBg }]}>
-              <Feather name="alert-circle" size={13} color={colors.warnTx} />
-              <Text style={[s.noteTxt, { color: colors.warnTx }]}>
-                Ya usaste las propuestas que incluye tu plan este mes.
-              </Text>
-            </View>
-          )}
-          <Button
-            label={limitReached ? 'Ver mi plan' : 'Pedir match →'}
-            variant={limitReached ? 'secondary' : 'primary'}
-            onPress={() => limitReached
-              ? navigation.navigate('MembershipPaywall')
-              : navigation.navigate('RequestMatch', { instructorId, instructorName: instructor.full_name })}
-            fullWidth
-            size="lg"
-          />
-        </View>
       </ScrollView>
+      {/* CTA fija abajo: siempre visible y por encima de la barra de navegación del teléfono */}
+      <View style={[s.ctaBar, { paddingBottom: insets.bottom + spacing.sm }]}>
+        {limitReached && (
+          <View style={[s.noteBox, { marginHorizontal: 0, backgroundColor: colors.warnBg }]}>
+            <Feather name="alert-circle" size={13} color={colors.warnTx} />
+            <Text style={[s.noteTxt, { color: colors.warnTx }]}>
+              No te quedan avisos disponibles este mes.
+            </Text>
+          </View>
+        )}
+        <Button
+          label={limitReached ? 'Ver mi plan' : 'Pedir match →'}
+          variant={limitReached ? 'secondary' : 'primary'}
+          onPress={() => limitReached
+            ? navigation.navigate('MembershipPaywall')
+            : navigation.navigate('RequestMatch', { instructorId, instructorName: instructor.full_name })}
+          fullWidth
+          size="lg"
+        />
+      </View>
     </View>
   )
 }
@@ -303,5 +305,5 @@ const s = StyleSheet.create({
   slot:           { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingVertical: 4 },
   slotTime:       { fontFamily: 'Nunito-SemiBold', fontSize: 13, color: colors.dark },
 
-  ctaInner:       { paddingHorizontal: spacing.md, paddingTop: spacing.sm, paddingBottom: 32 },
+  ctaBar:         { paddingHorizontal: spacing.md, paddingTop: spacing.sm, backgroundColor: colors.cream, borderTopWidth: 0.5, borderTopColor: colors.border },
 })
