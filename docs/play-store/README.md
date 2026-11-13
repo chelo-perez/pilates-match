@@ -33,4 +33,11 @@ El identificador no se puede cambiar después de publicar. Pasos:
 - Cuenta de Google Play Console (USD 25) y prueba cerrada con 12 personas durante 14 días.
 - Completar los datos entre [CORCHETES] de los textos legales y publicarlos en una URL propia.
 - Plan Pro de Supabase antes de lanzar, porque el plan gratuito pausa el proyecto si no se usa.
-- Mercado Pago de la plataforma: Access Token, webhook y clave secreta.
+- Mercado Pago de la plataforma (en espera del alta de Tecnología Más Fácil SAS, que va a facturar):
+  - Crear la cuenta de Mercado Pago a nombre de la sociedad y una aplicación en Mercado Pago Developers.
+  - Cargar en Supabase → Edge Functions → Secrets: `MP_ACCESS_TOKEN` y `MP_WEBHOOK_SECRET` (nunca en el chat).
+  - Configurar el webhook de Mercado Pago apuntando a la función `mp-webhook` (eventos: pagos y suscripciones).
+  - Hasta entonces, los botones de pago responden "Los pagos todavía no están configurados".
+  - Lo que ya está listo y espera las claves: cargo de incorporación de clases regulares (pago, devolución y crédito) y planes del estudio.
+  - Siguiente etapa: cobro garantizado de reemplazos (split de Mercado Pago, 5% para la plataforma, el instructor recibe el 100%).
+- Contador: facturación de la comisión y del cargo de incorporación, e Ingresos Brutos.
