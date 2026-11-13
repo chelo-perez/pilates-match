@@ -6,6 +6,7 @@ import { useQuery } from '@tanstack/react-query'
 import { Feather } from '@expo/vector-icons'
 import { supabase } from '../lib/supabase'
 import { colors } from './ui'
+import { reliabilityWarning, useReliability } from '../lib/matchFlow'
 
 /** Lo que el instructor ve del estudio antes de aceptar (agregados que calcula el servidor) */
 export default function StudioRep({ studioId }: { studioId: string }) {
@@ -14,7 +15,10 @@ export default function StudioRep({ studioId }: { studioId: string }) {
     queryFn: async () => { const { data } = await supabase.rpc('studio_reputation', { p_studio_id: studioId }); return data as any },
     staleTime: 5 * 60_000,
   })
+  const { data: rel } = useReliability({ studioId })
+  const warn = reliabilityWarning(rel)
   if (!r) return null
+  if (warn) return <Text style={[s.repTxt, { color: colors.warnTx }]}><Feather name="alert-triangle" size={11} /> {warn}</Text>
   if (!r.classes && !r.evals) return <Text style={s.repTxt}>Sin historial en la app todavía</Text>
   const bad = r.paid_total > 0 && r.paid_ok < r.paid_total
   const parts = [

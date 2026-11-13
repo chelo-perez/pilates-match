@@ -187,6 +187,7 @@ export const matchAPI = {
       schedule_days: dto.class_type === 'regular' ? (dto.schedule_days ?? null) : null,
       schedule_from: dto.class_type === 'regular' ? (dto.schedule_from ?? null) : null,
       schedule_to: dto.class_type === 'regular' ? (dto.schedule_to ?? null) : null,
+      ...(dto.class_type === 'regular' && (dto as any).trial_paid ? { trial_paid: true } : {}),
     }
     const { data, error } = await db.matches().insert(row).select().single()
     if (error) {

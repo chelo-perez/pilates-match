@@ -155,7 +155,8 @@ export default function StudioHomeScreen({ navigation }: any) {
             recentHistory.map((item: any) => {
               const st = MATCH_STATUS[item.status as keyof typeof MATCH_STATUS]
               return (
-                <View key={item.id} style={s.histRow}>
+                <TouchableOpacity key={item.id} style={s.histRow} activeOpacity={0.8} disabled={item.status !== 'aceptado' && !item.cancelled_at}
+                  onPress={() => navigation.navigate('ClassDetail', { matchId: item.id })}>
                   <Avatar name={item.instructor?.full_name ?? '?'} source={item.instructor?.avatar_url} size={36} />
                   <View style={{ flex: 1 }}>
                     <Text style={s.histName}>{item.instructor?.full_name ?? 'Instructor'}</Text>
@@ -165,7 +166,7 @@ export default function StudioHomeScreen({ navigation }: any) {
                     </Text>
                   </View>
                   <Badge label={st?.label ?? item.status} variant={st?.variant ?? 'neutral'} />
-                </View>
+                </TouchableOpacity>
               )
             })
           )}

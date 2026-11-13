@@ -88,7 +88,8 @@ export const money = (n: number) => '$' + Math.round(Number(n)).toLocaleString('
 export const whenLabel = (c: OpenClass) => {
   if (c.class_type === 'regular') {
     const days = (c.schedule_days ?? []).map(d => DAYS_SHORT[d] ?? d).join(', ')
-    return `${days || 'Clase regular'} · ${hhmm(c.schedule_from ?? c.start_time)}–${hhmm(c.schedule_to ?? c.end_time)}`
+    const trial = new Date(c.class_date + 'T12:00:00').toLocaleDateString('es-AR', { weekday: 'short', day: 'numeric', month: 'short' })
+    return `${days || 'Clase regular'} · ${hhmm(c.schedule_from ?? c.start_time)}–${hhmm(c.schedule_to ?? c.end_time)} · entrevista ${trial} ${hhmm(c.start_time)}`
   }
   const d = new Date(c.class_date + 'T12:00:00').toLocaleDateString('es-AR', { weekday: 'long', day: 'numeric', month: 'long' })
   return `${d} · ${hhmm(c.start_time)}–${hhmm(c.end_time)}`

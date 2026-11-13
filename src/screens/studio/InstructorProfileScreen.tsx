@@ -1,6 +1,7 @@
 import React, { useState } from 'react'
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from 'react-native'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
+import { reliabilityWarning, useReliability } from '../../lib/matchFlow'
 import { useCanMatch, useInstructor, useMyStudio } from '../../hooks'
 import { Button, EmptyState, ErrorState, LoadingScreen, colors, spacing, typography } from '../../components/ui'
 import { SPECIALTY_LABELS } from '../../constants/labels'
@@ -25,6 +26,7 @@ const fmt1 = (v: any) => { const n = num(v); return n == null ? '—' : n.toFixe
 
 export default function InstructorProfileScreen({ navigation, route }: Props) {
   const insets = useSafeAreaInsets()
+  const relWarn = reliabilityWarning(useReliability({ instructorId: (route.params as any)?.instructorId }).data)
   const { instructorId } = (route.params || {}) as any
   const [tab, setTab] = useState<Tab>('perfil')
   const { data: instructor, isLoading, isError, refetch } = useInstructor(instructorId)
@@ -67,6 +69,11 @@ export default function InstructorProfileScreen({ navigation, route }: Props) {
                 <Text style={s.veriTxt}>✓ Verificado por {entity().la}</Text>
               </View>
             )}
+            {relWarn ? (
+              <View style={[s.veriBadge, { backgroundColor: colors.warnBg }]}>
+                <Text style={[s.veriTxt, { color: colors.warnTx }]}>⚠ {relWarn}</Text>
+              </View>
+            ) : null}
           </View>
         }
       />

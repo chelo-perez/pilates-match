@@ -24,6 +24,7 @@ import { openNotificationTarget } from '../lib/notificationTarget'
 import { useLoadEntity } from '../lib/entity'
 import { queryClient } from '../lib/queryClient'
 import NotificationsScreen from '../screens/shared/NotificationsScreen'
+import ClassDetailScreen from '../screens/shared/ClassDetailScreen'
 import PlatformCamarasScreen from '../screens/platform/CamarasScreen'
 import PlatformCamaraEditScreen from '../screens/platform/CamaraEditScreen'
 import PlatformSettlementsScreen from '../screens/platform/SettlementsScreen'
@@ -250,6 +251,12 @@ function useNotificationRouting(role: string | undefined) {
       () => { queryClient.invalidateQueries({ queryKey: ['notifications'] }); queryClient.invalidateQueries({ queryKey: ['instructor-matches'] }) },
       (response) => {
         const data: any = response.notification.request.content.data ?? {}
+        // Tocó el aviso del teléfono: ese aviso queda leído en la campanita (solo ese)
+        if (data && Object.keys(data).length) {
+          supabase.from('notifications').update({ read_at: new Date().toISOString() })
+            .is('read_at', null).contains('data', data)
+            .then(() => queryClient.invalidateQueries({ queryKey: ['notifications'] }))
+        }
         if (!navigationRef.isReady()) return
         openNotificationTarget(navigationRef, role, data)
       },
@@ -293,6 +300,7 @@ export default function RootNavigator() {
         <Stack.Screen name="EvaluateStudio" component={EvaluateStudioScreen} />
         <Stack.Screen name="InstructorStudios" component={InstructorStudiosScreen} />
         <Stack.Screen name="OpenClasses" component={OpenClassesScreen} />
+        <Stack.Screen name="ClassDetail" component={ClassDetailScreen} />
         <Stack.Screen name="Notifications" component={NotificationsScreen} />
       </>
     )
@@ -307,6 +315,7 @@ export default function RootNavigator() {
         <Stack.Screen name="Membership" component={MembershipScreen} />
         <Stack.Screen name="StudioProfileEdit" component={StudioProfileEditScreen} />
         <Stack.Screen name="StudioOpenClasses" component={StudioOpenClassesScreen} />
+        <Stack.Screen name="ClassDetail" component={ClassDetailScreen} />
         <Stack.Screen name="Notifications" component={NotificationsScreen} />
       </>
     )

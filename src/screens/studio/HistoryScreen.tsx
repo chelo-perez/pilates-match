@@ -7,6 +7,7 @@ import { useEvaluationHistory, useMyStudio } from '../../hooks'
 import { matchAPI } from '../../lib/api'
 import { formatDate } from '../../lib/dates'
 import { MATCH_STATUS } from '../../constants/labels'
+import { pendingAction } from '../../lib/matchFlow'
 import { Avatar, Badge, Button, ScoreDisplay, EmptyState, ErrorState, LoadingScreen, colors, spacing, radius } from '../../components/ui'
 import { errorText } from '../../lib/errors'
 import { useSearchNeed } from '../../store/searchNeed'
@@ -162,9 +163,28 @@ export default function HistoryScreen({ navigation }: Props) {
                     </View>
                   </View>
                 ) : null}
-                {item.status === 'aceptado' ? (
-                  <Button label="Volver a proponer" variant="secondary" size="sm" onPress={() => again(item)}
-                    icon={<Feather name="repeat" size={13} color={colors.sage} />} style={{ marginBottom: spacing.sm, alignSelf: 'flex-start' }} />
+                {item.status === 'aceptado' || item.cancelled_at ? (
+                  <>
+                    {pendingAction(item, 'estudio') ? (
+                      <TouchableOpacity style={s.todo} onPress={() => navigation.navigate('ClassDetail', { matchId: item.id })}>
+                        <Feather name="alert-circle" size={14} color={colors.warnTx} />
+                        <Text style={s.todoTxt}>{pendingAction(item, 'estudio')}</Text>
+                        <Feather name="chevron-right" size={14} color={colors.warnTx} />
+                      </TouchableOpacity>
+                    ) : null}
+                    {item.cancelled_at ? (
+                      <Text style={s.comment}>{item.cancelled_by === 'instructor' ? 'La canceló el instructor' : 'La cancelaste'}{item.late_cancel ? ' con menos de 24 h' : ''}{item.cancel_reason ? `: "${item.cancel_reason}"` : ''}</Text>
+                    ) : null}
+                    <View style={{ flexDirection: 'row', gap: spacing.sm, marginBottom: spacing.sm, flexWrap: 'wrap' }}>
+                      <Button label={item.cancelled_at ? 'Ver detalle' : item.class_type === 'regular' ? 'Ver entrevista' : 'Ver clase'} size="sm"
+                        onPress={() => navigation.navigate('ClassDetail', { matchId: item.id })}
+                        icon={<Feather name="calendar" size={13} color={colors.white} />} />
+                      {item.status === 'aceptado' ? (
+                        <Button label="Volver a proponer" variant="secondary" size="sm" onPress={() => again(item)}
+                          icon={<Feather name="repeat" size={13} color={colors.sage} />} />
+                      ) : null}
+                    </View>
+                  </>
                 ) : null}
                 <View style={s.footerRow}>
                   <Text style={s.sentAt}>Enviada el {formatDate(new Date(item.created_at))}</Text>
@@ -233,6 +253,8 @@ export default function HistoryScreen({ navigation }: Props) {
 }
 
 const s = StyleSheet.create({
+  todo:    { flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: colors.warnBg, borderRadius: 10, paddingVertical: 8, paddingHorizontal: 10, marginBottom: spacing.sm },
+  todoTxt: { flex: 1, fontFamily: 'Nunito-Bold', fontSize: 12, color: colors.warnTx },
 
   filters:       { paddingHorizontal: spacing.md, paddingTop: spacing.sm, gap: 6 },
   chip:          { paddingVertical: 5, paddingHorizontal: 12, borderTopLeftRadius: 10, borderTopRightRadius: 0, borderBottomLeftRadius: 0, borderBottomRightRadius: 10, backgroundColor: colors.white, borderWidth: 0.5, borderColor: colors.border },

@@ -2,7 +2,7 @@
 import React, { useEffect, useState } from 'react'
 import {
   View, Text, StyleSheet, ScrollView, TouchableOpacity,
-  KeyboardAvoidingView, Platform, TextInput
+  KeyboardAvoidingView, Platform, TextInput, Switch
 } from 'react-native'
 import PickerField from '../../components/PickerField'
 import { useSearchNeed, parseLocal, fromHHMM } from '../../store/searchNeed'
@@ -57,6 +57,11 @@ export default function RequestMatchScreen({ navigation, route }: Props) {
   const [scheduleFrom, setScheduleFrom] = useState(() => fromHHMM(need.from))
   const [scheduleTo,   setScheduleTo]   = useState(() => fromHHMM(need.to))
 
+  // ── Regular: entrevista con clase de prueba en el estudio ──
+  const [trialDate, setTrialDate] = useState(() => { const d = new Date(); d.setDate(d.getDate() + 2); d.setHours(0, 0, 0, 0); return d })
+  const [trialTime, setTrialTime] = useState(() => fromHHMM(need.from))
+  const [trialPaid, setTrialPaid] = useState(false)
+
   const [note, setNote] = useState('')
 
   // Oferta por clase: es lo que el estudio paga si el instructor acepta. La tarifa del instructor
@@ -89,8 +94,10 @@ export default function RequestMatchScreen({ navigation, route }: Props) {
     availabilityCovers(availability, day, classType, toHHMM(from), toHHMM(to)))
 
   const limitReached = canMatch === false
+  const trialStart = new Date(trialDate); trialStart.setHours(trialTime.getHours(), trialTime.getMinutes(), 0, 0)
   const problem =
     classType === 'regular' && selectedDays.length === 0 ? 'Elegí al menos un día de la semana' :
+    classType === 'regular' && trialStart.getTime() < Date.now() + 3600_000 ? 'La entrevista tiene que ser al menos dentro de 1 hora' :
     !validRange ? 'La hora de fin tiene que ser posterior a la de inicio' :
     offer < 1000 ? 'Indicá cuánto pagás por clase' : null
 
@@ -102,15 +109,17 @@ export default function RequestMatchScreen({ navigation, route }: Props) {
       await createMatch.mutateAsync({
         instructor_id: instructorId,
         class_type: classType,
-        class_date: toLocalISODate(isRegular ? nextDateForDays(selectedDays) : classDate),
-        start_time: toHHMM(from),
-        end_time: toHHMM(to),
+        // Regular: fecha y hora de la entrevista con clase de prueba (1 h)
+        class_date: toLocalISODate(isRegular ? trialDate : classDate),
+        start_time: toHHMM(isRegular ? trialTime : from),
+        end_time: toHHMM(isRegular ? new Date(trialTime.getTime() + 3600_000) : to),
         note_studio: note.trim() || undefined,
         offered_rate: offer,
         ...(isRegular && {
           schedule_days: DAYS.map(d => d.key).filter(k => selectedDays.includes(k)),
           schedule_from: toHHMM(scheduleFrom),
           schedule_to:   toHHMM(scheduleTo),
+          trial_paid:    trialPaid,
         }),
       } as any)
       showToast(
@@ -139,7 +148,7 @@ export default function RequestMatchScreen({ navigation, route }: Props) {
         {limitReached && (
           <TouchableOpacity style={s.limitBanner} onPress={() => navigation.navigate('MembershipPaywall')} activeOpacity={0.85}>
             <Feather name="alert-circle" size={16} color={colors.warnTx} />
-            <Text style={s.limitTxt}>Ya usaste las propuestas de tu plan este mes. Tocá para ver opciones.</Text>
+            <Text style={s.limitTxt}>No te quedan avisos disponibles este mes. Tocá para ver opciones.</Text>
             <Feather name="chevron-right" size={16} color={colors.warnTx} />
           </TouchableOpacity>
         )}
@@ -266,17 +275,31 @@ export default function RequestMatchScreen({ navigation, route }: Props) {
               )}
             </BlobCard>
 
-            <View style={s.trialInfo}>
-              <View style={s.trialIcon}>
-                <Feather name="user-check" size={18} color={colors.sage} />
+            <BlobCard style={s.card} delay={2200}>
+              <Text style={s.cardLabel}>ENTREVISTA Y CLASE DE PRUEBA</Text>
+              <Text style={s.trialDesc}>
+                {instructorName} va al estudio y le da una clase a quien lo dirige. Si les gusta, desde la app la sumás como clase regular.
+              </Text>
+              <View style={[s.franjaRow, { marginTop: spacing.sm }]}>
+                <View style={{ flex: 1.4 }}>
+                  <Text style={s.franjaLbl}>Día</Text>
+                  <PickerField small value={trialDate} mode="date" display={fmtDate(trialDate)}
+                    minimumDate={(() => { const d = new Date(); d.setHours(0, 0, 0, 0); return d })()}
+                    onChange={d => { d.setHours(0, 0, 0, 0); setTrialDate(d) }} />
+                </View>
+                <View style={{ flex: 1 }}>
+                  <Text style={s.franjaLbl}>Hora</Text>
+                  <PickerField small value={trialTime} mode="time" display={toHHMM(trialTime)} minuteInterval={30} onChange={setTrialTime} />
+                </View>
               </View>
-              <View style={{ flex: 1 }}>
-                <Text style={s.trialTitle}>Próximo paso: clase de prueba</Text>
-                <Text style={s.trialDesc}>
-                  Si {instructorName} acepta, coordinan entre ustedes una clase de prueba antes de confirmar la incorporación.
-                </Text>
+              <View style={s.paidRow}>
+                <View style={{ flex: 1 }}>
+                  <Text style={s.paidTitle}>La clase de prueba se paga</Text>
+                  <Text style={s.trialDesc}>{trialPaid ? 'Con el mismo monto por clase que ofrecés abajo.' : 'Sin cargo: el monto rige si la sumás como clase regular.'}</Text>
+                </View>
+                <Switch value={trialPaid} onValueChange={setTrialPaid} trackColor={{ false: colors.border, true: colors.sageMid }} thumbColor={trialPaid ? colors.sage : colors.white} />
               </View>
-            </View>
+            </BlobCard>
           </>
         )}
 
@@ -328,8 +351,8 @@ export default function RequestMatchScreen({ navigation, route }: Props) {
           <Feather name="info" size={13} color={colors.sageMid} />
           <Text style={s.privacyTxt}>
             {classType === 'reemplazo'
-              ? 'El instructor va a ver la fecha, el horario, tu oferta y tu nota. Cada propuesta enviada cuenta para el límite mensual de tu plan.'
-              : 'El instructor va a ver los días, el horario, tu oferta por clase y tu nota. Cada propuesta enviada cuenta para el límite mensual de tu plan.'}
+              ? 'El instructor va a ver la fecha, el horario, tu oferta y tu nota. Si acepta, cuenta como un aviso cubierto de tu plan.'
+              : 'El instructor va a ver la entrevista, los días y horarios, tu oferta por clase y tu nota. Si acepta, cuenta como un aviso cubierto de tu plan.'}
           </Text>
         </View>
 
@@ -386,6 +409,8 @@ const s = StyleSheet.create({
   trialInfo:        { flexDirection: 'row', alignItems: 'flex-start', gap: spacing.md, backgroundColor: colors.sageLight, borderTopLeftRadius: 14, borderTopRightRadius: 0, borderBottomLeftRadius: 0, borderBottomRightRadius: 14, padding: spacing.md, marginBottom: spacing.md, borderWidth: 0.5, borderColor: colors.border },
   trialIcon:        { width: 36, height: 36, borderRadius: 18, backgroundColor: colors.white, alignItems: 'center', justifyContent: 'center', flexShrink: 0 },
   trialTitle:       { fontFamily: 'Nunito-Bold', fontSize: 13, color: colors.dark, marginBottom: 4 },
+  paidRow:          { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, marginTop: spacing.md, paddingTop: spacing.sm, borderTopWidth: 0.5, borderTopColor: colors.borderLight },
+  paidTitle:        { fontFamily: 'Nunito-Bold', fontSize: 13, color: colors.dark },
   trialDesc:        { fontFamily: 'Nunito-Regular', fontSize: 12, color: colors.mid, lineHeight: 18 },
 
   textarea:         { backgroundColor: colors.sageLighter, borderTopLeftRadius: 10, borderTopRightRadius: 0, borderBottomLeftRadius: 0, borderBottomRightRadius: 10, padding: spacing.md, fontFamily: 'Nunito-Regular', fontSize: 13, color: colors.dark, minHeight: 72, textAlignVertical: 'top' },

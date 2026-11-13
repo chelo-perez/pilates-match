@@ -1,5 +1,5 @@
 // Centro de notificaciones (campanita): historial de avisos del usuario.
-import React, { useEffect } from 'react'
+import React from 'react'
 import { View, Text, FlatList, TouchableOpacity, StyleSheet, RefreshControl } from 'react-native'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { Feather } from '@expo/vector-icons'
@@ -38,17 +38,21 @@ export default function NotificationsScreen({ navigation }: any) {
     onSuccess: () => qc.invalidateQueries({ queryKey: ['notifications'] }),
   })
 
-  // Al abrir la campanita, lo que se ve queda como leído (el punto se mantiene en esta visita)
-  useEffect(() => {
-    if (unreadIds.length) { const t = setTimeout(() => markRead.mutate(unreadIds), 1500); return () => clearTimeout(t) }
-  }, [unreadIds.join(',')])
+  // Cada aviso queda sin leer hasta que se toca; "Marcar todas" lo hace a mano
 
   if (isLoading) return <LoadingScreen message="Cargando notificaciones..." />
   if (isError) return <ErrorState message="No pudimos cargar tus notificaciones." onRetry={refetch} />
 
   return (
     <View style={{ flex: 1, backgroundColor: colors.cream }}>
-      <HeroHeader title="Notificaciones" subtitle={unreadIds.length ? `${unreadIds.length} sin leer` : 'Estás al día'} onBack={() => navigation.goBack()} />
+      <HeroHeader title="Notificaciones" subtitle={unreadIds.length ? `${unreadIds.length} sin leer` : 'Estás al día'} onBack={() => navigation.goBack()}
+        rightElement={unreadIds.length ? (
+          <TouchableOpacity onPress={() => markRead.mutate(unreadIds)} disabled={markRead.isPending} hitSlop={8}
+            accessibilityRole="button" style={s.allBtn}>
+            <Feather name="check-circle" size={13} color={colors.white} />
+            <Text style={s.allTxt}>Marcar todas como leídas</Text>
+          </TouchableOpacity>
+        ) : undefined} />
       <FlatList
         data={data}
         keyExtractor={(n: any) => n.id}
@@ -86,5 +90,7 @@ const s = StyleSheet.create({
   titleUnread: { fontFamily: 'Nunito-Bold' },
   body:        { fontFamily: 'Nunito-Regular', fontSize: 13, color: colors.mid, lineHeight: 18, marginTop: 2 },
   when:        { fontFamily: 'Nunito-Regular', fontSize: 11, color: colors.light, marginTop: 4 },
+  allBtn:      { flexDirection: 'row', alignItems: 'center', gap: 5, paddingVertical: 5, paddingHorizontal: 10, borderRadius: 999, backgroundColor: 'rgba(255,255,255,0.15)' },
+  allTxt:      { fontFamily: 'Nunito-Bold', fontSize: 11, color: colors.white },
   dot:         { width: 9, height: 9, borderRadius: 5, backgroundColor: colors.gold, marginTop: 6 },
 })

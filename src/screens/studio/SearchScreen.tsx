@@ -99,6 +99,9 @@ export default function SearchScreen({ navigation }: Props) {
   const [publishing, setPublishing] = useState(false)
   const [offer, setOffer] = useState(0)
   const [pubNote, setPubNote] = useState('')
+  // Regular: día y hora de la entrevista con clase de prueba
+  const [trialDate, setTrialDate] = useState(() => { const d = new Date(); d.setDate(d.getDate() + 2); d.setHours(0, 0, 0, 0); return d })
+  const [trialTime, setTrialTime] = useState(() => fromHHMM('10:00'))
   const [busy, setBusy] = useState(false)
   const { data: ranges = [] } = useQuery({
     queryKey: ['rate-ranges'],
@@ -111,11 +114,16 @@ export default function SearchScreen({ navigation }: Props) {
   }
   const publish = async () => {
     if (offer < 1000) { Alert.alert('Indicá cuánto pagás por clase'); return }
+    const isRegular = need.classType === 'regular'
+    const trialStart = new Date(trialDate); trialStart.setHours(trialTime.getHours(), trialTime.getMinutes(), 0, 0)
+    if (isRegular && trialStart.getTime() < Date.now() + 3600_000) { Alert.alert('La entrevista tiene que ser al menos dentro de 1 hora'); return }
     try {
       setBusy(true)
       await publishOpenClass({
-        classType: need.classType, classDate: need.classType === 'reemplazo' ? need.date : toLocalISODate(new Date()),
-        start: need.from, end: need.to, days: need.classType === 'regular' ? need.days : undefined,
+        // Regular: la fecha y hora son las de la entrevista con clase de prueba (1 h)
+        classType: need.classType, classDate: isRegular ? toLocalISODate(trialDate) : need.date,
+        start: isRegular ? toHHMM(trialTime) : need.from, end: isRegular ? toHHMM(new Date(trialTime.getTime() + 3600_000)) : need.to,
+        days: isRegular ? need.days : undefined,
         from: need.classType === 'regular' ? need.from : undefined, to: need.classType === 'regular' ? need.to : undefined,
         offered: offer, note: pubNote.trim() || undefined,
       })
@@ -324,7 +332,7 @@ export default function SearchScreen({ navigation }: Props) {
           <View style={s.sheet}>
             <Text style={s.sheetTitle}>Publicar clase abierta</Text>
             <Text style={s.sheetSub}>
-              Avisamos a los instructores verificados de tu red con zona u horario compatibles. Los que quieran se anotan y vos elegís. Cuenta como una propuesta de tu plan.
+              Avisamos a los instructores verificados de tu red con zona u horario compatibles. Los que quieran se anotan y vos elegís. Cuando elegís a alguien, cuenta como un aviso cubierto de tu plan.
             </Text>
             <Text style={s.offerLabel}>CUÁNTO PAGÁS POR CLASE</Text>
             <View style={s.offerRow}>
@@ -334,6 +342,21 @@ export default function SearchScreen({ navigation }: Props) {
               <TouchableOpacity style={s.offerBtn} onPress={() => setOffer(o => o + 500)}><Feather name="plus" size={18} color={colors.sage} /></TouchableOpacity>
             </View>
             {range ? <Text style={s.offerHint}>Referencia de la red: {money(range.min_ars)} – {money(range.max_ars)}</Text> : null}
+            {need.classType === 'regular' ? (
+              <>
+                <Text style={[s.offerLabel, { marginTop: spacing.md }]}>ENTREVISTA Y CLASE DE PRUEBA EN EL ESTUDIO</Text>
+                <View style={{ flexDirection: 'row', gap: spacing.sm }}>
+                  <View style={{ flex: 1.4 }}>
+                    <PickerField small mode="date" value={trialDate} minimumDate={new Date()}
+                      display={trialDate.toLocaleDateString('es-AR', { weekday: 'short', day: 'numeric', month: 'short' })}
+                      onChange={d => { d.setHours(0, 0, 0, 0); setTrialDate(d) }} />
+                  </View>
+                  <View style={{ flex: 1 }}>
+                    <PickerField small mode="time" minuteInterval={30} value={trialTime} display={toHHMM(trialTime)} onChange={setTrialTime} />
+                  </View>
+                </View>
+              </>
+            ) : null}
             <TextInput style={s.noteInput} placeholder="Nota (opcional): nivel del grupo, cantidad de alumnos..." placeholderTextColor={colors.light}
               value={pubNote} onChangeText={setPubNote} multiline maxLength={300} />
             <Button label="Publicar" onPress={publish} isLoading={busy} fullWidth size="lg" />

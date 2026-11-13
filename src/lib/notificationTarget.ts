@@ -2,6 +2,10 @@
 export function openNotificationTarget(nav: any, role: string | undefined, data: any) {
   const screen = data?.screen ?? (data?.match_id ? 'propuestas' : null)
   if (!nav || !screen) return
+  // Ficha de una clase confirmada (estudio e instructor)
+  if (screen === 'clase' && data?.match_id && (role === 'instructor' || role === 'estudio')) {
+    nav.navigate('ClassDetail', { matchId: data.match_id }); return
+  }
   if (role === 'instructor') {
     if (screen === 'propuestas') nav.navigate('InstructorTabs', { screen: 'InstructorPropuestas' })
     else if (screen === 'clases_abiertas') nav.navigate('OpenClasses')

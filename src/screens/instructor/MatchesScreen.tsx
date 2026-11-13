@@ -18,6 +18,7 @@ import BlobCard from '../../components/BlobCard'
 import HeroHeader, { HeaderPills } from '../../components/HeroHeader'
 import Toast from '../../components/Toast'
 import { useToast } from '../../hooks/useToast'
+import { pendingAction } from '../../lib/matchFlow'
 import StudioRep from '../../components/StudioRep'
 import { Feather } from '@expo/vector-icons'
 
@@ -208,7 +209,7 @@ export default function InstructorMatchesScreen({ navigation }: any) {
           <View style={styles.datetimeItem}>
             <Feather name="calendar" size={13} color={colors.sage} />
             <Text style={styles.datetimeText}>
-              {match.class_type === 'regular' ? 'Desde el ' : ''}{longDate(match.class_date)}
+              {match.class_type === 'regular' ? 'Entrevista: ' : ''}{longDate(match.class_date)}
             </Text>
           </View>
           <View style={styles.datetimeItem}>
@@ -262,22 +263,26 @@ export default function InstructorMatchesScreen({ navigation }: any) {
           </View>
         ) : null}
 
-        {/* Datos de contacto cuando la clase está confirmada */}
-        {accepted && (studio?.address || studio?.phone) ? (
-          <View style={styles.contactBox}>
-            {studio?.address ? (
-              <View style={styles.datetimeItem}>
-                <Feather name="navigation" size={13} color={colors.sage} />
-                <Text style={styles.datetimeText}>{studio.address}</Text>
-              </View>
-            ) : null}
-            {studio?.phone ? (
-              <TouchableOpacity style={styles.datetimeItem} onPress={() => Linking.openURL(`tel:${studio.phone}`)}>
-                <Feather name="phone" size={13} color={colors.sage} />
-                <Text style={[styles.datetimeText, styles.link]}>{studio.phone}</Text>
+        {/* Clase confirmada o cancelada: ficha con contacto, calendario, cancelar y cierre */}
+        {accepted || match.cancelled_at ? (
+          <>
+            {pendingAction(match, 'instructor') ? (
+              <TouchableOpacity style={styles.todo} onPress={() => navigation.navigate('ClassDetail', { matchId: match.id })}>
+                <Feather name="alert-circle" size={14} color={colors.warnTx} />
+                <Text style={styles.todoTxt}>{pendingAction(match, 'instructor')}</Text>
+                <Feather name="chevron-right" size={14} color={colors.warnTx} />
               </TouchableOpacity>
             ) : null}
-          </View>
+            {match.cancelled_at ? (
+              <Text style={styles.noteText}>{match.cancelled_by === 'estudio' ? 'La canceló el estudio' : 'La cancelaste'}{match.cancel_reason ? `: "${match.cancel_reason}"` : ''}</Text>
+            ) : null}
+            {match.hire_status === 'contratado' && !match.ended_at ? (
+              <Text style={[styles.noteText, { color: colors.okTx }]}>✓ Clase regular activa</Text>
+            ) : null}
+            <Button label={match.cancelled_at ? 'Ver detalle' : match.class_type === 'regular' ? 'Ver entrevista' : 'Ver clase, dirección y contacto'}
+              size="sm" onPress={() => navigation.navigate('ClassDetail', { matchId: match.id })}
+              icon={<Feather name="calendar" size={13} color={colors.white} />} style={{ marginTop: spacing.sm, alignSelf: 'flex-start' }} />
+          </>
         ) : null}
 
         {isPending ? (
@@ -417,6 +422,8 @@ export default function InstructorMatchesScreen({ navigation }: any) {
 }
 
 const styles = StyleSheet.create({
+  todo:    { flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: colors.warnBg, borderRadius: 10, paddingVertical: 8, paddingHorizontal: 10, marginTop: spacing.sm },
+  todoTxt: { flex: 1, fontFamily: 'Nunito-Bold', fontSize: 12, color: colors.warnTx },
   container:         { flex: 1, backgroundColor: colors.cream },
   countBadge:        { width: 28, height: 28, borderRadius: 14, backgroundColor: colors.white, alignItems: 'center', justifyContent: 'center' },
   countBadgeTxt:     { fontFamily: 'Nunito-Bold', fontSize: 13, color: colors.sage },
