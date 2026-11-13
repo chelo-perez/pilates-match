@@ -1,4 +1,3 @@
--- PENDIENTE
 -- Después de aceptar: ficha de la clase, recordatorios, cancelar con aviso,
 -- "¿Se dio la clase?" y, para las regulares, entrevista con clase de prueba.
 
