@@ -49,6 +49,9 @@ export default function InstructorProfileScreen({ navigation, route }: Props) {
       <HeroHeader
         title={instructor.full_name}
         subtitle={instructor.neighborhood ?? undefined}
+        centered
+        avatarUri={instructor.avatar_url}
+        avatarFallback={instructor.full_name}
         onBack={() => navigation.goBack()}
         backLabel="Volver"
         rightElement={hasEvaluations ? (

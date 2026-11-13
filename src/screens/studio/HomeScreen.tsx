@@ -5,7 +5,7 @@ import { supabase } from '../../lib/supabase'
 import { confirmSignOut } from '../../lib/auth'
 import { useStudioOpenClasses } from '../../lib/openClasses'
 import { useMyStudio, useStudioStats } from '../../hooks'
-import { Badge, Button, EmptyState, ErrorState, LoadingScreen, colors, spacing, typography } from '../../components/ui'
+import { Avatar, Badge, Button, EmptyState, ErrorState, LoadingScreen, colors, spacing, typography } from '../../components/ui'
 import { planLabel } from '../../constants/plans'
 import { MATCH_STATUS } from '../../constants/labels'
 import { Feather } from '@expo/vector-icons'
@@ -156,9 +156,7 @@ export default function StudioHomeScreen({ navigation }: any) {
               const st = MATCH_STATUS[item.status as keyof typeof MATCH_STATUS]
               return (
                 <View key={item.id} style={s.histRow}>
-                  <View style={s.histAv}>
-                    <Text style={s.histAvTxt}>{item.instructor?.full_name?.[0]?.toUpperCase() ?? '?'}</Text>
-                  </View>
+                  <Avatar name={item.instructor?.full_name ?? '?'} source={item.instructor?.avatar_url} size={36} />
                   <View style={{ flex: 1 }}>
                     <Text style={s.histName}>{item.instructor?.full_name ?? 'Instructor'}</Text>
                     <Text style={s.histMeta}>
@@ -245,8 +243,6 @@ const s = StyleSheet.create({
   sectionLink:    { fontFamily: 'Nunito-Bold', fontSize: 12, color: colors.sage },
 
   histRow:        { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, paddingVertical: spacing.sm, borderBottomWidth: 0.5, borderColor: colors.borderLight },
-  histAv:         { width: 38, height: 38, borderRadius: 19, backgroundColor: colors.sageLight, alignItems: 'center', justifyContent: 'center' },
-  histAvTxt:      { fontFamily: 'Nunito-Bold', fontSize: 15, color: colors.sage },
   histName:       { fontFamily: 'Nunito-Bold', fontSize: 13, color: colors.dark },
   histMeta:       { fontFamily: 'Nunito-Regular', fontSize: 11, color: colors.light, marginTop: 1 },
 })
