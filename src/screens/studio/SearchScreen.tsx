@@ -15,6 +15,7 @@ import HeroHeader from '../../components/HeroHeader'
 import type { NativeStackScreenProps } from '@react-navigation/native-stack'
 import { entity } from '../../lib/entity'
 import { publishOpenClass, money } from '../../lib/openClasses'
+import { BARRIOS_CABA } from '../../constants/barrios'
 import { errorText } from '../../lib/errors'
 import { Button } from '../../components/ui'
 
@@ -44,7 +45,10 @@ export default function SearchScreen({ navigation }: Props) {
   const [search, setSearch] = useState('')
   const [showAll, setShowAll] = useState(false)
 
-  const profileComplete = (studio?.equipment?.length ?? 0) > 0 && !!studio?.neighborhood
+  // El match por zona compara el barrio del estudio con los de cada instructor: tiene que ser un barrio real
+  const validBarrio = !!studio?.neighborhood && BARRIOS_CABA.includes(studio.neighborhood)
+  const hasEquipment = (studio?.equipment?.length ?? 0) > 0
+  const profileComplete = hasEquipment && validBarrio
 
   // La clase que necesita cubrir: el match se calcula en el servidor para ESA clase
   const need = useSearchNeed(st => st.need)
@@ -171,8 +175,14 @@ export default function SearchScreen({ navigation }: Props) {
         >
           <Feather name="alert-circle" size={16} color={colors.warnTx} />
           <View style={{ flex: 1 }}>
-            <Text style={s.incompleteTxt}>Cargá el equipamiento de tu estudio para ver la compatibilidad</Text>
-            <Text style={s.incompleteHint}>Cargá tu equipamiento y cuánto pagás por clase</Text>
+            <Text style={s.incompleteTxt}>
+              {!validBarrio ? 'Elegí el barrio de tu estudio para ver la compatibilidad' : 'Cargá el equipamiento de tu estudio para ver la compatibilidad'}
+            </Text>
+            <Text style={s.incompleteHint}>
+              {!validBarrio
+                ? `Sin barrio no sabemos qué instructores trabajan en tu zona${studio?.neighborhood ? ` (hoy dice "${studio.neighborhood}")` : ''}`
+                : 'Con tu equipamiento te mostramos primero a quienes saben usarlo'}
+            </Text>
           </View>
           <Feather name="chevron-right" size={16} color={colors.warnTx} />
         </TouchableOpacity>

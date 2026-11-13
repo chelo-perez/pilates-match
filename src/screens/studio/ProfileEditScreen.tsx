@@ -9,7 +9,7 @@ import { useAuthStore } from '../../store'
 import { useMyStudio } from '../../hooks'
 import { LoadingScreen, colors, spacing, typography } from '../../components/ui'
 import { SPECIALTY_LABELS } from '../../constants/labels'
-import { humanizeError } from '../../lib/errors'
+import { humanizeError, UserError } from '../../lib/errors'
 import { Feather } from '@expo/vector-icons'
 import BlobCard from '../../components/BlobCard'
 import HeroHeader from '../../components/HeroHeader'
@@ -17,6 +17,8 @@ import SaveButton from '../../components/SaveButton'
 import Toast from '../../components/Toast'
 import { useToast } from '../../hooks/useToast'
 import DeleteAccount from '../../components/DeleteAccount'
+import BarrioSelect from '../../components/BarrioSelect'
+import { BARRIOS_CABA } from '../../constants/barrios'
 
 // Deben coincidir con el enum specialty para poder compararse con los instructores
 const EQUIPMENT_OPTIONS = [
@@ -36,6 +38,7 @@ export default function StudioProfileEditScreen({ navigation }: any) {
   const qc   = useQueryClient()
   const { toast, showToast, hideToast } = useToast()
 
+  const [barrio,     setBarrio]     = useState('')
   const [bio,        setBio]        = useState('')
   const [phone,      setPhone]      = useState('')
   const [instagram,  setInstagram]  = useState('')
@@ -46,6 +49,8 @@ export default function StudioProfileEditScreen({ navigation }: any) {
 
   useEffect(() => {
     if (!studio) return
+    // Solo barrios reales: las cuentas viejas tienen "Buenos Aires" y hay que elegirlo de nuevo
+    setBarrio(BARRIOS_CABA.includes(studio.neighborhood ?? '') ? studio.neighborhood! : '')
     setBio(studio.bio ?? '')
     setPhone(studio.phone ?? '')
     setInstagram(studio.instagram ?? '')
@@ -84,7 +89,9 @@ export default function StudioProfileEditScreen({ navigation }: any) {
 
   const saveMutation = useMutation({
     mutationFn: async () => {
+      if (!barrio) throw new UserError('Elegí el barrio de tu estudio')
       const { error } = await supabase.from('studios').update({
+        neighborhood:       barrio,
         bio:                bio.trim() || null,
         phone:              phone.trim() || null,
         instagram:          instagram.trim() || null,
@@ -97,6 +104,7 @@ export default function StudioProfileEditScreen({ navigation }: any) {
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['my-studio'] })
       qc.invalidateQueries({ queryKey: ['instructor-match'] })
+      qc.invalidateQueries({ queryKey: ['studio'] })
       showToast('Perfil guardado')
     },
     onError: (e: any) => showToast(humanizeError(e), 'error'),
@@ -154,6 +162,20 @@ export default function StudioProfileEditScreen({ navigation }: any) {
           </View>
         </BlobCard>
 
+        {/* Barrio — clave para el match por zona */}
+        <BlobCard style={s.card} delay={1000}>
+          <View style={s.sectionHeader}>
+            <Text style={s.sectionTitle}>UBICACIÓN</Text>
+            <View style={s.matchTag}>
+              <Feather name="zap" size={10} color={colors.sage} />
+              <Text style={s.matchTagTxt}>Afecta el match</Text>
+            </View>
+          </View>
+          <Text style={s.hint}>Te mostramos primero a quienes trabajan en tu barrio.</Text>
+          <BarrioSelect value={barrio} onChange={setBarrio} label="BARRIO DEL ESTUDIO"
+            error={!barrio && studio?.neighborhood ? `"${studio.neighborhood}" no es un barrio: elegilo de la lista` : undefined} />
+        </BlobCard>
+
         {/* Equipamiento — clave para el match */}
         <BlobCard style={s.card} delay={2000}>
           <View style={s.sectionHeader}>
@@ -189,12 +211,8 @@ export default function StudioProfileEditScreen({ navigation }: any) {
         <BlobCard style={s.card} delay={4000}>
           <View style={s.sectionHeader}>
             <Text style={s.sectionTitle}>PRESUPUESTO POR CLASE</Text>
-            <View style={s.matchTag}>
-              <Feather name="zap" size={10} color={colors.sage} />
-              <Text style={s.matchTagTxt}>Afecta el match</Text>
-            </View>
           </View>
-          <Text style={s.hint}>Cuánto pagás como máximo por clase. Te mostramos primero a quienes cobran dentro de ese monto.</Text>
+          <Text style={s.hint}>Cuánto pagás por clase. Lo usamos como monto sugerido cuando hacés una propuesta o publicás una clase abierta; siempre lo podés cambiar.</Text>
 
           <View style={s.rowFields}>
             <View style={{ flex: 1 }}>
