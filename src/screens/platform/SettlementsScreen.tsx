@@ -7,7 +7,8 @@ import { useQueryClient } from '@tanstack/react-query'
 import { Feather } from '@expo/vector-icons'
 import { errorText } from '../../lib/errors'
 import { formatARS } from '../../lib/payments'
-import { INVOICE_STATUS, Invoice, isoMonth, monthLabel, monthStart, rpc, SETTLEMENT_STATUS, Settlement, useInvoices, useSettlements } from '../../lib/platform'
+import { PLACEMENT_STATUS, refundPlacement } from '../../lib/matchFlow'
+import { INVOICE_STATUS, Invoice, usePlacements, isoMonth, monthLabel, monthStart, rpc, SETTLEMENT_STATUS, Settlement, useInvoices, useSettlements } from '../../lib/platform'
 import HeroHeader from '../../components/HeroHeader'
 import { Button, EmptyState, Input, colors, spacing, radius, typography } from '../../components/ui'
 
@@ -18,6 +19,13 @@ export default function PlatformSettlementsScreen() {
   const period = isoMonth(d)
   const { data: list = [], isFetching } = useSettlements(period)
   const { data: invoices = [] } = useInvoices(period)
+  const { data: placements = [] } = usePlacements(period)
+  const placementIncome = placements.filter(p => p.placement_status === 'cobrado' && p.placement_via !== 'credito').reduce((a, p) => a + Number(p.placement_fee_ars), 0)
+  const refund = async (id: string) => {
+    try { setBusy(true); await refundPlacement(id); qc.invalidateQueries({ queryKey: ['placements'] }) }
+    catch (e) { Alert.alert('No pudimos devolver', errorText(e)) }
+    finally { setBusy(false) }
+  }
   const [paying, setPaying] = useState<Settlement | null>(null)
   const [ref, setRef] = useState('')
   const [busy, setBusy] = useState(false)
@@ -76,7 +84,7 @@ export default function PlatformSettlementsScreen() {
       />
       <ScrollView contentContainerStyle={s.content}>
         <View style={s.kpis}>
-          <KPI n={formatARS(invoiced + collected - shares)} l="Ingreso de la plataforma" />
+          <KPI n={formatARS(invoiced + collected - shares + placementIncome)} l="Ingreso de la plataforma" />
           <KPI n={formatARS(toCollect)} l="Falta cobrar a entidades" warn={toCollect > 0} />
           <KPI n={formatARS(owed)} l="Falta pagar a entidades" warn={owed > 0} />
         </View>
@@ -107,8 +115,22 @@ export default function PlatformSettlementsScreen() {
           )
         })}
 
+        {placements.length ? <Text style={s.section}>CARGOS DE INCORPORACIÓN</Text> : null}
+        {placements.map(p => (
+          <View key={p.id} style={s.card}>
+            <View style={s.head}>
+              <Text style={s.name} numberOfLines={2}>{p.studio?.name ?? 'Estudio'} → {p.instructor?.full_name ?? 'Instructor'}</Text>
+              <Text style={[s.rowV, { fontFamily: 'Nunito-Bold' }]}>{formatARS(Number(p.placement_fee_ars))}</Text>
+            </View>
+            <Row l={p.camara?.name ?? 'Red'} v={(PLACEMENT_STATUS[p.placement_status] ?? p.placement_status) + (p.placement_via === 'credito' ? ' (crédito)' : '')} />
+            {p.placement_status === 'a_devolver' ? (
+              <Button label="Devolver en Mercado Pago" variant="secondary" onPress={() => refund(p.id)} isLoading={busy} fullWidth style={{ marginTop: spacing.sm }} />
+            ) : null}
+          </View>
+        ))}
+
         {list.length ? <Text style={s.section}>SUSCRIPCIONES · LIQUIDACIONES</Text> : null}
-        {list.length === 0 && invoices.length === 0 ? (
+        {list.length === 0 && invoices.length === 0 && placements.length === 0 ? (
           <EmptyState icon="file-text" title="Sin cierre para este mes" message="Se calcula solo el día 1 de cada mes. También podés calcularlo ahora." />
         ) : list.map(st => {
           const b = SETTLEMENT_STATUS[st.status]

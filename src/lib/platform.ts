@@ -117,6 +117,21 @@ export const useInvoices = (period?: string) =>
     },
   })
 
+/** Cargos de incorporación pagados en un mes (plataforma) */
+export const usePlacements = (period: string) =>
+  useQuery({
+    queryKey: ['placements', period],
+    queryFn: async () => {
+      const start = new Date(period + 'T00:00:00'); const end = new Date(start); end.setMonth(end.getMonth() + 1)
+      const { data, error } = await supabase.from('matches')
+        .select('id, placement_fee_ars, placement_status, placement_via, placement_paid_at, studio:studios(name), instructor:instructors(full_name), camara:camaras(name)')
+        .not('placement_paid_at', 'is', null).gte('placement_paid_at', start.toISOString()).lt('placement_paid_at', end.toISOString())
+        .order('placement_paid_at', { ascending: false })
+      if (error) return []
+      return (data ?? []) as any[]
+    },
+  })
+
 export async function rpc(fn: string, args: Record<string, unknown>) {
   const { error } = await supabase.rpc(fn, args)
   if (error) throw error

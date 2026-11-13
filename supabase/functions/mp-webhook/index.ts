@@ -82,7 +82,15 @@ Deno.serve(async (req) => {
   }
 
   try {
-    if (type === 'subscription_preapproval' || type === 'preapproval') {
+    if (type === 'payment') {
+      // Pago único: cargo de incorporación de una clase regular
+      const pay = await mp(`/v1/payments/${rawId}`)
+      const ref = String(pay?.external_reference ?? '')
+      if (pay?.status === 'approved' && ref.startsWith('placement:')) {
+        const { error } = await admin.rpc('placement_paid', { p_match: ref.slice(10), p_payment_id: String(pay.id), p_amount: Number(pay.transaction_amount) })
+        if (error) throw error
+      }
+    } else if (type === 'subscription_preapproval' || type === 'preapproval') {
       await syncPreapproval(rawId)
     } else if (type === 'subscription_authorized_payment') {
       const ap = await mp(`/authorized_payments/${rawId}`)

@@ -1,6 +1,8 @@
-// Edge Function: el estudio se suscribe o cancela su plan con Mercado Pago.
-//   POST { action: 'subscribe', plan: 'starter'|'premium', payer_email }  -> { init_point }
-//   POST { action: 'cancel' }                                            -> { ok }
+// Edge Function: cobros con Mercado Pago (cuenta de la plataforma).
+//   POST { action: 'subscribe', plan: 'starter'|'premium', payer_email }  -> { init_point }   (estudio)
+//   POST { action: 'cancel' }                                            -> { ok }           (estudio)
+//   POST { action: 'placement_pay', match_id }                           -> { init_point }   (estudio: cargo de incorporación)
+//   POST { action: 'placement_refund', match_id }                        -> { ok }           (plataforma: devolver el cargo)
 // El precio depende de la Cámara del estudio. Cobra la cuenta de Mercado Pago de la plataforma.
 // Secretos: MP_ACCESS_TOKEN.
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.45.4'
@@ -26,13 +28,52 @@ Deno.serve(async (req) => {
     const { data: { user } } = await admin.auth.getUser(jwt)
     if (!user) return json({ error: 'Sesión vencida. Volvé a entrar.' }, 401)
 
-    const { data: studio } = await admin.from('studios').select('id, name, camara_id').eq('user_id', user.id).maybeSingle()
-    if (!studio) return json({ error: 'Solo los estudios pueden suscribirse.' }, 403)
-
     const body = await req.json().catch(() => ({}))
     const mp = (path: string, init: RequestInit = {}) => fetch(MP + path, {
       ...init, headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json', ...(init.headers ?? {}) },
     })
+
+    // ── Plataforma: devolver un cargo de incorporación ──
+    if (body.action === 'placement_refund') {
+      const { data: me } = await admin.from('users').select('role').eq('id', user.id).maybeSingle()
+      if (me?.role !== 'super_admin') return json({ error: 'Solo la plataforma puede devolver pagos.' }, 403)
+      const { data: m } = await admin.from('matches').select('id, placement_status, placement_payment_id').eq('id', body.match_id).maybeSingle()
+      if (!m || m.placement_status !== 'a_devolver' || !m.placement_payment_id) return json({ error: 'Este cargo no está para devolver.' }, 409)
+      const r = await mp(`/v1/payments/${m.placement_payment_id}/refunds`, {
+        method: 'POST', body: '{}', headers: { 'X-Idempotency-Key': `refund-${m.id}` },
+      })
+      if (!r.ok) { console.error('refund', r.status, await r.text()); return json({ error: 'Mercado Pago no pudo hacer la devolución. Probá de nuevo.' }, 502) }
+      await admin.rpc('placement_refunded', { p_match: m.id })
+      return json({ ok: true })
+    }
+
+    const { data: studio } = await admin.from('studios').select('id, name, camara_id').eq('user_id', user.id).maybeSingle()
+    if (!studio) return json({ error: 'Solo los estudios pueden pagar.' }, 403)
+
+    // ── Estudio: pagar el cargo de incorporación para confirmar la entrevista ──
+    if (body.action === 'placement_pay') {
+      const { data: m } = await admin.from('matches')
+        .select('id, studio_id, placement_status, placement_fee_ars, placement_deadline, instructor:instructors(full_name)')
+        .eq('id', body.match_id).maybeSingle()
+      if (!m || m.studio_id !== studio.id) return json({ error: 'No encontramos esta entrevista.' }, 404)
+      if (m.placement_status !== 'pendiente_pago') return json({ error: 'Esta entrevista no tiene un pago pendiente.' }, 409)
+      const name = (m as any).instructor?.full_name ?? 'instructor'
+      const r = await mp('/checkout/preferences', {
+        method: 'POST',
+        body: JSON.stringify({
+          items: [{ id: m.id, title: `Cargo de incorporación · ${name}`, quantity: 1, unit_price: m.placement_fee_ars, currency_id: 'ARS' }],
+          external_reference: `placement:${m.id}`,
+          notification_url: `${url}/functions/v1/mp-webhook`,
+          back_urls: { success: `${url}/functions/v1/mp-webhook?volver=1`, pending: `${url}/functions/v1/mp-webhook?volver=1`, failure: `${url}/functions/v1/mp-webhook?volver=1` },
+          auto_return: 'approved',
+          statement_descriptor: 'TRABAJOMASFACIL',
+          ...(m.placement_deadline ? { expires: true, date_of_expiration: m.placement_deadline } : {}),
+        }),
+      })
+      const pref = await r.json()
+      if (!r.ok || !pref.init_point) { console.error('preference', r.status, JSON.stringify(pref)); return json({ error: 'Mercado Pago no pudo iniciar el pago. Probá de nuevo.' }, 502) }
+      return json({ init_point: pref.init_point })
+    }
 
     if (body.action === 'cancel') {
       const { data: subs } = await admin.from('subscriptions').select('id')

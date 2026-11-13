@@ -60,6 +60,9 @@ export interface CamaraContact {
   phone: string | null
   /** 'per_member': la entidad paga la app por sus socios; los planes pagos solo son upgrade */
   billing_model: 'subscriptions' | 'per_member'
+  /** Cargo de incorporación de clases regulares */
+  placement_enabled: boolean
+  placement_max_blocks: number
 }
 
 /** Cuota del mes: avisos cubiertos, lo que está en curso y el lugar que queda */
@@ -81,19 +84,21 @@ export const useCamaraContact = (camaraId: string | null | undefined) =>
     queryFn: async (): Promise<CamaraContact> => {
       const { data, error } = await supabase
         .from('camaras')
-        .select('name, contact_email, contact_phone, phone, billing_model')
+        .select('name, contact_email, contact_phone, phone, billing_model, placement_enabled, placement_max_blocks')
         .eq('id', camaraId!)
         .maybeSingle()
       if (error) {
         // Si no se puede leer, se usa el contacto general (no bloquea la pantalla)
         console.warn('useCamaraContact', error)
-        return { name: null, email: null, phone: null, billing_model: 'subscriptions' }
+        return { name: null, email: null, phone: null, billing_model: 'subscriptions', placement_enabled: false, placement_max_blocks: 2 }
       }
       return {
         name: data?.name ?? null,
         email: data?.contact_email ?? null,
         phone: data?.contact_phone ?? data?.phone ?? null,
         billing_model: data?.billing_model === 'per_member' ? 'per_member' : 'subscriptions',
+        placement_enabled: !!data?.placement_enabled,
+        placement_max_blocks: Number(data?.placement_max_blocks ?? 2),
       }
     },
     enabled: !!camaraId,

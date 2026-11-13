@@ -5,7 +5,7 @@ import {
   KeyboardAvoidingView, Platform, TextInput, Switch
 } from 'react-native'
 import PickerField from '../../components/PickerField'
-import { useSearchNeed, parseLocal, fromHHMM } from '../../store/searchNeed'
+import { useSearchNeed, parseLocal, fromHHMM, shiftStart } from '../../store/searchNeed'
 import { useQuery } from '@tanstack/react-query'
 import { useCanMatch, useCreateMatch, useInstructor, useMyStudio } from '../../hooks'
 import { supabase } from '../../lib/supabase'
@@ -17,7 +17,8 @@ import BlobCard from '../../components/BlobCard'
 import HeroHeader from '../../components/HeroHeader'
 import Toast from '../../components/Toast'
 import { useToast } from '../../hooks/useToast'
-import { availabilityCovers, DAY_BY_JS_INDEX, nextDateForDays } from './studioQueries'
+import { availabilityCovers, DAY_BY_JS_INDEX, useCamaraContact } from './studioQueries'
+import { placementFee } from '../../lib/matchFlow'
 import type { NativeStackScreenProps } from '@react-navigation/native-stack'
 
 type Props = NativeStackScreenProps<any, 'RequestMatch'>
@@ -61,6 +62,8 @@ export default function RequestMatchScreen({ navigation, route }: Props) {
   const [trialDate, setTrialDate] = useState(() => { const d = new Date(); d.setDate(d.getDate() + 2); d.setHours(0, 0, 0, 0); return d })
   const [trialTime, setTrialTime] = useState(() => fromHHMM(need.from))
   const [trialPaid, setTrialPaid] = useState(false)
+  const { data: network } = useCamaraContact((studio as any)?.camara_id)
+  const credits = Number((studio as any)?.placement_credits ?? 0)
 
   const [note, setNote] = useState('')
 
@@ -213,7 +216,7 @@ export default function RequestMatchScreen({ navigation, route }: Props) {
               <View style={s.franjaRow}>
                 <View style={{ flex: 1 }}>
                   <Text style={s.franjaLbl}>Desde</Text>
-                  <PickerField small value={startTime} mode="time" display={toHHMM(startTime)} minuteInterval={30} onChange={setStartTime} />
+                  <PickerField small value={startTime} mode="time" display={toHHMM(startTime)} minuteInterval={30} onChange={d => { setEndTime(shiftStart(d, startTime, endTime)); setStartTime(d) }} />
                 </View>
                 <View style={s.franjaArrow}><Feather name="arrow-right" size={18} color={colors.sage} /></View>
                 <View style={{ flex: 1 }}>
@@ -254,7 +257,7 @@ export default function RequestMatchScreen({ navigation, route }: Props) {
               <View style={s.franjaRow}>
                 <View style={{ flex: 1 }}>
                   <Text style={s.franjaLbl}>De</Text>
-                  <PickerField small value={scheduleFrom} mode="time" display={toHHMM(scheduleFrom)} minuteInterval={30} onChange={setScheduleFrom} />
+                  <PickerField small value={scheduleFrom} mode="time" display={toHHMM(scheduleFrom)} minuteInterval={30} onChange={d => { setScheduleTo(shiftStart(d, scheduleFrom, scheduleTo)); setScheduleFrom(d) }} />
                 </View>
                 <View style={s.franjaArrow}><Feather name="arrow-right" size={18} color={colors.sage} /></View>
                 <View style={{ flex: 1 }}>
@@ -324,6 +327,16 @@ export default function RequestMatchScreen({ navigation, route }: Props) {
             <Text style={s.offerHint}>
               Referencia de la red para {classType === 'regular' ? 'clase regular' : 'reemplazo'}: {money(range.min_ars)} – {money(range.max_ars)}
             </Text>
+          ) : null}
+          {classType === 'regular' && network?.placement_enabled && offer > 0 ? (
+            <View style={s.feeBox}>
+              <Text style={s.feeTitle}>
+                Cargo de incorporación: {credits > 0 ? 'sin cargo (usás tu crédito)' : money(placementFee(selectedDays.length, offer, network.placement_max_blocks))}
+              </Text>
+              <Text style={s.feeTxt}>
+                Un bloque de 4 clases por cada día que sumás, hasta {network.placement_max_blocks}. Lo pagás cuando {instructorName} acepta, antes de la clase de prueba. Si {instructorName} no sigue, te lo devolvemos; si vos no seguís, queda como crédito para otra búsqueda.
+              </Text>
+            </View>
           ) : null}
           {classType === 'reemplazo' && hours > 1 && offer > 0 ? (
             <Text style={s.offerTotal}>Total del bloque: {money(offer * hours)} ({hours} clases × {money(offer)})</Text>
@@ -412,6 +425,9 @@ const s = StyleSheet.create({
   trialInfo:        { flexDirection: 'row', alignItems: 'flex-start', gap: spacing.md, backgroundColor: colors.sageLight, borderTopLeftRadius: 14, borderTopRightRadius: 0, borderBottomLeftRadius: 0, borderBottomRightRadius: 14, padding: spacing.md, marginBottom: spacing.md, borderWidth: 0.5, borderColor: colors.border },
   trialIcon:        { width: 36, height: 36, borderRadius: 18, backgroundColor: colors.white, alignItems: 'center', justifyContent: 'center', flexShrink: 0 },
   trialTitle:       { fontFamily: 'Nunito-Bold', fontSize: 13, color: colors.dark, marginBottom: 4 },
+  feeBox:           { marginTop: spacing.sm, padding: spacing.sm, borderRadius: 10, backgroundColor: colors.sageLighter, gap: 3 },
+  feeTitle:         { fontFamily: 'Nunito-Bold', fontSize: 13, color: colors.sage },
+  feeTxt:           { fontFamily: 'Nunito-Regular', fontSize: 11, lineHeight: 16, color: colors.mid },
   offerTotal:       { fontFamily: 'Nunito-Bold', fontSize: 13, color: colors.sage, marginTop: spacing.sm },
   paidRow:          { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, marginTop: spacing.md, paddingTop: spacing.sm, borderTopWidth: 0.5, borderTopColor: colors.borderLight },
   paidTitle:        { fontFamily: 'Nunito-Bold', fontSize: 13, color: colors.dark },

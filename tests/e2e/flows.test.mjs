@@ -315,9 +315,17 @@ test('clase confirmada: nadie cambia el cierre a mano, el contacto aparece y el 
   const hack = await S.instructor.c.from('matches').update({ hire_status: 'contratado', held_instructor: true }).eq('id', S.matchId).select('hire_status')
   assert.ok(hack.error || !(hack.data ?? []).some(r => r.hire_status === 'contratado'), 'no puede marcarse contratado')
 
-  // Contacto solo con la clase confirmada: el estudio ve el teléfono del instructor
-  const contact = ok(await S.studio.c.rpc('match_contact', { p_match: S.matchId }), 'contacto')
-  assert.ok(contact && 'phone' in contact)
+  // Entrevista regular aceptada: cargo de incorporación = 1 bloque de 4 clases por día (2 días, tope 2) al monto acordado
+  const pl = ok(await S.studio.c.from('matches').select('placement_status, placement_fee_ars, placement_deadline').eq('id', S.matchId).single(), 'cargo')
+  assert.equal(pl.placement_status, 'pendiente_pago')
+  assert.equal(pl.placement_fee_ars, 2 * 4 * 20000)
+  assert.ok(pl.placement_deadline)
+  // Sin pagar, ninguno de los dos ve el contacto del otro
+  assert.equal(ok(await S.studio.c.rpc('match_contact', { p_match: S.matchId }), 'contacto estudio'), null)
+  assert.equal(ok(await S.instructor.c.rpc('match_contact', { p_match: S.matchId }), 'contacto instructor'), null)
+  // Nadie se marca el pago a mano
+  const fake = await S.studio.c.from('matches').update({ placement_status: 'pagado' }).eq('id', S.matchId).select('placement_status')
+  assert.ok(fake.error || !(fake.data ?? []).some(r => r.placement_status === 'pagado'))
 
   // Todavía no empezó: no se puede confirmar si se dio
   const early = await S.studio.c.rpc('confirm_class_held', { p_match: S.matchId, p_held: true })
@@ -328,8 +336,8 @@ test('clase confirmada: nadie cambia el cierre a mano, el contacto aparece y el 
   assert.match(noReason.error?.message ?? '', /motivo/)
   const before = ok(await S.studio.c.from('memberships').select('matches_used_month').eq('studio_id', S.studio.id).single(), 'cuota antes')
   ok(await S.instructor.c.rpc('cancel_confirmed_match', { p_match: S.matchId, p_reason: 'Me enfermé' }), 'cancelar')
-  const m = ok(await S.studio.c.from('matches').select('status, cancelled_by, cancel_reason, late_cancel').eq('id', S.matchId).single(), 'leer')
-  assert.deepEqual(m, { status: 'cancelado', cancelled_by: 'instructor', cancel_reason: 'Me enfermé', late_cancel: false })
+  const m = ok(await S.studio.c.from('matches').select('status, cancelled_by, cancel_reason, late_cancel, placement_status').eq('id', S.matchId).single(), 'leer')
+  assert.deepEqual(m, { status: 'cancelado', cancelled_by: 'instructor', cancel_reason: 'Me enfermé', late_cancel: false, placement_status: 'anulado' })
   const after = ok(await S.studio.c.from('memberships').select('matches_used_month').eq('studio_id', S.studio.id).single(), 'cuota después')
   assert.equal(after.matches_used_month, before.matches_used_month - 1, 'el estudio recupera el aviso')
 

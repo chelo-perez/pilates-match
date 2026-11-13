@@ -43,6 +43,7 @@ export default function PlatformCamaraEditScreen({ navigation, route }: any) {
     name: '', entity_type: 'Cámara', entity_article: 'la' as 'la' | 'el', sector: '', business_label: '', instructor_label: '', pct: '25', cuit: '', email: '', active: true,
     starter: '', premium: '',
     billing_model: 'subscriptions' as 'subscriptions' | 'per_member', min_members: '0', price_index: 'fixed' as 'fixed' | 'avg_hour',
+    placement_enabled: true, placement_max: '2',
   })
   const { data: preview } = useBillingPreview(camaraId)
   // Co-marca
@@ -74,6 +75,7 @@ export default function PlatformCamaraEditScreen({ navigation, route }: any) {
       email: camara.contact_email ?? '', active: camara.is_active,
       billing_model: camara.billing_model === 'per_member' ? 'per_member' : 'subscriptions', min_members: String(camara.min_billable_members ?? 0),
       price_index: camara.price_index === 'avg_hour' ? 'avg_hour' : 'fixed',
+      placement_enabled: (camara as any).placement_enabled ?? true, placement_max: String((camara as any).placement_max_blocks ?? 2),
     }))
     const b: any = (camara as any).brand ?? {}
     setBrand({ enabled: !!b.enabled, short_name: b.short_name ?? '', colors: b.colors ?? {}, fonts: b.fonts ?? {}, logos: b.logos ?? {} })
@@ -117,6 +119,7 @@ export default function PlatformCamaraEditScreen({ navigation, route }: any) {
         instructor_label: f.instructor_label.trim() || 'Instructor/a', revenue_share_pct: pct,
         cuit: f.cuit.trim() || null, contact_email: f.email.trim().toLowerCase() || null, is_active: f.active,
         billing_model: f.billing_model, min_billable_members: Math.max(0, parseInt(digits(f.min_members), 10) || 0), price_index: f.price_index,
+        placement_enabled: f.placement_enabled, placement_max_blocks: Math.min(7, Math.max(1, parseInt(digits(f.placement_max), 10) || 2)),
         brand: brandOut,
       }
       let id = camaraId
@@ -272,6 +275,21 @@ export default function PlatformCamaraEditScreen({ navigation, route }: any) {
                 <Input label="PREMIUM (SIN LÍMITE) — ARS" value={f.premium} onChangeText={set('premium')} keyboardType="number-pad" placeholder="Ej: 30000" />
               </>
             )}
+          </View>
+
+          <View style={s.card}>
+            <Text style={s.caption}>CLASES REGULARES: CARGO DE INCORPORACIÓN</Text>
+            <View style={s.switchRow}>
+              <Text style={s.switchTxt}>Cobrar al incorporar una profe</Text>
+              <Switch value={f.placement_enabled} onValueChange={set('placement_enabled')} trackColor={{ true: colors.sage, false: colors.border }} thumbColor={colors.white} />
+            </View>
+            <Text style={s.hint}>
+              El estudio paga 1 bloque de 4 clases (al monto acordado) por cada día de la semana que suma, antes de la clase de prueba.
+              Si los dos siguen, se cobra; si la profe no sigue, se devuelve; si el estudio no sigue, queda como crédito.
+            </Text>
+            {f.placement_enabled ? (
+              <Input label="MÁXIMO DE BLOQUES" value={f.placement_max} onChangeText={set('placement_max')} keyboardType="number-pad" placeholder="2" />
+            ) : null}
           </View>
 
           <View style={s.card}>

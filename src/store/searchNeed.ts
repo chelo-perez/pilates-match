@@ -15,7 +15,7 @@ const iso = (d: Date) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart
 
 interface State { need: ClassNeed; set: (n: Partial<ClassNeed>) => void }
 export const useSearchNeed = create<State>()(set => ({
-  need: { classType: 'reemplazo', date: iso(tomorrow()), days: ['lunes', 'miercoles'], from: '18:00', to: '19:00' },
+  need: { classType: 'reemplazo', date: iso(tomorrow()), days: ['lunes', 'miercoles'], from: '09:00', to: '13:00' }, // bloque habitual: 4 clases
   set: n => set(s => ({ need: { ...s.need, ...n } })),
 }))
 
@@ -25,3 +25,11 @@ export const DAY_SHORT: Record<string, string> = { lunes: 'Lun', martes: 'Mar', 
 export const needDays = (n: ClassNeed) => n.classType === 'reemplazo' ? [DAY_BY_JS_INDEX[new Date(n.date + 'T12:00:00').getDay()]] : n.days
 export const parseLocal = (isoDate: string) => new Date(isoDate + 'T12:00:00')
 export const fromHHMM = (hhmm: string) => { const [h, m] = hhmm.split(':').map(Number); const d = new Date(); d.setHours(h, m, 0, 0); return d }
+
+/** Corre el inicio manteniendo la duración (por defecto, el bloque de 4 clases) */
+export function shiftStart(newFrom: Date, oldFrom: Date, oldTo: Date) {
+  const span = oldTo.getTime() - oldFrom.getTime()
+  const to = new Date(newFrom.getTime() + (span > 0 ? span : 4 * 3600_000))
+  if (to.getDate() !== newFrom.getDate()) to.setHours(23, 30, 0, 0)
+  return to
+}

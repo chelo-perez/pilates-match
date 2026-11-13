@@ -9,9 +9,10 @@ import { Feather } from '@expo/vector-icons'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { useAuthStore } from '../../store'
 import { errorText } from '../../lib/errors'
+import { IN_APP_PAYMENTS } from '../../lib/payments'
 import { DAYS_SHORT, publishOpenClass, money } from '../../lib/openClasses'
 import {
-  addToCalendar, cancelConfirmed, matchEnd, confirmHeld, decideHire, endRegular, isConfirmed, matchStart, MATCH_KEYS,
+  addToCalendar, awaitingPayment, cancelConfirmed, instructorDecide, matchEnd, payPlacement, PLACEMENT_STATUS, confirmHeld, decideHire, endRegular, isConfirmed, matchStart, MATCH_KEYS,
   openCall, openMaps, openWhatsApp, phaseOf, useEvaluated, useMatchContact, useMatchDetail, waNumber,
 } from '../../lib/matchFlow'
 import HeroHeader from '../../components/HeroHeader'
@@ -55,6 +56,7 @@ export default function ClassDetailScreen({ navigation, route }: any) {
   const [busy, setBusy] = useState<string | null>(null)
   const [cancelOpen, setCancelOpen] = useState<'cancel' | 'end' | null>(null)
   const [reason, setReason] = useState('')
+  const [declining, setDeclining] = useState(false)
 
   if (isLoading) return <LoadingScreen />
   if (!m) return <EmptyState icon="calendar" title="No encontramos esta clase" action="Volver" onAction={() => navigation.goBack()} />
@@ -71,6 +73,9 @@ export default function ClassDetailScreen({ navigation, route }: any) {
   const schedule = scheduleDays.length ? `${scheduleDays.map(d => DAYS_SHORT[d] ?? d).join(', ')} · ${hhmm(m.schedule_from)}–${hhmm(m.schedule_to)}` : null
   const eventTitle = `${isRegular ? 'Clase de prueba' : 'Reemplazo'} · ${other.name}`
   const address = side === 'instructor' ? contact?.address : null
+  const unpaid = awaitingPayment(m)
+  const feeBlocks = Math.min(Math.max((m.schedule_days ?? []).length, 1), 2)
+  const deadlineLabel = m.placement_deadline ? new Date(m.placement_deadline).toLocaleString('es-AR', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }) : ''
   // Un reemplazo suele ser un bloque de varias horas: una clase por hora
   const blockHours = Math.max(1, Math.floor((matchEnd(m).getTime() - start.getTime()) / 3600_000))
 
@@ -122,18 +127,77 @@ export default function ClassDetailScreen({ navigation, route }: any) {
           </View>
         ) : null}
 
-        {phase === 'terminada' && side === 'estudio' && isRegular ? (
+        {/* Regular: falta pagar el cargo de incorporación para confirmar la entrevista */}
+        {unpaid && side === 'estudio' ? (
           <View style={s.ask}>
-            <Text style={s.askTitle}>¿Cómo te fue con {firstName}?</Text>
-            <Text style={s.askTxt}>Si la sumás, queda como clase regular activa con los días y el monto acordados.</Text>
-            <View style={s.askRow}>
-              <Button label="No sigo" variant="secondary" style={{ flex: 1 }} isLoading={busy === 'nohire'}
-                onPress={() => run('nohire', () => decideHire(m.id, false), 'Listo. Podés evaluar la clase de prueba.')} />
-              <Button label="La sumo" style={{ flex: 1.4 }} isLoading={busy === 'hire'}
-                onPress={() => run('hire', () => decideHire(m.id, true), `${firstName} ya es parte de tu equipo`)} />
+            <Text style={s.askTitle}>Confirmá la entrevista: {money(m.placement_fee_ars)}</Text>
+            <Text style={s.askTxt}>
+              Cargo de incorporación: {feeBlocks} bloque{feeBlocks === 1 ? '' : 's'} de 4 clases. Pagalo antes del {deadlineLabel}; si no, la entrevista se cancela sola.
+            </Text>
+            <View style={s.rules}>
+              <Text style={s.rule}>✓ Si las dos partes siguen, se cobra.</Text>
+              <Text style={s.rule}>↺ Si {firstName} no sigue o no va, te lo devolvemos.</Text>
+              <Text style={s.rule}>★ Si vos no seguís, queda como crédito para otra búsqueda.</Text>
+            </View>
+            {IN_APP_PAYMENTS ? (
+              <Button label={`Pagar ${money(m.placement_fee_ars)} con Mercado Pago`} isLoading={busy === 'pay'} fullWidth style={{ marginTop: spacing.md }}
+                onPress={() => run('pay', async () => { await payPlacement(m.id); setTimeout(refresh, 4000); setTimeout(refresh, 12000) })} />
+            ) : (
+              <Text style={[s.askTxt, { marginTop: spacing.md, fontFamily: 'Nunito-Bold' }]}>
+                Pagalo desde app.trabajo.masfacil.com.ar: entrá con tu cuenta y abrí esta entrevista en Historial.
+              </Text>
+            )}
+          </View>
+        ) : unpaid ? (
+          <View style={[s.banner, { backgroundColor: colors.warnBg }]}>
+            <Feather name="clock" size={18} color={colors.warnTx} />
+            <View style={{ flex: 1 }}>
+              <Text style={[s.bannerTitle, { color: colors.warnTx }]}>Falta que el estudio la confirme</Text>
+              <Text style={s.bannerTxt}>Tiene tiempo hasta el {deadlineLabel}. Cuando la confirme te avisamos y vas a ver la dirección y el contacto.</Text>
             </View>
           </View>
-        ) : phase === 'terminada' && held == null ? (
+        ) : null}
+
+        {/* Regular, después de la clase de prueba: cada lado dice si sigue */}
+        {phase === 'terminada' && isRegular ? (
+          (side === 'estudio' ? m.studio_continue : m.instructor_continue) == null ? (
+            <View style={s.ask}>
+              <Text style={s.askTitle}>{side === 'estudio' ? `¿Cómo te fue con ${firstName}?` : '¿Querés tomar la clase regular?'}</Text>
+              <Text style={s.askTxt}>
+                {side === 'estudio'
+                  ? 'Si los dos siguen, queda como clase regular activa con los días y el monto acordados.'
+                  : `${schedule ?? 'Los días y horarios acordados'} · ${money(m.agreed_rate ?? m.offered_rate)} por clase.`}
+              </Text>
+              {side === 'instructor' && declining ? (
+                <>
+                  <View style={[s.chips, { marginTop: spacing.sm }]}>
+                    {['No me fue bien', 'No me interesa', 'No me sirven los horarios'].map(r => (
+                      <TouchableOpacity key={r} style={[s.chip, reason === r && s.chipOn]} onPress={() => setReason(r)}>
+                        <Text style={[s.chipTxt, reason === r && s.chipTxtOn]}>{r}</Text>
+                      </TouchableOpacity>
+                    ))}
+                  </View>
+                  <Button label="Confirmar que no sigo" variant="danger" fullWidth disabled={!reason} isLoading={busy === 'idecide'}
+                    onPress={() => run('idecide', () => instructorDecide(m.id, false, reason), 'Le avisamos al estudio')} />
+                </>
+              ) : (
+                <View style={s.askRow}>
+                  <Button label="No sigo" variant="secondary" style={{ flex: 1 }} isLoading={busy === 'nohire'}
+                    onPress={() => side === 'estudio'
+                      ? run('nohire', () => decideHire(m.id, false), 'Listo. El cargo queda como crédito para otra búsqueda.')
+                      : (setReason(''), setDeclining(true))} />
+                  <Button label={side === 'estudio' ? 'La sumo' : 'Sí, la tomo'} style={{ flex: 1.4 }} isLoading={busy === 'hire'}
+                    onPress={() => run('hire', () => side === 'estudio' ? decideHire(m.id, true) : instructorDecide(m.id, true), 'Listo, lo registramos')} />
+                </View>
+              )}
+            </View>
+          ) : (
+            <View style={[s.banner, { backgroundColor: colors.sageLighter }]}>
+              <Feather name="clock" size={18} color={colors.mid} />
+              <Text style={[s.bannerTxt, { flex: 1 }]}>Ya respondiste. Falta la respuesta {side === 'estudio' ? `de ${firstName}` : 'del estudio'}.</Text>
+            </View>
+          )
+        ) : phase === 'terminada' && !isRegular && held == null ? (
           <View style={s.ask}>
             <Text style={s.askTitle}>{isRegular ? '¿Se dio la clase de prueba?' : '¿Se dio la clase?'}</Text>
             <Text style={s.askTxt}>Confirmalo para cerrar la clase. Así la red sabe qué clases se dieron de verdad.</Text>
@@ -161,7 +225,9 @@ export default function ClassDetailScreen({ navigation, route }: any) {
             <Feather name="info" size={18} color={colors.mid} />
             <Text style={[s.bannerTxt, { flex: 1 }]}>
               {m.hire_status === 'no_sigue'
-                ? 'Después de la clase de prueba, el estudio decidió no seguir.'
+                ? (m.instructor_continue === false
+                    ? `Después de la clase de prueba, ${side === 'instructor' ? 'decidiste' : `${firstName} decidió`} no seguir.`
+                    : `Después de la clase de prueba, ${side === 'estudio' ? 'decidiste' : 'el estudio decidió'} no seguir.`)
                 : `La terminó ${m.ended_by === side ? 'vos' : m.ended_by === 'estudio' ? 'el estudio' : 'el instructor'} el ${shortDate(m.ended_at)}.`}
               {m.cancel_reason ? ` "${m.cancel_reason}"` : ''}
             </Text>
@@ -216,6 +282,9 @@ export default function ClassDetailScreen({ navigation, route }: any) {
             <Text style={s.small}>{m.trial_paid ? 'La clase de prueba se paga con ese monto.' : 'La clase de prueba es sin cargo; el monto rige si la suman como clase regular.'}</Text>
           ) : null}
           {m.note_studio ? <Text style={s.note}>Nota del estudio: "{m.note_studio}"</Text> : null}
+          {side === 'estudio' && m.placement_fee_ars && m.placement_status ? (
+            <Text style={s.small}>Cargo de incorporación: {money(m.placement_fee_ars)} · {PLACEMENT_STATUS[m.placement_status] ?? m.placement_status}{m.placement_via === 'credito' ? ' (con crédito)' : ''}</Text>
+          ) : null}
         </View>
 
         {/* Contacto: solo con la clase confirmada */}
@@ -307,6 +376,8 @@ const s = StyleSheet.create({
   banner:     { flexDirection: 'row', alignItems: 'flex-start', gap: spacing.sm, padding: spacing.md, ...radius.leaf, marginBottom: spacing.md },
   bannerTitle:{ fontFamily: 'Nunito-Bold', fontSize: 14 },
   bannerTxt:  { fontFamily: 'Nunito-Regular', fontSize: 12, color: colors.mid, lineHeight: 17, marginTop: 2 },
+  rules:      { marginTop: spacing.sm, gap: 3 },
+  rule:       { fontFamily: 'Nunito-SemiBold', fontSize: 12, color: colors.dark },
   ask:        { backgroundColor: colors.white, ...radius.leaf, padding: spacing.md, borderWidth: 1.5, borderColor: colors.sage, marginBottom: spacing.md },
   askTitle:   { fontFamily: 'Nunito-Bold', fontSize: 16, color: colors.dark },
   askTxt:     { fontFamily: 'Nunito-Regular', fontSize: 12, color: colors.mid, lineHeight: 17, marginTop: 4 },

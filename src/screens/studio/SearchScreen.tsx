@@ -7,7 +7,7 @@ import { supabase } from '../../lib/supabase'
 import { useMyStudio } from '../../hooks'
 import { Avatar, EmptyState, ErrorState, LoadingScreen, colors, spacing, radius, typography } from '../../components/ui'
 import PickerField from '../../components/PickerField'
-import { useSearchNeed, needDays, parseLocal, fromHHMM, DAY_SHORT } from '../../store/searchNeed'
+import { useSearchNeed, needDays, parseLocal, fromHHMM, DAY_SHORT, shiftStart } from '../../store/searchNeed'
 import { toLocalISODate, toHHMM } from '../../lib/dates'
 import { Feather } from '@expo/vector-icons'
 import BlobCard from '../../components/BlobCard'
@@ -223,7 +223,7 @@ export default function SearchScreen({ navigation }: Props) {
           </View>
         )}
         <View style={s.timeRow}>
-          <View style={{ flex: 1 }}><PickerField mode="time" small minuteInterval={15} value={fromHHMM(need.from)} display={need.from} onChange={d => setNeed({ from: toHHMM(d) })} /></View>
+          <View style={{ flex: 1 }}><PickerField mode="time" small minuteInterval={15} value={fromHHMM(need.from)} display={need.from} onChange={d => setNeed({ from: toHHMM(d), to: toHHMM(shiftStart(d, fromHHMM(need.from), fromHHMM(need.to))) })} /></View>
           <Feather name="arrow-right" size={16} color={colors.sageMid} />
           <View style={{ flex: 1 }}><PickerField mode="time" small minuteInterval={15} value={fromHHMM(need.to)} display={need.to} onChange={d => setNeed({ to: toHHMM(d) })} /></View>
         </View>

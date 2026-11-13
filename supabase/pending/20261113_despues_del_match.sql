@@ -18,7 +18,25 @@ ALTER TABLE public.matches
   ADD COLUMN IF NOT EXISTS hire_status      text CHECK (hire_status IN ('contratado', 'no_sigue')),
   ADD COLUMN IF NOT EXISTS hire_decided_at  timestamptz,
   ADD COLUMN IF NOT EXISTS ended_at         timestamptz,
-  ADD COLUMN IF NOT EXISTS ended_by         text CHECK (ended_by IN ('estudio', 'instructor'));
+  ADD COLUMN IF NOT EXISTS ended_by         text CHECK (ended_by IN ('estudio', 'instructor')),
+  -- Regular: cargo de incorporación (lo paga el estudio antes de la clase de prueba)
+  ADD COLUMN IF NOT EXISTS placement_fee_ars     integer,
+  ADD COLUMN IF NOT EXISTS placement_status      text CHECK (placement_status IN
+    ('sin_cargo', 'pendiente_pago', 'pagado', 'cobrado', 'a_devolver', 'devuelto', 'credito', 'vencido', 'anulado')),
+  ADD COLUMN IF NOT EXISTS placement_deadline    timestamptz,
+  ADD COLUMN IF NOT EXISTS placement_paid_at     timestamptz,
+  ADD COLUMN IF NOT EXISTS placement_via         text CHECK (placement_via IN ('mercadopago', 'credito')),
+  ADD COLUMN IF NOT EXISTS placement_payment_id  text,
+  ADD COLUMN IF NOT EXISTS studio_continue       boolean,
+  ADD COLUMN IF NOT EXISTS instructor_continue   boolean,
+  ADD COLUMN IF NOT EXISTS instructor_reason     text;
+
+-- Configuración por red: 1 bloque (4 clases) por día contratado, hasta placement_max_blocks
+ALTER TABLE public.camaras
+  ADD COLUMN IF NOT EXISTS placement_enabled    boolean NOT NULL DEFAULT true,
+  ADD COLUMN IF NOT EXISTS placement_max_blocks integer NOT NULL DEFAULT 2 CHECK (placement_max_blocks BETWEEN 1 AND 7);
+-- Búsquedas sin cargo (cuando el estudio decide no seguir después de pagar)
+ALTER TABLE public.studios ADD COLUMN IF NOT EXISTS placement_credits integer NOT NULL DEFAULT 0;
 
 -- Inicio y fin de la clase en hora argentina
 CREATE OR REPLACE FUNCTION public.match_start_ts(m public.matches)
@@ -70,6 +88,14 @@ BEGIN
          cancelled_at = now(), late_cancel = v_late
   WHERE id = p_match;
 
+  -- Cargo de incorporación: sin pagar se anula; pagado, si cancela la profe se devuelve
+  -- y si cancela el estudio queda como crédito para otra búsqueda
+  IF (p.m).placement_status = 'pendiente_pago' THEN
+    UPDATE public.matches SET placement_status = 'anulado' WHERE id = p_match;
+  ELSIF (p.m).placement_status = 'pagado' THEN
+    PERFORM public.settle_placement(p_match, CASE WHEN v_side = 'instructor' THEN 'devolver' ELSE 'credito' END);
+  END IF;
+
   -- Si cancela el instructor, el estudio recupera el aviso del mes
   IF v_side = 'instructor' THEN
     UPDATE public.memberships SET matches_used_month = greatest(0, matches_used_month - 1)
@@ -118,19 +144,11 @@ BEGIN
   IF public.match_side(p_match) IS DISTINCT FROM 'estudio' THEN RAISE EXCEPTION 'not allowed' USING ERRCODE = '42501'; END IF;
   SELECT * INTO p FROM public.match_people(p_match);
   IF (p.m).class_type <> 'regular' OR (p.m).status <> 'aceptado' THEN RAISE EXCEPTION 'No es una entrevista confirmada' USING ERRCODE = 'P0001'; END IF;
-  IF (p.m).hire_status IS NOT NULL THEN RAISE EXCEPTION 'Ya lo decidiste' USING ERRCODE = 'P0001'; END IF;
+  IF (p.m).studio_continue IS NOT NULL OR (p.m).hire_status IS NOT NULL THEN RAISE EXCEPTION 'Ya lo decidiste' USING ERRCODE = 'P0001'; END IF;
+  IF (p.m).placement_status = 'pendiente_pago' THEN RAISE EXCEPTION 'Primero confirmá la entrevista con el pago' USING ERRCODE = 'P0001'; END IF;
   IF public.match_start_ts(p.m) > now() THEN RAISE EXCEPTION 'Primero tiene que ser la clase de prueba' USING ERRCODE = 'P0001'; END IF;
-  UPDATE public.matches SET hire_status = CASE WHEN p_hire THEN 'contratado' ELSE 'no_sigue' END,
-         hire_decided_at = now(), held_studio = coalesce(held_studio, true)
-  WHERE id = p_match;
-  IF p.instr_user IS NOT NULL THEN
-    PERFORM public.send_push(ARRAY[p.instr_user],
-      CASE WHEN p_hire THEN '¡' || coalesce(p.studio_name, 'El estudio') || ' te sumó a su equipo!'
-           ELSE coalesce(p.studio_name, 'El estudio') || ' no va a seguir con la clase regular' END,
-      CASE WHEN p_hire THEN 'Clase regular activa por $' || to_char((p.m).agreed_rate, 'FM999G999G990') || ' la clase. Tocá para ver los días y horarios.'
-           ELSE 'Gracias por la clase de prueba. Podés evaluar al estudio.' END,
-      jsonb_build_object('screen', 'clase', 'match_id', p_match));
-  END IF;
+  UPDATE public.matches SET studio_continue = p_hire, held_studio = coalesce(held_studio, true) WHERE id = p_match;
+  PERFORM public.resolve_trial(p_match);
 END;
 $fn$;
 REVOKE EXECUTE ON FUNCTION public.decide_hire(uuid, boolean) FROM PUBLIC, anon;
@@ -162,11 +180,26 @@ CREATE OR REPLACE FUNCTION public.match_reminders()
 RETURNS void LANGUAGE plpgsql SECURITY DEFINER SET search_path = '' AS $fn$
 DECLARE r record; v_what text; v_at text;
 BEGIN
+  -- Entrevistas sin pagar a tiempo: se cancelan y se avisa a los dos
+  FOR r IN
+    SELECT m.id, s.user_id AS su, s.name AS sn, i.user_id AS iu, i.full_name AS iname, m.class_date, m.start_time
+    FROM public.matches m JOIN public.studios s ON s.id = m.studio_id JOIN public.instructors i ON i.id = m.instructor_id
+    WHERE m.status = 'aceptado' AND m.placement_status = 'pendiente_pago' AND m.placement_deadline < now()
+  LOOP
+    UPDATE public.matches SET status = 'cancelado', cancelled_by = 'estudio', cancel_reason = 'No se confirmó a tiempo',
+           cancelled_at = now(), placement_status = 'vencido' WHERE id = r.id;
+    PERFORM public.send_push(ARRAY[r.iu], 'Se canceló la entrevista en ' || r.sn,
+      'El estudio no la confirmó a tiempo. Te avisamos cuando haya otras propuestas.', jsonb_build_object('screen', 'clase', 'match_id', r.id));
+    PERFORM public.send_push(ARRAY[r.su], 'Se canceló la entrevista con ' || r.iname,
+      'No se pagó el cargo de incorporación a tiempo. Podés volver a proponerla.', jsonb_build_object('screen', 'clase', 'match_id', r.id));
+  END LOOP;
+
   FOR r IN
     SELECT m.*, s.user_id AS su, s.name AS sn, s.address AS sa, i.user_id AS iu, i.full_name AS iname,
            public.match_start_ts(m) AS st, public.match_end_ts(m) AS en
     FROM public.matches m JOIN public.studios s ON s.id = m.studio_id JOIN public.instructors i ON i.id = m.instructor_id
     WHERE m.status = 'aceptado' AND m.class_date BETWEEN CURRENT_DATE - 2 AND CURRENT_DATE + 2
+      AND m.placement_status IS DISTINCT FROM 'pendiente_pago'
   LOOP
     v_what := CASE WHEN r.class_type = 'regular' THEN 'Entrevista y clase de prueba' ELSE 'Reemplazo' END;
     v_at := to_char(r.start_time, 'HH24:MI');
@@ -196,8 +229,10 @@ BEGIN
         PERFORM public.send_push(ARRAY[r.su], '¿Se dio la clase con ' || r.iname || '?',
           'Confirmalo y evaluá cómo fue.', jsonb_build_object('screen', 'clase', 'match_id', r.id));
       END IF;
-      PERFORM public.send_push(ARRAY[r.iu], '¿Se dio la clase en ' || r.sn || '?',
-        'Confirmalo y evaluá al estudio.', jsonb_build_object('screen', 'clase', 'match_id', r.id));
+      PERFORM public.send_push(ARRAY[r.iu],
+        CASE WHEN r.class_type = 'regular' THEN '¿Cómo te fue en ' || r.sn || '?' ELSE '¿Se dio la clase en ' || r.sn || '?' END,
+        CASE WHEN r.class_type = 'regular' THEN 'Contanos si querés tomar la clase regular.' ELSE 'Confirmalo y evaluá al estudio.' END,
+        jsonb_build_object('screen', 'clase', 'match_id', r.id));
       UPDATE public.matches SET held_asked_at = now() WHERE id = r.id;
     END IF;
   END LOOP;
@@ -239,7 +274,8 @@ BEGIN
 
   IF OLD.status IS NOT DISTINCT FROM NEW.status OR NEW.status NOT IN ('aceptado', 'rechazado') THEN RETURN NEW; END IF;
   v_amount := CASE WHEN NEW.agreed_rate IS NOT NULL THEN ' por $' || to_char(NEW.agreed_rate, 'FM999G999G990') || ' la clase' ELSE '' END;
-  v_trial := 'Entrevista y clase de prueba el ' || to_char(NEW.class_date, 'DD/MM') || ' a las ' || to_char(NEW.start_time, 'HH24:MI') || '.';
+  v_trial := 'Entrevista y clase de prueba el ' || to_char(NEW.class_date, 'DD/MM') || ' a las ' || to_char(NEW.start_time, 'HH24:MI') || '.'
+          || CASE WHEN OLD.counter_rate IS NULL THEN ' Confirmala con el cargo de incorporación.' ELSE ' El estudio la confirma con el pago.' END;
 
   IF OLD.counter_rate IS NOT NULL THEN
     IF v_instr_user IS NOT NULL THEN
@@ -274,6 +310,7 @@ BEGIN
   IF v_side IS NULL THEN RETURN NULL; END IF;
   SELECT * INTO p FROM public.match_people(p_match);
   IF (p.m).status <> 'aceptado' OR (p.m).ended_at IS NOT NULL THEN RETURN NULL; END IF;
+  IF (p.m).placement_status = 'pendiente_pago' THEN RETURN NULL; END IF;
   IF v_side = 'estudio' THEN
     SELECT phone, email INTO i FROM public.instructors WHERE id = (p.m).instructor_id;
     RETURN jsonb_build_object('phone', i.phone, 'email', i.email);
@@ -340,6 +377,9 @@ BEGIN
     NEW.reminded_24h_at := NULL; NEW.reminded_2h_at := NULL;
     NEW.hire_status := NULL; NEW.hire_decided_at := NULL; NEW.ended_at := NULL; NEW.ended_by := NULL;
     NEW.trial_paid := coalesce(NEW.trial_paid, false) AND NEW.class_type = 'regular';
+    NEW.placement_fee_ars := NULL; NEW.placement_status := NULL; NEW.placement_deadline := NULL; NEW.placement_paid_at := NULL;
+    NEW.placement_via := NULL; NEW.placement_payment_id := NULL;
+    NEW.studio_continue := NULL; NEW.instructor_continue := NULL; NEW.instructor_reason := NULL;
     RETURN NEW;
   END IF;
   NEW.studio_id := OLD.studio_id; NEW.instructor_id := OLD.instructor_id; NEW.camara_id := OLD.camara_id;
@@ -353,6 +393,9 @@ BEGIN
   NEW.held_studio := OLD.held_studio; NEW.held_instructor := OLD.held_instructor; NEW.held_asked_at := OLD.held_asked_at;
   NEW.reminded_24h_at := OLD.reminded_24h_at; NEW.reminded_2h_at := OLD.reminded_2h_at;
   NEW.hire_status := OLD.hire_status; NEW.hire_decided_at := OLD.hire_decided_at; NEW.ended_at := OLD.ended_at; NEW.ended_by := OLD.ended_by;
+  NEW.placement_fee_ars := OLD.placement_fee_ars; NEW.placement_status := OLD.placement_status; NEW.placement_deadline := OLD.placement_deadline;
+  NEW.placement_paid_at := OLD.placement_paid_at; NEW.placement_via := OLD.placement_via; NEW.placement_payment_id := OLD.placement_payment_id;
+  NEW.studio_continue := OLD.studio_continue; NEW.instructor_continue := OLD.instructor_continue; NEW.instructor_reason := OLD.instructor_reason;
   IF OLD.status <> 'pendiente' THEN RAISE EXCEPTION 'Esta propuesta ya fue respondida' USING ERRCODE = 'P0001'; END IF;
   IF v_role = 'instructor' THEN
     NEW.agreed_rate := OLD.agreed_rate;
@@ -380,3 +423,155 @@ BEGIN
   RAISE EXCEPTION 'not allowed' USING ERRCODE = '42501';
 END;
 $fn$;
+
+-- ══ Cargo de incorporación (clases regulares) ═══════════════════════
+-- Un bloque = 4 clases al monto acordado. Se cobra 1 bloque por día de la semana
+-- contratado, hasta placement_max_blocks de la red. Lo paga el estudio antes de la
+-- clase de prueba; queda en la cuenta de la plataforma y se resuelve así:
+--   los dos siguen → se cobra · la profe no sigue o cancela → se devuelve
+--   el estudio no sigue o cancela → crédito para otra búsqueda
+
+CREATE OR REPLACE FUNCTION public.placement_fee_for(m public.matches)
+RETURNS integer LANGUAGE sql STABLE SECURITY DEFINER SET search_path = '' AS $fn$
+  SELECT CASE WHEN m.class_type <> 'regular' OR NOT coalesce(c.placement_enabled, false) THEN NULL
+    ELSE least(greatest(coalesce(array_length(m.schedule_days, 1), 1), 1), c.placement_max_blocks)
+         * 4 * coalesce(m.agreed_rate, m.offered_rate) END
+  FROM public.camaras c WHERE c.id = m.camara_id;
+$fn$;
+REVOKE EXECUTE ON FUNCTION public.placement_fee_for(public.matches) FROM PUBLIC, anon;
+GRANT EXECUTE ON FUNCTION public.placement_fee_for(public.matches) TO authenticated;
+
+-- Al aceptarse una entrevista: calcula el cargo, usa un crédito si hay, o pide el pago
+CREATE OR REPLACE FUNCTION public.start_placement()
+RETURNS trigger LANGUAGE plpgsql SECURITY DEFINER SET search_path = '' AS $fn$
+DECLARE v_fee integer; v_user uuid; v_credits integer; v_deadline timestamptz; v_start timestamptz;
+BEGIN
+  IF NEW.status <> 'aceptado' OR NEW.class_type <> 'regular' OR NEW.placement_status IS NOT NULL THEN RETURN NEW; END IF;
+  IF TG_OP = 'UPDATE' AND OLD.status = 'aceptado' THEN RETURN NEW; END IF;
+  v_fee := public.placement_fee_for(NEW);
+  IF coalesce(v_fee, 0) <= 0 THEN
+    UPDATE public.matches SET placement_status = 'sin_cargo' WHERE id = NEW.id; RETURN NEW;
+  END IF;
+  SELECT user_id, placement_credits INTO v_user, v_credits FROM public.studios WHERE id = NEW.studio_id;
+  IF v_credits > 0 THEN
+    UPDATE public.studios SET placement_credits = placement_credits - 1 WHERE id = NEW.studio_id;
+    UPDATE public.matches SET placement_fee_ars = v_fee, placement_status = 'pagado', placement_via = 'credito', placement_paid_at = now()
+    WHERE id = NEW.id;
+    PERFORM public.send_push(ARRAY[v_user], 'Entrevista confirmada con tu crédito',
+      'Usamos tu búsqueda sin cargo. Tocá para ver el contacto.', jsonb_build_object('screen', 'clase', 'match_id', NEW.id));
+    RETURN NEW;
+  END IF;
+  -- Plazo: 24 h antes de la entrevista (como mínimo, 2 h desde ahora y 1 h antes de empezar)
+  v_start := public.match_start_ts(NEW);
+  v_deadline := least(greatest(v_start - interval '24 hours', now() + interval '2 hours'), v_start - interval '1 hour');
+  UPDATE public.matches SET placement_fee_ars = v_fee, placement_status = 'pendiente_pago', placement_deadline = v_deadline WHERE id = NEW.id;
+  PERFORM public.send_push(ARRAY[v_user], 'Confirmá la entrevista: $' || to_char(v_fee, 'FM999G999G990'),
+    'Pagá el cargo de incorporación antes del ' || to_char(v_deadline AT TIME ZONE 'America/Argentina/Buenos_Aires', 'DD/MM HH24:MI')
+    || '. Si la profe no sigue, te lo devolvemos.', jsonb_build_object('screen', 'clase', 'match_id', NEW.id));
+  RETURN NEW;
+END;
+$fn$;
+REVOKE EXECUTE ON FUNCTION public.start_placement() FROM PUBLIC, anon, authenticated;
+DROP TRIGGER IF EXISTS trg_start_placement ON public.matches;
+CREATE TRIGGER trg_start_placement AFTER INSERT OR UPDATE OF status ON public.matches
+  FOR EACH ROW EXECUTE FUNCTION public.start_placement();
+
+-- Pago acreditado (lo llama el webhook de Mercado Pago con la clave de servicio)
+CREATE OR REPLACE FUNCTION public.placement_paid(p_match uuid, p_payment_id text, p_amount numeric)
+RETURNS void LANGUAGE plpgsql SECURITY DEFINER SET search_path = '' AS $fn$
+DECLARE p record;
+BEGIN
+  SELECT * INTO p FROM public.match_people(p_match);
+  IF (p.m).id IS NULL OR (p.m).placement_status NOT IN ('pendiente_pago', 'vencido') THEN RETURN; END IF;
+  IF p_amount < (p.m).placement_fee_ars THEN RETURN; END IF;
+  IF (p.m).placement_status = 'vencido' THEN
+    -- Pagó tarde y la entrevista ya se canceló: se devuelve
+    UPDATE public.matches SET placement_status = 'a_devolver', placement_via = 'mercadopago', placement_payment_id = p_payment_id, placement_paid_at = now() WHERE id = p_match;
+    RETURN;
+  END IF;
+  UPDATE public.matches SET placement_status = 'pagado', placement_via = 'mercadopago', placement_payment_id = p_payment_id, placement_paid_at = now()
+  WHERE id = p_match;
+  PERFORM public.send_push(ARRAY[p.instr_user], coalesce(p.studio_name, 'El estudio') || ' confirmó la entrevista',
+    'Clase de prueba el ' || to_char((p.m).class_date, 'DD/MM') || ' a las ' || to_char((p.m).start_time, 'HH24:MI') || '. Tocá para ver la dirección.',
+    jsonb_build_object('screen', 'clase', 'match_id', p_match));
+END;
+$fn$;
+REVOKE EXECUTE ON FUNCTION public.placement_paid(uuid, text, numeric) FROM PUBLIC, anon, authenticated;
+GRANT EXECUTE ON FUNCTION public.placement_paid(uuid, text, numeric) TO service_role;
+
+-- Destino del cargo pagado: 'cobrar' | 'devolver' | 'credito'
+CREATE OR REPLACE FUNCTION public.settle_placement(p_match uuid, p_how text)
+RETURNS void LANGUAGE plpgsql SECURITY DEFINER SET search_path = '' AS $fn$
+DECLARE m public.matches%ROWTYPE;
+BEGIN
+  SELECT * INTO m FROM public.matches WHERE id = p_match;
+  IF m.placement_status IS DISTINCT FROM 'pagado' THEN RETURN; END IF;
+  IF p_how = 'cobrar' THEN
+    UPDATE public.matches SET placement_status = 'cobrado' WHERE id = p_match;
+  ELSIF p_how = 'credito' OR m.placement_via = 'credito' THEN
+    -- Si se había pagado con un crédito, el crédito vuelve
+    UPDATE public.studios SET placement_credits = placement_credits + 1 WHERE id = m.studio_id;
+    UPDATE public.matches SET placement_status = CASE WHEN p_how = 'credito' THEN 'credito' ELSE 'devuelto' END WHERE id = p_match;
+  ELSE
+    UPDATE public.matches SET placement_status = 'a_devolver' WHERE id = p_match;
+  END IF;
+END;
+$fn$;
+REVOKE EXECUTE ON FUNCTION public.settle_placement(uuid, text) FROM PUBLIC, anon, authenticated;
+
+-- Con las dos respuestas después de la clase de prueba
+CREATE OR REPLACE FUNCTION public.resolve_trial(p_match uuid)
+RETURNS void LANGUAGE plpgsql SECURITY DEFINER SET search_path = '' AS $fn$
+DECLARE p record; v_name text;
+BEGIN
+  SELECT * INTO p FROM public.match_people(p_match);
+  IF (p.m).hire_status IS NOT NULL THEN RETURN; END IF;
+  v_name := split_part(coalesce(p.instr_name, 'La profe'), ' ', 1);
+  IF (p.m).instructor_continue = false THEN
+    UPDATE public.matches SET hire_status = 'no_sigue', hire_decided_at = now() WHERE id = p_match;
+    PERFORM public.settle_placement(p_match, 'devolver');
+    PERFORM public.send_push(ARRAY[p.studio_user], v_name || ' no va a seguir con la clase regular',
+      coalesce('"' || nullif((p.m).instructor_reason, '') || '". ', '') || 'Te devolvemos el cargo de incorporación.',
+      jsonb_build_object('screen', 'clase', 'match_id', p_match));
+  ELSIF (p.m).studio_continue = false THEN
+    UPDATE public.matches SET hire_status = 'no_sigue', hire_decided_at = now() WHERE id = p_match;
+    PERFORM public.settle_placement(p_match, 'credito');
+    PERFORM public.send_push(ARRAY[p.instr_user], coalesce(p.studio_name, 'El estudio') || ' no va a seguir con la clase regular',
+      'Gracias por la clase de prueba. Podés evaluar al estudio.', jsonb_build_object('screen', 'clase', 'match_id', p_match));
+  ELSIF (p.m).studio_continue AND (p.m).instructor_continue THEN
+    UPDATE public.matches SET hire_status = 'contratado', hire_decided_at = now() WHERE id = p_match;
+    PERFORM public.settle_placement(p_match, 'cobrar');
+    PERFORM public.send_push(ARRAY[p.instr_user], '¡' || coalesce(p.studio_name, 'El estudio') || ' te sumó a su equipo!',
+      'Clase regular activa por $' || to_char((p.m).agreed_rate, 'FM999G999G990') || ' la clase.', jsonb_build_object('screen', 'clase', 'match_id', p_match));
+    PERFORM public.send_push(ARRAY[p.studio_user], v_name || ' ya es parte de tu equipo',
+      'La clase regular quedó activa.', jsonb_build_object('screen', 'clase', 'match_id', p_match));
+  END IF;
+END;
+$fn$;
+REVOKE EXECUTE ON FUNCTION public.resolve_trial(uuid) FROM PUBLIC, anon, authenticated;
+
+-- La profe dice si quiere tomar la clase regular
+CREATE OR REPLACE FUNCTION public.instructor_decide(p_match uuid, p_continue boolean, p_reason text)
+RETURNS void LANGUAGE plpgsql SECURITY DEFINER SET search_path = '' AS $fn$
+DECLARE p record;
+BEGIN
+  IF public.match_side(p_match) IS DISTINCT FROM 'instructor' THEN RAISE EXCEPTION 'not allowed' USING ERRCODE = '42501'; END IF;
+  SELECT * INTO p FROM public.match_people(p_match);
+  IF (p.m).class_type <> 'regular' OR (p.m).status <> 'aceptado' THEN RAISE EXCEPTION 'No es una entrevista confirmada' USING ERRCODE = 'P0001'; END IF;
+  IF (p.m).instructor_continue IS NOT NULL OR (p.m).hire_status IS NOT NULL THEN RAISE EXCEPTION 'Ya lo respondiste' USING ERRCODE = 'P0001'; END IF;
+  IF public.match_start_ts(p.m) > now() THEN RAISE EXCEPTION 'Primero tiene que ser la clase de prueba' USING ERRCODE = 'P0001'; END IF;
+  UPDATE public.matches SET instructor_continue = p_continue, instructor_reason = nullif(trim(coalesce(p_reason, '')), ''),
+         held_instructor = coalesce(held_instructor, true) WHERE id = p_match;
+  PERFORM public.resolve_trial(p_match);
+END;
+$fn$;
+REVOKE EXECUTE ON FUNCTION public.instructor_decide(uuid, boolean, text) FROM PUBLIC, anon;
+GRANT EXECUTE ON FUNCTION public.instructor_decide(uuid, boolean, text) TO authenticated;
+
+-- Plataforma: devolución hecha (la Edge Function la registra después de devolver en Mercado Pago)
+CREATE OR REPLACE FUNCTION public.placement_refunded(p_match uuid)
+RETURNS void LANGUAGE sql SECURITY DEFINER SET search_path = '' AS $fn$
+  UPDATE public.matches SET placement_status = 'devuelto' WHERE id = p_match AND placement_status = 'a_devolver';
+$fn$;
+REVOKE EXECUTE ON FUNCTION public.placement_refunded(uuid) FROM PUBLIC, anon, authenticated;
+GRANT EXECUTE ON FUNCTION public.placement_refunded(uuid) TO service_role;

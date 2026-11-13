@@ -32,16 +32,34 @@ export function phaseOf(m: any, now = new Date()): Phase {
   return 'terminada'
 }
 
+/** Entrevista regular esperando que el estudio pague el cargo de incorporación */
+export const awaitingPayment = (m: any) => m?.status === 'aceptado' && m?.placement_status === 'pendiente_pago'
+
 /** Lo que falta hacer de este lado (para mostrar un aviso en las listas) */
 export function pendingAction(m: any, side: 'estudio' | 'instructor'): string | null {
+  if (awaitingPayment(m)) return side === 'estudio' ? 'Pagá el cargo para confirmar la entrevista' : null
   const ph = phaseOf(m)
   if (ph !== 'terminada') return null
-  if (side === 'estudio' && m.class_type === 'regular') return '¿La sumás como clase regular?'
+  if (m.class_type === 'regular') {
+    const mine = side === 'estudio' ? m.studio_continue : m.instructor_continue
+    return mine == null ? (side === 'estudio' ? '¿La sumás como clase regular?' : '¿Querés tomar la clase regular?') : null
+  }
   const held = side === 'estudio' ? m.held_studio : m.held_instructor
   return held == null ? '¿Se dio la clase?' : null
 }
 
-export const isConfirmed = (m: any) => ['proxima', 'en_curso', 'terminada', 'contratado'].includes(phaseOf(m))
+// ── Cargo de incorporación (regular) ──────────────────────────────
+/** 1 bloque (4 clases) por día de la semana contratado, hasta maxBlocks */
+export const placementFee = (days: number, rate: number, maxBlocks = 2) =>
+  Math.min(Math.max(days, 1), maxBlocks) * 4 * rate
+
+export const PLACEMENT_STATUS: Record<string, string> = {
+  pendiente_pago: 'Falta pagar', pagado: 'Pagado · se resuelve después de la clase de prueba',
+  cobrado: 'Cobrado', a_devolver: 'Se devuelve', devuelto: 'Devuelto', credito: 'Quedó como crédito para otra búsqueda',
+  vencido: 'No se pagó a tiempo', anulado: 'Anulado', sin_cargo: 'Sin cargo',
+}
+
+export const isConfirmed = (m: any) => !awaitingPayment(m) && ['proxima', 'en_curso', 'terminada', 'contratado'].includes(phaseOf(m))
 
 // ── Contacto ──────────────────────────────────────────────────────
 /** Teléfono para WhatsApp: 54 + 9 + área y número (acepta 011 15..., 11..., +54...) */
@@ -144,6 +162,27 @@ async function rpc(fn: string, args: Record<string, unknown>) {
 export const cancelConfirmed = (matchId: string, reason: string) => rpc('cancel_confirmed_match', { p_match: matchId, p_reason: reason })
 export const confirmHeld = (matchId: string, held: boolean) => rpc('confirm_class_held', { p_match: matchId, p_held: held })
 export const decideHire = (matchId: string, hire: boolean) => rpc('decide_hire', { p_match: matchId, p_hire: hire })
+export const instructorDecide = (matchId: string, cont: boolean, reason?: string) =>
+  rpc('instructor_decide', { p_match: matchId, p_continue: cont, p_reason: reason ?? null })
+
+/** Abre el checkout de Mercado Pago para el cargo de incorporación */
+export async function payPlacement(matchId: string) {
+  const { data, error } = await supabase.functions.invoke('mercadopago', { body: { action: 'placement_pay', match_id: matchId } })
+  if (error) {
+    const msg = await (error as any).context?.json?.().then((j: any) => j?.error).catch(() => null)
+    throw new UserError(msg ?? 'No pudimos conectar con Mercado Pago. Probá de nuevo.')
+  }
+  if (!data?.init_point) throw new UserError('Mercado Pago no devolvió el link de pago.')
+  const WebBrowser = require('expo-web-browser')
+  await WebBrowser.openBrowserAsync(data.init_point)
+}
+export async function refundPlacement(matchId: string) {
+  const { error } = await supabase.functions.invoke('mercadopago', { body: { action: 'placement_refund', match_id: matchId } })
+  if (error) {
+    const msg = await (error as any).context?.json?.().then((j: any) => j?.error).catch(() => null)
+    throw new UserError(msg ?? 'No se pudo devolver. Probá de nuevo.')
+  }
+}
 export const endRegular = (matchId: string, reason: string) => rpc('end_regular', { p_match: matchId, p_reason: reason })
 
 export const MATCH_KEYS = [['match-detail'], ['match-contact'], ['studio-matches'], ['instructor-matches'], ['studio-history-recent'],
