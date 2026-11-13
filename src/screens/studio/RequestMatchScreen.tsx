@@ -325,6 +325,9 @@ export default function RequestMatchScreen({ navigation, route }: Props) {
               Referencia de la red para {classType === 'regular' ? 'clase regular' : 'reemplazo'}: {money(range.min_ars)} – {money(range.max_ars)}
             </Text>
           ) : null}
+          {classType === 'reemplazo' && hours > 1 && offer > 0 ? (
+            <Text style={s.offerTotal}>Total del bloque: {money(offer * hours)} ({hours} clases × {money(offer)})</Text>
+          ) : null}
           <Text style={s.offerNote}>
             Es lo que pagás si {instructorName} acepta. Su tarifa es privada: la compara con tu oferta y puede aceptar, rechazar o proponerte otro monto.
           </Text>
@@ -409,6 +412,7 @@ const s = StyleSheet.create({
   trialInfo:        { flexDirection: 'row', alignItems: 'flex-start', gap: spacing.md, backgroundColor: colors.sageLight, borderTopLeftRadius: 14, borderTopRightRadius: 0, borderBottomLeftRadius: 0, borderBottomRightRadius: 14, padding: spacing.md, marginBottom: spacing.md, borderWidth: 0.5, borderColor: colors.border },
   trialIcon:        { width: 36, height: 36, borderRadius: 18, backgroundColor: colors.white, alignItems: 'center', justifyContent: 'center', flexShrink: 0 },
   trialTitle:       { fontFamily: 'Nunito-Bold', fontSize: 13, color: colors.dark, marginBottom: 4 },
+  offerTotal:       { fontFamily: 'Nunito-Bold', fontSize: 13, color: colors.sage, marginTop: spacing.sm },
   paidRow:          { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, marginTop: spacing.md, paddingTop: spacing.sm, borderTopWidth: 0.5, borderTopColor: colors.borderLight },
   paidTitle:        { fontFamily: 'Nunito-Bold', fontSize: 13, color: colors.dark },
   trialDesc:        { fontFamily: 'Nunito-Regular', fontSize: 12, color: colors.mid, lineHeight: 18 },

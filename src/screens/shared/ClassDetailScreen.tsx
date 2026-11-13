@@ -11,7 +11,7 @@ import { useAuthStore } from '../../store'
 import { errorText } from '../../lib/errors'
 import { DAYS_SHORT, publishOpenClass, money } from '../../lib/openClasses'
 import {
-  addToCalendar, cancelConfirmed, confirmHeld, decideHire, endRegular, isConfirmed, matchStart, MATCH_KEYS,
+  addToCalendar, cancelConfirmed, matchEnd, confirmHeld, decideHire, endRegular, isConfirmed, matchStart, MATCH_KEYS,
   openCall, openMaps, openWhatsApp, phaseOf, useEvaluated, useMatchContact, useMatchDetail, waNumber,
 } from '../../lib/matchFlow'
 import HeroHeader from '../../components/HeroHeader'
@@ -71,6 +71,8 @@ export default function ClassDetailScreen({ navigation, route }: any) {
   const schedule = scheduleDays.length ? `${scheduleDays.map(d => DAYS_SHORT[d] ?? d).join(', ')} · ${hhmm(m.schedule_from)}–${hhmm(m.schedule_to)}` : null
   const eventTitle = `${isRegular ? 'Clase de prueba' : 'Reemplazo'} · ${other.name}`
   const address = side === 'instructor' ? contact?.address : null
+  // Un reemplazo suele ser un bloque de varias horas: una clase por hora
+  const blockHours = Math.max(1, Math.floor((matchEnd(m).getTime() - start.getTime()) / 3600_000))
 
   const refresh = () => { MATCH_KEYS.forEach(k => qc.invalidateQueries({ queryKey: k })); refetch() }
   const run = async (key: string, fn: () => Promise<void>, ok?: string) => {
@@ -207,6 +209,9 @@ export default function ClassDetailScreen({ navigation, route }: any) {
         <View style={s.card}>
           <Text style={s.caption}>ACORDADO</Text>
           <Text style={s.amount}>{money(m.agreed_rate ?? m.offered_rate)}<Text style={s.amountPer}> por clase</Text></Text>
+          {!isRegular && blockHours > 1 ? (
+            <Text style={s.blockTotal}>Total del bloque: {money(Number(m.agreed_rate ?? m.offered_rate) * blockHours)} ({blockHours} clases)</Text>
+          ) : null}
           {isRegular ? (
             <Text style={s.small}>{m.trial_paid ? 'La clase de prueba se paga con ese monto.' : 'La clase de prueba es sin cargo; el monto rige si la suman como clase regular.'}</Text>
           ) : null}
@@ -314,6 +319,7 @@ const s = StyleSheet.create({
   calBtn:     { flexDirection: 'row', alignItems: 'center', gap: 6, alignSelf: 'flex-start', marginTop: 4, paddingVertical: 6, paddingHorizontal: 12, borderRadius: 999, backgroundColor: colors.sageLighter },
   calTxt:     { fontFamily: 'Nunito-Bold', fontSize: 12, color: colors.sage },
   amount:     { fontFamily: 'Nunito-Bold', fontSize: 22, color: colors.sage },
+  blockTotal: { fontFamily: 'Nunito-Bold', fontSize: 14, color: colors.dark },
   amountPer:  { fontFamily: 'Nunito-Regular', fontSize: 13, color: colors.mid },
   small:      { fontFamily: 'Nunito-Regular', fontSize: 12, color: colors.mid, lineHeight: 17 },
   note:       { fontFamily: 'Nunito-Regular', fontSize: 12, color: colors.mid, fontStyle: 'italic' },
