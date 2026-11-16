@@ -52,7 +52,7 @@ export const useStudioMembership = (studioId: string | undefined) =>
   })
 
 // ── Contacto de la Cámara ───────────────────────────────────
-export const DEFAULT_CONTACT_EMAIL = 'contacto@trabajomasfacil.com'
+export const DEFAULT_CONTACT_EMAIL = 'info@masfacil.com.ar'
 
 export interface CamaraContact {
   name: string | null

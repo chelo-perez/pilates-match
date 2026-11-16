@@ -1,8 +1,7 @@
 # Eliminar tu cuenta de Trabajo Más Fácil
 
-> Página pública que pide Google Play. Publicarla en una URL propia, por ejemplo
-> `https://[TU-DOMINIO]/trabajo-mas-facil/eliminar-cuenta`, y cargar esa URL en Play Console
-> (Contenido de la app → Eliminación de datos).
+> Página pública que pide Google Play: https://masfacil.com.ar/trabajo/eliminar-cuenta
+> Cargar esa URL en Play Console (Contenido de la app → Eliminación de datos).
 
 ## Desde la app (inmediato)
 
@@ -16,7 +15,7 @@
 
 ## Sin la app
 
-Escribí a **[EMAIL DE CONTACTO]** desde el email con el que te registraste, con el asunto **"Eliminar mi cuenta"**. La eliminamos dentro de los **5 días hábiles** y te confirmamos por email.
+Escribí a **info@masfacil.com.ar** desde el email con el que te registraste, con el asunto **"Eliminar mi cuenta"**. La eliminamos dentro de los **5 días hábiles** y te confirmamos por email.
 
 ## Qué se borra
 
@@ -28,4 +27,4 @@ Escribí a **[EMAIL DE CONTACTO]** desde el email con el que te registraste, con
 
 ## Qué se conserva
 
-Los **registros de cobros** ya realizados (fecha y monto, sin datos de tarjeta), durante el plazo que exigen las normas contables e impositivas (hasta 10 años). Después se borran.
+Los **registros de cobros y devoluciones** ya realizados (fecha y monto, sin datos de tarjeta), durante el plazo que exigen las normas contables e impositivas (hasta 10 años). Después se borran.

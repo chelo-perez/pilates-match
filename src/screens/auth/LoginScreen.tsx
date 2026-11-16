@@ -1,7 +1,7 @@
 import React, { useState } from 'react'
 import {
   View, Text, StyleSheet, TouchableOpacity,
-  ActivityIndicator, Modal, TextInput, KeyboardAvoidingView, Platform, useWindowDimensions,
+  ActivityIndicator, Modal, TextInput, KeyboardAvoidingView, Platform, useWindowDimensions, Linking,
 } from 'react-native'
 import { supabase } from '../../lib/supabase'
 import { humanizeError } from '../../lib/errors'
@@ -140,6 +140,12 @@ export default function LoginScreen({ navigation }: any) {
         <TouchableOpacity style={s.registerLink} onPress={() => navigation.navigate('RegisterRole')}>
           <Text style={s.registerTxt}>¿No tenés cuenta? <Text style={s.registerBold}>Registrate</Text></Text>
         </TouchableOpacity>
+        <Text style={s.legal}>
+          Al continuar aceptás los{' '}
+          <Text style={s.legalLink} onPress={() => Linking.openURL('https://masfacil.com.ar/trabajo/terminos')}>Términos y condiciones</Text>
+          {' '}y la{' '}
+          <Text style={s.legalLink} onPress={() => Linking.openURL('https://masfacil.com.ar/trabajo/privacidad')}>Política de privacidad</Text>.
+        </Text>
       </View>
 
       <View style={{ height: insets.bottom + 20 }} />
@@ -234,6 +240,8 @@ const s = StyleSheet.create({
   emailBtn:     { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 10, ...radius.leaf, paddingVertical: 15, borderWidth: 1, borderColor: 'rgba(255,255,255,0.28)', backgroundColor: 'rgba(255,255,255,0.06)' },
   emailBtnTxt:  { fontFamily: 'Nunito-Bold', fontSize: 15, color: colors.white },
 
+  legal:        { fontFamily: 'Nunito-Regular', fontSize: 11, lineHeight: 16, color: 'rgba(255,255,255,0.5)', textAlign: 'center', marginTop: 2 },
+  legalLink:    { textDecorationLine: 'underline', color: 'rgba(255,255,255,0.75)' },
   registerLink: { alignItems: 'center', paddingVertical: 10, marginTop: 4 },
   registerTxt:  { fontFamily: 'Nunito-Regular', fontSize: 14, color: 'rgba(255,255,255,0.6)' },
   registerBold: { fontFamily: 'Nunito-Bold', color: colors.goldBright },
