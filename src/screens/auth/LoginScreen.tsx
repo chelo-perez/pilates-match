@@ -7,9 +7,8 @@ import { supabase } from '../../lib/supabase'
 import { humanizeError } from '../../lib/errors'
 import { authRedirectUrl, handleAuthRedirect } from '../../lib/auth'
 import Toast from '../../components/Toast'
-import NetworkLockup from '../../components/NetworkLockup'
-import { activeBrand, titleFont, titleItalicFont } from '../../lib/brand'
-import { Image } from 'react-native'
+import { activeBrand } from '../../lib/brand'
+import { EntryMark, PoweredBy, entryBg, useMarkTop } from './entry'
 import { useToast } from '../../hooks/useToast'
 import { colors, radius, spacing, typography } from '../../components/ui'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
@@ -31,6 +30,7 @@ export default function LoginScreen({ navigation }: any) {
   const [socialLoading, setSocialLoading] = useState<'google' | 'apple' | null>(null)
   const { toast, showToast, hideToast } = useToast()
   const insets = useSafeAreaInsets()
+  const markTop = useMarkTop()
   const wide = useWindowDimensions().width >= 700 // compu: formulario centrado
 
   // Después de iniciar sesión no navegamos a mano: el listener de auth
@@ -87,25 +87,19 @@ export default function LoginScreen({ navigation }: any) {
   }
 
   return (
-    <View style={[s.root, { paddingTop: insets.top }]}>
-      {/* Blobs decorativos (con co-marca, también el isologo de la red como marca de agua) */}
-      {activeBrand?.logos?.markDark ? <Image source={{ uri: activeBrand.logos.markDark }} style={s.watermark} resizeMode="contain" /> : null}
-      <View style={s.blob1} />
-      <View style={s.blob2} />
-      <View style={s.blob3} />
+    <View style={s.root}>
+      {/* Mismo logo y en el mismo lugar que la pantalla de inicio: el paso entre las dos es continuo */}
+      <View style={{ height: markTop }} />
+      <EntryMark />
 
-      {/* Marca + propuesta de valor, agrupadas; las acciones van abajo, al alcance del pulgar */}
-      <View style={s.brand}>
-        <NetworkLockup size="md" style={s.logo} />
-        {activeBrand ? (
-          <Text style={[s.headline, s.headlineBrand]}>Estudios e instructores{'\n'}de Pilates, <Text style={s.headlineEm}>conectados.</Text></Text>
-        ) : (
-          <Text style={s.headline}>Estudios e instructores{'\n'}de Pilates, conectados</Text>
-        )}
+      <View style={s.copy}>
+        <Text style={s.headline}>Estudios e instructores{'\n'}de Pilates, conectados</Text>
         <Text style={s.subline}>{activeBrand
-          ? `Reemplazos y clases regulares con profesionales verificados por ${activeBrand.shortName}`
-          : 'Reemplazos y clases regulares con profesionales verificados'}</Text>
+          ? `Reemplazos y clases regulares con profesionales verificados por ${activeBrand.shortName}.`
+          : 'Reemplazos y clases regulares con profesionales verificados.'}</Text>
       </View>
+
+      <View style={{ flex: 1 }} />
 
       <View style={s.buttons}>
         <TouchableOpacity style={s.googleBtn} onPress={() => handleOAuth('google')} disabled={!!socialLoading} activeOpacity={0.88}>
@@ -137,18 +131,20 @@ export default function LoginScreen({ navigation }: any) {
           <Text style={s.emailBtnTxt}>Continuar con email</Text>
         </TouchableOpacity>
 
-        <TouchableOpacity style={s.registerLink} onPress={() => navigation.navigate('RegisterRole')}>
+        <TouchableOpacity style={s.registerLink} onPress={() => navigation.navigate('RegisterRole')} hitSlop={8}>
           <Text style={s.registerTxt}>¿No tenés cuenta? <Text style={s.registerBold}>Registrate</Text></Text>
         </TouchableOpacity>
+      </View>
+
+      <View style={[s.footer, { paddingBottom: insets.bottom + 16 }]}>
+        <PoweredBy />
         <Text style={s.legal}>
           Al continuar aceptás los{' '}
-          <Text style={s.legalLink} onPress={() => Linking.openURL('https://masfacil.com.ar/trabajo/terminos')}>Términos y condiciones</Text>
+          <Text style={s.legalLink} onPress={() => Linking.openURL('https://masfacil.com.ar/trabajo/terminos')}>Términos</Text>
           {' '}y la{' '}
           <Text style={s.legalLink} onPress={() => Linking.openURL('https://masfacil.com.ar/trabajo/privacidad')}>Política de privacidad</Text>.
         </Text>
       </View>
-
-      <View style={{ height: insets.bottom + 20 }} />
 
       {/* Modal email */}
       <Modal visible={showEmail} transparent animationType="slide" onRequestClose={() => setShowEmail(false)}>
@@ -213,37 +209,27 @@ export default function LoginScreen({ navigation }: any) {
 }
 
 const s = StyleSheet.create({
-  // Con co-marca, el color principal de la red (como su web); si no, el petróleo oscuro de siempre
-  root:         { flex: 1, backgroundColor: activeBrand ? colors.forest : colors.forestDeep, alignItems: 'center', justifyContent: 'space-between' },
-  watermark:    { position: 'absolute', width: 520, height: 520, right: -170, top: '18%', opacity: 0.07 },
+  root:         { flex: 1, backgroundColor: entryBg(), alignItems: 'center' },
+  copy:         { width: '100%', maxWidth: 420, alignItems: 'center', paddingHorizontal: 32, marginTop: 28 },
+  headline:     { fontFamily: 'Nunito-Bold', fontSize: 26, lineHeight: 32, color: colors.white, textAlign: 'center', letterSpacing: -0.2 },
+  subline:      { fontFamily: 'Nunito-Regular', fontSize: 15, lineHeight: 22, color: 'rgba(255,255,255,0.72)', textAlign: 'center', marginTop: 12, maxWidth: 320 },
+  footer:       { width: '100%', alignItems: 'center', gap: 10, paddingHorizontal: 28, marginTop: 12 },
 
-  // Blobs decorativos
-  blob1:        { position: 'absolute', width: 300, height: 300, borderRadius: 150, backgroundColor: colors.goldBright + '10', top: -80, right: -80 },
-  blob2:        { position: 'absolute', width: 200, height: 200, borderRadius: 100, backgroundColor: colors.sage + '66', bottom: 100, left: -60 },
-  blob3:        { position: 'absolute', width: 150, height: 150, borderRadius: 75, backgroundColor: 'rgba(255,255,255,0.03)', top: '40%', right: -40 },
+  buttons:      { width: '100%', maxWidth: 460, paddingHorizontal: 28, gap: 12 },
 
-  brand:        { flex: 1, width: '100%', alignItems: 'center', justifyContent: 'center', paddingHorizontal: 36, paddingBottom: 24 },
-  logo:         { marginBottom: 36 },
-  headline:     { fontFamily: 'Nunito-Bold', fontSize: 24, lineHeight: 31, color: colors.white, textAlign: 'center', marginBottom: 12 },
-  headlineBrand:{ fontFamily: titleFont, fontSize: 30, lineHeight: 34, letterSpacing: 0, marginHorizontal: -12 },
-  headlineEm:   { fontFamily: titleItalicFont, color: colors.goldBright },
-  subline:      { fontFamily: 'Nunito-Regular', fontSize: 14, lineHeight: 20, color: 'rgba(255,255,255,0.62)', textAlign: 'center', maxWidth: 300 },
-
-  buttons:      { width: '100%', maxWidth: 460, paddingHorizontal: 28, gap: 12, marginBottom: 8 },
-
-  googleBtn:    { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 12, backgroundColor: colors.white, ...radius.leaf, paddingVertical: 16, elevation: 4, shadowColor: colors.black, shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.2, shadowRadius: 8 },
+  googleBtn:    { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 12, backgroundColor: colors.white, borderRadius: 14, height: 54 },
   googleTxt:    { fontFamily: 'Nunito-Bold', fontSize: 15, color: colors.dark },
 
-  appleBtn:     { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 12, backgroundColor: 'rgba(255,255,255,0.12)', ...radius.leaf, paddingVertical: 16, borderWidth: 1, borderColor: 'rgba(255,255,255,0.2)' },
+  appleBtn:     { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 12, backgroundColor: colors.black, borderRadius: 14, height: 54 },
   appleTxt:     { fontFamily: 'Nunito-Bold', fontSize: 15, color: colors.white },
 
-  emailBtn:     { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 10, ...radius.leaf, paddingVertical: 15, borderWidth: 1, borderColor: 'rgba(255,255,255,0.28)', backgroundColor: 'rgba(255,255,255,0.06)' },
+  emailBtn:     { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 10, borderRadius: 14, height: 54, borderWidth: 1, borderColor: 'rgba(255,255,255,0.35)' },
   emailBtnTxt:  { fontFamily: 'Nunito-Bold', fontSize: 15, color: colors.white },
 
-  legal:        { fontFamily: 'Nunito-Regular', fontSize: 11, lineHeight: 16, color: 'rgba(255,255,255,0.5)', textAlign: 'center', marginTop: 2 },
-  legalLink:    { textDecorationLine: 'underline', color: 'rgba(255,255,255,0.75)' },
-  registerLink: { alignItems: 'center', paddingVertical: 10, marginTop: 4 },
-  registerTxt:  { fontFamily: 'Nunito-Regular', fontSize: 14, color: 'rgba(255,255,255,0.6)' },
+  legal:        { fontFamily: 'Nunito-Regular', fontSize: 11, lineHeight: 16, color: 'rgba(255,255,255,0.5)', textAlign: 'center' },
+  legalLink:    { textDecorationLine: 'underline', color: 'rgba(255,255,255,0.7)' },
+  registerLink: { alignItems: 'center', paddingVertical: 8, marginTop: 4 },
+  registerTxt:  { fontFamily: 'Nunito-Regular', fontSize: 14, color: 'rgba(255,255,255,0.72)' },
   registerBold: { fontFamily: 'Nunito-Bold', color: colors.goldBright },
 
 

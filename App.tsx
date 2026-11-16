@@ -1,5 +1,5 @@
 import React, { useEffect } from 'react'
-import { View, ActivityIndicator } from 'react-native'
+import { View } from 'react-native'
 import { SafeAreaProvider } from 'react-native-safe-area-context'
 import { QueryClientProvider } from '@tanstack/react-query'
 import { useFonts } from 'expo-font'
@@ -8,8 +8,8 @@ import RootNavigator from './src/navigation'
 import AnimatedSplash from './src/screens/auth/SplashScreen'
 import { queryClient } from './src/lib/queryClient'
 import { subscribeAuth, subscribeDeepLinks } from './src/lib/auth'
-import { colors } from './src/components/ui'
-import { brandFontFiles } from './src/lib/brand'
+import { brandFontFiles, ensureLocalMark } from './src/lib/brand'
+import { useAuthStore } from './src/store'
 import './src/lib/webAlert' // confirmaciones visibles en la web
 
 SplashScreen.preventAutoHideAsync()
@@ -18,6 +18,9 @@ export default function App() {
   const [showSplash, setShowSplash] = React.useState(true)
   // Tipografías de la red (o Nunito): ver src/lib/brand.ts
   const [fontsLoaded] = useFonts(brandFontFiles())
+  // El inicio animado se va cuando la app ya sabe a qué pantalla ir (sin pantalla de carga en el medio)
+  const authReady = !useAuthStore(s => s.isLoading)
+  useEffect(() => { ensureLocalMark() }, [])
 
   useEffect(() => {
     if (fontsLoaded) SplashScreen.hideAsync()
@@ -31,18 +34,15 @@ export default function App() {
   // Links entrantes: mail de "olvidé mi contraseña"
   useEffect(() => subscribeDeepLinks(), [])
 
-  if (!fontsLoaded) return (
-    <View style={{ flex: 1, backgroundColor: colors.cream, alignItems: 'center', justifyContent: 'center' }}>
-      <ActivityIndicator color={colors.sage} size="large" />
-    </View>
-  )
+  // Mientras cargan las tipografías sigue la pantalla de inicio fija: mismo color, sin parpadeo
+  if (!fontsLoaded) return <View style={{ flex: 1, backgroundColor: '#163235' }} />
 
   return (
     <QueryClientProvider client={queryClient}>
       <SafeAreaProvider>
         <RootNavigator />
         {showSplash && (
-          <AnimatedSplash onFinish={() => setShowSplash(false)} />
+          <AnimatedSplash ready={authReady} onFinish={() => setShowSplash(false)} />
         )}
       </SafeAreaProvider>
     </QueryClientProvider>

@@ -1,74 +1,64 @@
-// src/screens/auth/SplashScreen.tsx
-import React, { useEffect, useRef } from 'react'
-import { View, Animated, StyleSheet } from 'react-native'
-import { colors } from '../../components/ui'
-import { activeBrand } from '../../lib/brand'
-import NetworkLockup from '../../components/NetworkLockup'
+// Pantalla de inicio animada. Continúa la pantalla de inicio fija del celular (mismo fondo y
+// mismo logo, en el mismo lugar) y la lleva hasta la entrada de la red:
+//   1. Se ve igual que el inicio fijo: logo de Trabajo Más Fácil sobre petróleo.
+//   2. El fondo pasa suavemente al color de la red y el logo de la red aparece donde va a estar en el login.
+//   3. Cuando la app sabe a dónde ir (sesión y perfil cargados), se desvanece.
+import React, { useEffect, useRef, useState } from 'react'
+import { View, Animated, Easing, Image, StyleSheet } from 'react-native'
+import { EntryMark, NATIVE_SPLASH_BG, entryBg, useMarkTop } from './entry'
 
+interface Props { ready: boolean; onFinish: () => void }
 
-interface Props {
-  onFinish: () => void
-}
+const ease = Easing.bezier(0.4, 0, 0.2, 1)
+const MAX_WAIT = 6000 // si la sesión tarda, no dejamos a la persona mirando el logo
 
-export default function AnimatedSplash({ onFinish }: Props) {
-  // Arranca con el logo visible (igual que el splash nativo) para que no parpadee
-  const opacity    = useRef(new Animated.Value(1)).current
-  const scale      = useRef(new Animated.Value(0.94)).current
-  const fadeOut    = useRef(new Animated.Value(1)).current
+export default function AnimatedSplash({ ready, onFinish }: Props) {
+  const native = useRef(new Animated.Value(1)).current   // logo del inicio fijo
+  const bg     = useRef(new Animated.Value(0)).current   // fondo de la red
+  const mark   = useRef(new Animated.Value(0)).current   // logo de entrada
+  const out    = useRef(new Animated.Value(1)).current   // todo el inicio
+  const [intro, setIntro] = useState(false)
+  const [timedOut, setTimedOut] = useState(false)
+  const markTop = useMarkTop()
 
   useEffect(() => {
     Animated.sequence([
-      // 1. Leve zoom del logo (ya visible, igual que el splash nativo)
+      Animated.delay(250),
       Animated.parallel([
-        Animated.timing(opacity, {
-          toValue: 1, duration: 700,
-          useNativeDriver: true,
-        }),
-        Animated.spring(scale, {
-          toValue: 1, friction: 6, tension: 40,
-          useNativeDriver: true,
-        }),
+        Animated.timing(native, { toValue: 0, duration: 420, easing: ease, useNativeDriver: true }),
+        Animated.timing(bg, { toValue: 1, duration: 520, easing: ease, useNativeDriver: true }),
+        Animated.timing(mark, { toValue: 1, duration: 520, delay: 200, easing: ease, useNativeDriver: true }),
       ]),
-      // 2. Pausa con el logo visible
-      Animated.delay(900),
-      // 3. Primero se va el logo y después el fondo: así no se ven dos logos
-      //    a la vez (el del login está en otra posición)
-      Animated.timing(opacity, {
-        toValue: 0, duration: 250,
-        useNativeDriver: true,
-      }),
-      Animated.timing(fadeOut, {
-        toValue: 0, duration: 400,
-        useNativeDriver: true,
-      }),
-    ]).start(() => onFinish())
+    ]).start(() => setIntro(true))
+    const t = setTimeout(() => setTimedOut(true), MAX_WAIT)
+    return () => clearTimeout(t)
   }, [])
 
-  return (
-    <Animated.View style={[s.container, { opacity: fadeOut }]}>
-      {/* Mismo fondo y círculos que el login, para que el paso sea continuo */}
-      <View style={s.blob1} />
-      <View style={s.blob2} />
-      <View style={s.blob3} />
+  useEffect(() => {
+    if (!intro || !(ready || timedOut)) return
+    Animated.timing(out, { toValue: 0, duration: 380, delay: 120, easing: ease, useNativeDriver: true }).start(() => onFinish())
+  }, [intro, ready, timedOut])
 
-      {/* Logo */}
-      <Animated.View style={{ opacity, transform: [{ scale }] }}>
-        <NetworkLockup />
+  return (
+    <Animated.View style={[s.root, { opacity: out }]} pointerEvents="none">
+      <View style={[StyleSheet.absoluteFill, { backgroundColor: NATIVE_SPLASH_BG }]} />
+      <Animated.View style={[StyleSheet.absoluteFill, { backgroundColor: entryBg(), opacity: bg }]} />
+
+      {/* Igual que el inicio fijo: imagen de 288 de ancho, centrada */}
+      <Animated.View style={[s.center, { opacity: native, transform: [{ scale: native.interpolate({ inputRange: [0, 1], outputRange: [0.94, 1] }) }] }]}>
+        <Image source={require('../../../assets/splash-icon.png')} style={s.nativeImg} resizeMode="contain" />
+      </Animated.View>
+
+      <Animated.View style={[s.mark, { top: markTop, opacity: mark, transform: [{ translateY: mark.interpolate({ inputRange: [0, 1], outputRange: [10, 0] }) }] }]}>
+        <EntryMark />
       </Animated.View>
     </Animated.View>
   )
 }
 
 const s = StyleSheet.create({
-  container: {
-    ...StyleSheet.absoluteFillObject,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: activeBrand ? colors.forest : colors.forestDeep,
-    zIndex: 999,
-  },
-  blob1: { position: 'absolute', width: 300, height: 300, borderRadius: 150, backgroundColor: colors.goldBright + '10', top: -80, right: -80 },
-  blob2: { position: 'absolute', width: 200, height: 200, borderRadius: 100, backgroundColor: colors.sage + '66', bottom: 100, left: -60 },
-  blob3: { position: 'absolute', width: 150, height: 150, borderRadius: 75, backgroundColor: 'rgba(255,255,255,0.03)', top: '40%', right: -40 },
-  logo:  { width: 220, height: 170 },
+  root:      { ...StyleSheet.absoluteFillObject, zIndex: 999 },
+  center:    { ...StyleSheet.absoluteFillObject, alignItems: 'center', justifyContent: 'center' },
+  nativeImg: { width: 288, height: 288 },
+  mark:      { position: 'absolute', left: 0, right: 0, alignItems: 'center' },
 })

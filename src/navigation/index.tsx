@@ -88,6 +88,8 @@ import CamaraReportsScreen from '../screens/camara/ReportsScreen'
 const Stack = createNativeStackNavigator()
 const Tab = createBottomTabNavigator<any>()
 const noHeader = { headerShown: false }
+// Entrar, salir o cambiar de rol reemplaza toda la pantalla: fundido, no deslizamiento
+const rootFade = { animation: 'fade' as const, animationDuration: 260 }
 
 export const navigationRef = createNavigationContainerRef<any>()
 
@@ -270,22 +272,22 @@ export default function RootNavigator() {
   if (!session || registering) {
     screens = (
       <>
-        <Stack.Screen name="Login" component={LoginScreen} />
+        <Stack.Screen name="Login" component={LoginScreen} options={rootFade} />
         <Stack.Screen name="RegisterRole" component={RegisterRoleScreen} />
         <Stack.Screen name="RegisterInstructor" component={RegisterInstructorScreen} />
         <Stack.Screen name="RegisterStudio" component={RegisterStudioScreen} />
       </>
     )
   } else if (passwordRecovery) {
-    screens = <Stack.Screen name="ResetPassword" component={ResetPasswordScreen} />
+    screens = <Stack.Screen name="ResetPassword" component={ResetPasswordScreen} options={rootFade} />
   } else if (!user && profileError) {
-    screens = <Stack.Screen name="ProfileError" component={ProfileErrorScreen} />
+    screens = <Stack.Screen name="ProfileError" component={ProfileErrorScreen} options={rootFade} />
   } else if (!user || (needsOnboarding && !isAdmin)) {
-    screens = <Stack.Screen name="SelectRole" component={SelectRoleScreen} />
+    screens = <Stack.Screen name="SelectRole" component={SelectRoleScreen} options={rootFade} />
   } else if (user.role === 'instructor') {
     screens = (
       <>
-        <Stack.Screen name="InstructorTabs" component={InstructorTabs} />
+        <Stack.Screen name="InstructorTabs" component={InstructorTabs} options={rootFade} />
         <Stack.Screen name="EvaluateStudio" component={EvaluateStudioScreen} />
         <Stack.Screen name="InstructorStudios" component={InstructorStudiosScreen} />
         <Stack.Screen name="OpenClasses" component={OpenClassesScreen} />
@@ -296,7 +298,7 @@ export default function RootNavigator() {
   } else if (user.role === 'estudio') {
     screens = (
       <>
-        <Stack.Screen name="EstudioHome" component={StudioTabs} />
+        <Stack.Screen name="EstudioHome" component={StudioTabs} options={rootFade} />
         <Stack.Screen name="InstructorProfile" component={InstructorProfileScreen} />
         <Stack.Screen name="RequestMatch" component={RequestMatchScreen} />
         <Stack.Screen name="EvaluateInstructor" component={EvaluateInstructorScreen} />
@@ -312,14 +314,14 @@ export default function RootNavigator() {
     // Dueño de la plataforma: Cámaras, liquidaciones y la red completa
     screens = (
       <>
-        <Stack.Screen name="PlatformTabs" component={AdminTabs} />
+        <Stack.Screen name="PlatformTabs" component={AdminTabs} options={rootFade} />
       </>
     )
   } else {
     // Admin de una Cámara: panel de su red
     screens = (
       <>
-        <Stack.Screen name="CamaraTabs" component={CamaraTabs} />
+        <Stack.Screen name="CamaraTabs" component={CamaraTabs} options={rootFade} />
         <Stack.Screen name="VerifyInstructor" component={VerifyInstructorScreen} />
         <Stack.Screen name="StudioDetail" component={StudioDetailScreen} />
         <Stack.Screen name="CamaraProfileEdit" component={CamaraProfileEditScreen} />

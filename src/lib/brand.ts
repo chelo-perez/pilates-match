@@ -29,6 +29,8 @@ export interface NetworkBrand {
   fonts: { body?: 'jost' | null; title?: 'dm-serif' | null }
   /** wide: logo horizontal sobre fondo claro; mark: isologo sobre claro; markDark: isologo sobre oscuro */
   logos: { wide?: string | null; mark?: string | null; markDark?: string | null }
+  /** Copia del isologo guardada en el celular, para mostrarlo al instante al abrir (no viene de la base) */
+  markDarkLocal?: string | null
 }
 
 const KEY = 'network-brand-v1'
@@ -145,12 +147,13 @@ export function brandFromRow(r: any): NetworkBrand | null {
   }
 }
 
-const canon = (b: NetworkBrand | null) => JSON.stringify(b ?? null)
+const canon = (b: NetworkBrand | null) => JSON.stringify(b ? { ...b, markDarkLocal: undefined } : null)
 export const sameBrand = (a: NetworkBrand | null, b: NetworkBrand | null) => canon(a) === canon(b)
 
 /** Guarda la marca nueva y recarga la app para aplicarla (una vez por cambio) */
 export async function switchBrand(b: NetworkBrand | null) {
   if (sameBrand(b, activeBrand)) return
+  if (b) b = { ...b, markDarkLocal: await saveLogoLocally(b.logos?.markDark) }
   writeCachedBrand(b)
   // Si no se pudo guardar, recargar no cambiaría nada (y se repetiría): se deja como está
   if (!sameBrand(readCachedBrand(), b)) return
@@ -161,10 +164,33 @@ export async function switchBrand(b: NetworkBrand | null) {
   } catch { /* en desarrollo no se puede recargar: se aplica al próximo arranque */ }
 }
 
+/** Isologo para fondos oscuros: la copia local si existe (aparece sin esperar la red) */
+export const brandMark = (b: NetworkBrand | null = activeBrand) => b?.markDarkLocal || b?.logos?.markDark || null
+
+async function saveLogoLocally(url?: string | null): Promise<string | null> {
+  if (!url || Platform.OS === 'web') return null
+  try {
+    const { File, Paths } = require('expo-file-system')
+    const ext = (url.split('?')[0].match(/\.(png|jpe?g|webp)$/i)?.[1] ?? 'png').toLowerCase()
+    const dest = new File(Paths.document, `network-mark.${ext}`)
+    if (dest.exists) dest.delete()
+    const f = await File.downloadFileAsync(url, dest)
+    return f.uri
+  } catch { return null }
+}
+
 // ── Link de la red (web): app.trabajo.masfacil.com.ar/?red=capiaf ────
 /** Slug pedido por URL, si lo hay. Se recuerda para preseleccionar la red al registrarse. */
 export function requestedSlug(): string | null {
   if (Platform.OS !== 'web' || typeof window === 'undefined') return null
   const q = new URLSearchParams(window.location.search).get('red')
   return q && /^[a-z0-9-]{2,40}$/.test(q) ? q : null
+}
+
+/** Usuarios que ya tenían la marca guardada sin la copia local del logo: se descarga una vez, sin recargar */
+export async function ensureLocalMark() {
+  const b = activeBrand
+  if (!b || b.markDarkLocal || !b.logos?.markDark || Platform.OS === 'web') return
+  const local = await saveLogoLocally(b.logos.markDark)
+  if (local) writeCachedBrand({ ...b, markDarkLocal: local })
 }
