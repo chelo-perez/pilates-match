@@ -71,7 +71,14 @@ export async function syncAuthUser(userId: string) {
 
 // ── Redirecciones (OAuth y "olvidé mi contraseña") ──────────
 /** URL de vuelta a la app. Tiene que estar en Auth → URL Configuration → Redirect URLs de Supabase. */
+/** Web de la app: los links de los mails abren acá, desde cualquier dispositivo */
+export const WEB_APP_URL = 'https://app.trabajo.masfacil.com.ar'
+
 export function authRedirectUrl(path?: string) {
+  // El mail de "olvidé mi contraseña" se puede abrir en la compu aunque se haya pedido desde
+  // el celular: un link a la app (trabajomasfacil://) ahí no abre nada y quema el link.
+  // Por eso siempre vuelve a la web, que permite elegir la contraseña nueva en cualquier lado.
+  if (path === 'reset-password') return `${WEB_APP_URL}/?reset=1`
   if (Platform.OS === 'web' && typeof window !== 'undefined') {
     // Se vuelve a la raíz de la web (app.trabajo.masfacil.com.ar). No hace falta el path:
     // la recuperación de contraseña llega con type=recovery en la URL.
@@ -120,7 +127,12 @@ export function subscribeDeepLinks() {
     handleAuthRedirect(url).catch((e) => {
       useAuthStore.getState().setPasswordRecovery(false)
       if (__DEV__) console.warn('[auth] link inválido', e)
-      Alert.alert('Link vencido', 'El link ya no es válido. Pedí uno nuevo desde "¿Olvidaste tu contraseña?".')
+      const msg = 'El link ya no es válido: cada link sirve una sola vez. Pedí uno nuevo desde "¿Olvidaste tu contraseña?".'
+      // En la web Alert no se muestra
+      if (Platform.OS === 'web') window.alert(msg); else Alert.alert('Link vencido', msg)
+    }).finally(() => {
+      // En la web, sacar los datos del link de la barra de direcciones (no se reprocesan al recargar)
+      if (Platform.OS === 'web' && typeof window !== 'undefined') window.history.replaceState(null, '', window.location.pathname)
     })
   }
   Linking.getInitialURL().then(handle).catch(() => {})

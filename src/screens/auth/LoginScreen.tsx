@@ -1,7 +1,7 @@
 import React, { useState } from 'react'
 import {
   View, Text, StyleSheet, TouchableOpacity,
-  ActivityIndicator, Modal, TextInput, KeyboardAvoidingView, Platform,
+  ActivityIndicator, Modal, TextInput, KeyboardAvoidingView, Platform, useWindowDimensions,
 } from 'react-native'
 import { supabase } from '../../lib/supabase'
 import { humanizeError } from '../../lib/errors'
@@ -31,6 +31,7 @@ export default function LoginScreen({ navigation }: any) {
   const [socialLoading, setSocialLoading] = useState<'google' | 'apple' | null>(null)
   const { toast, showToast, hideToast } = useToast()
   const insets = useSafeAreaInsets()
+  const wide = useWindowDimensions().width >= 700 // compu: formulario centrado
 
   // Después de iniciar sesión no navegamos a mano: el listener de auth
   // (src/lib/auth.ts) lee el perfil y RootNavigator cambia de pantalla solo.
@@ -145,8 +146,8 @@ export default function LoginScreen({ navigation }: any) {
 
       {/* Modal email */}
       <Modal visible={showEmail} transparent animationType="slide" onRequestClose={() => setShowEmail(false)}>
-        <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={s.modalOverlay}>
-          <View style={[s.modalBox, { paddingBottom: insets.bottom + 28 }]}>
+        <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={[s.modalOverlay, wide && { justifyContent: 'center', padding: 24 }]}>
+          <View style={[s.modalBox, { paddingBottom: insets.bottom + 28 }, wide && { borderRadius: 28 }]}>
             <Text style={s.modalTitle}>Iniciar sesión</Text>
             <Text style={s.modalSub}>con tu email y contraseña</Text>
 
@@ -239,8 +240,9 @@ const s = StyleSheet.create({
 
 
   // Modal email
-  modalOverlay: { flex: 1, backgroundColor: colors.overlay, justifyContent: 'flex-end' },
-  modalBox:     { backgroundColor: colors.cream, borderTopLeftRadius: 28, borderTopRightRadius: 28, padding: 28 },
+  // En la compu el formulario va centrado y angosto; en el celular, como hoja desde abajo
+  modalOverlay: { flex: 1, backgroundColor: colors.overlay, justifyContent: 'flex-end', alignItems: 'center' },
+  modalBox:     { backgroundColor: colors.cream, borderTopLeftRadius: 28, borderTopRightRadius: 28, padding: 28, width: '100%', maxWidth: 520 },
   modalTitle:   { fontFamily: 'Nunito-Bold', fontSize: 22, color: colors.dark, marginBottom: 2 },
   modalSub:     { fontFamily: 'Nunito-Regular', fontSize: 13, color: colors.mid, marginBottom: 20 },
   fieldLabel:   { ...typography.caption, marginBottom: 5 },

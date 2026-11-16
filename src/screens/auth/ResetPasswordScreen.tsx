@@ -27,7 +27,7 @@ export default function ResetPasswordScreen() {
     try {
       const { error: e } = await supabase.auth.updateUser({ password })
       if (e) throw e
-      showToast('Listo, ya cambiaste tu contraseña', 'success')
+      showToast(Platform.OS === 'web' ? 'Listo. Usá esta contraseña también en la app del celular.' : 'Listo, ya cambiaste tu contraseña', 'success')
       setTimeout(() => useAuthStore.getState().setPasswordRecovery(false), 1200)
     } catch (e) {
       showToast(humanizeError(e), 'error')
@@ -54,7 +54,7 @@ export default function ResetPasswordScreen() {
 }
 
 const s = StyleSheet.create({
-  container: { flexGrow: 1, padding: spacing.xl },
+  container: { flexGrow: 1, padding: spacing.xl, width: '100%', maxWidth: 480, alignSelf: 'center' },
   title:     { ...typography.h2, marginBottom: spacing.xs },
   sub:       { ...typography.body, marginBottom: spacing.xl },
 })
