@@ -8,7 +8,7 @@ import { humanizeError } from '../../lib/errors'
 import { authRedirectUrl, handleAuthRedirect } from '../../lib/auth'
 import Toast from '../../components/Toast'
 import { activeBrand } from '../../lib/brand'
-import { EntryMark, PoweredBy, entryBg, useMarkTop, LEGAL_H, LEGAL_GAP } from './entry'
+import { EntryLockup, ENTRY_BG, useLogoTop } from './entry'
 import { useToast } from '../../hooks/useToast'
 import { colors, radius, spacing, typography } from '../../components/ui'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
@@ -30,7 +30,7 @@ export default function LoginScreen({ navigation }: any) {
   const [socialLoading, setSocialLoading] = useState<'google' | 'apple' | null>(null)
   const { toast, showToast, hideToast } = useToast()
   const insets = useSafeAreaInsets()
-  const markTop = useMarkTop()
+  const logoTop = useLogoTop()
   const wide = useWindowDimensions().width >= 700 // compu: formulario centrado
 
   // Después de iniciar sesión no navegamos a mano: el listener de auth
@@ -88,9 +88,9 @@ export default function LoginScreen({ navigation }: any) {
 
   return (
     <View style={s.root}>
-      {/* Mismo logo y en el mismo lugar que la pantalla de inicio: el paso entre las dos es continuo */}
-      <View style={{ height: markTop }} />
-      <EntryMark />
+      {/* Nuestro logo (y la red debajo), en el mismo lugar que la pantalla de inicio: el paso es continuo */}
+      <View style={{ height: logoTop }} />
+      <EntryLockup />
 
       <View style={s.copy}>
         <Text style={s.headline}>Estudios e instructores{'\n'}de Pilates, conectados</Text>
@@ -137,8 +137,7 @@ export default function LoginScreen({ navigation }: any) {
       </View>
 
       <View style={[s.footer, { paddingBottom: insets.bottom + 16 }]}>
-        <PoweredBy />
-        <Text style={[s.legal, { height: LEGAL_H, marginTop: activeBrand ? LEGAL_GAP : 0 }]} numberOfLines={2}>
+        <Text style={s.legal}>
           Al continuar aceptás los{' '}
           <Text style={s.legalLink} onPress={() => Linking.openURL('https://masfacil.com.ar/trabajo/terminos')}>Términos</Text>
           {' '}y la{' '}
@@ -209,8 +208,8 @@ export default function LoginScreen({ navigation }: any) {
 }
 
 const s = StyleSheet.create({
-  root:         { flex: 1, backgroundColor: entryBg(), alignItems: 'center' },
-  copy:         { width: '100%', maxWidth: 420, alignItems: 'center', paddingHorizontal: 32, marginTop: 28 },
+  root:         { flex: 1, backgroundColor: ENTRY_BG, alignItems: 'center' },
+  copy:         { width: '100%', maxWidth: 420, alignItems: 'center', paddingHorizontal: 32, marginTop: 36 },
   headline:     { fontFamily: 'Nunito-Bold', fontSize: 26, lineHeight: 32, color: colors.white, textAlign: 'center', letterSpacing: -0.2 },
   subline:      { fontFamily: 'Nunito-Regular', fontSize: 15, lineHeight: 22, color: 'rgba(255,255,255,0.72)', textAlign: 'center', marginTop: 12, maxWidth: 320 },
   footer:       { width: '100%', alignItems: 'center', paddingHorizontal: 28, marginTop: 20 },
@@ -230,7 +229,7 @@ const s = StyleSheet.create({
   legalLink:    { textDecorationLine: 'underline', color: 'rgba(255,255,255,0.7)' },
   registerLink: { alignItems: 'center', paddingVertical: 8, marginTop: 4 },
   registerTxt:  { fontFamily: 'Nunito-Regular', fontSize: 14, color: 'rgba(255,255,255,0.72)' },
-  registerBold: { fontFamily: 'Nunito-Bold', color: colors.goldBright },
+  registerBold: { fontFamily: 'Nunito-Bold', color: '#8FD6CF' },
 
 
   // Modal email
