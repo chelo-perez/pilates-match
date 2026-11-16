@@ -33,7 +33,7 @@ El identificador no se puede cambiar después de publicar. Pasos:
 - Cuenta de Google Play Console (USD 25) y prueba cerrada con 12 personas durante 14 días.
 - Completar los datos entre [CORCHETES] de los textos legales y publicarlos en una URL propia.
 - Plan Pro de Supabase antes de lanzar, porque el plan gratuito pausa el proyecto si no se usa.
-- Mercado Pago de la plataforma (en espera del alta de Tecnología Más Fácil SAS, que va a facturar):
+- Mercado Pago de la plataforma: claves cargadas y probado de punta a punta (pago real de $400 del cargo de incorporación, aviso del webhook y devolución desde Liquidaciones). Tecnología Más Fácil SAS ya tiene CUIT y cuenta.
   - Crear la cuenta de Mercado Pago a nombre de la sociedad y una aplicación en Mercado Pago Developers.
   - Cargar en Supabase → Edge Functions → Secrets: `MP_ACCESS_TOKEN` y `MP_WEBHOOK_SECRET` (nunca en el chat).
   - Configurar el webhook de Mercado Pago apuntando a la función `mp-webhook` (eventos: pagos y suscripciones).
@@ -41,3 +41,7 @@ El identificador no se puede cambiar después de publicar. Pasos:
   - Lo que ya está listo y espera las claves: cargo de incorporación de clases regulares (pago, devolución y crédito) y planes del estudio.
   - Siguiente etapa: cobro garantizado de reemplazos (split de Mercado Pago, 5% para la plataforma, el instructor recibe el 100%).
 - Contador: facturación de la comisión y del cargo de incorporación, e Ingresos Brutos.
+- Mails de autenticación:
+  - Plantilla de "recuperar contraseña" en castellano cargada (docs/emails/recuperar-contrasena.html). Faltan las de confirmar cuenta y cambio de email.
+  - Servidor de correo propio (por ejemplo Resend con el dominio masfacil.com.ar) para que el remitente sea "Trabajo Más Fácil" y subir el límite de 2 mails por hora del servidor de Supabase.
+- Configuración de Supabase Auth: dirección por defecto https://app.trabajo.masfacil.com.ar y direcciones permitidas (app del celular, web, dirección de Expo y la landing).
