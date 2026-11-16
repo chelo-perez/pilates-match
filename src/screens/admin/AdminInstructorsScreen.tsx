@@ -2,6 +2,7 @@
 import React, { useEffect, useMemo, useState } from 'react'
 import { useCamaras } from '../../lib/platform'
 import { shortDate, useAdminInstructors, VERIF } from '../../lib/admin'
+import { useIsEntity } from '../../lib/admin'
 import { AdminPage, CellTitle, DataTable, NetworkFilter, Pill, SearchBox, Segmented, Toolbar } from '../../components/admin/AdminUI'
 import { Avatar, ErrorState, LoadingScreen } from '../../components/ui'
 
@@ -9,6 +10,7 @@ const norm = (s: string) => s.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCa
 type F = 'todos' | 'pendiente' | 'verificado' | 'rechazado'
 
 export default function AdminInstructorsScreen({ navigation, route }: any) {
+  const isEntity = useIsEntity()
   const { data: rows = [], isLoading, isError, refetch } = useAdminInstructors()
   const { data: camaras = [] } = useCamaras()
   const [filter, setFilter] = useState<F>(route?.params?.filter ?? 'todos')
@@ -27,7 +29,7 @@ export default function AdminInstructorsScreen({ navigation, route }: any) {
   const netName = (id: string) => camaras.find(c => c.id === id)?.name ?? 'Sin red'
 
   return (
-    <AdminPage title="Instructores" subtitle="Estado de verificación de cada red: la verificación la hace la entidad">
+    <AdminPage title="Instructores" subtitle={isEntity ? "Revisá los certificados y verificá a los instructores de tu red" : "Estado de verificación de cada red: la verificación la hace la entidad"}>
       <Toolbar>
         <Segmented value={filter} onChange={setFilter} items={[
           { key: 'todos', label: 'Todos', count: count('todos') },
@@ -35,14 +37,14 @@ export default function AdminInstructorsScreen({ navigation, route }: any) {
           { key: 'verificado', label: 'Verificados', count: count('verificado') },
           { key: 'rechazado', label: 'Rechazados', count: count('rechazado') },
         ]} />
-        <NetworkFilter networks={camaras} value={net} onChange={setNet} />
+        {!isEntity ? <NetworkFilter networks={camaras} value={net} onChange={setNet} /> : null}
         <SearchBox value={q} onChange={setQ} placeholder="Nombre, email o barrio" />
       </Toolbar>
       <DataTable rows={list} keyOf={r => r.id} onRowPress={r => navigation.navigate('AdminInstructorDetail', { instructorId: r.id })}
         empty={q ? 'Nadie coincide con la búsqueda.' : 'No hay instructores con este filtro.'}
         columns={[
           { key: 'n', label: 'Instructor', flex: 2.4, render: r => <CellTitle title={r.full_name} sub={r.email} avatar={<Avatar name={r.full_name} source={r.avatar_url} size={34} />} /> },
-          { key: 'r', label: 'Red', flex: 1.6, render: r => netName(r.camara_id) },
+          ...(isEntity ? [] : [{ key: 'r', label: 'Red', flex: 1.6, render: (r: any) => netName(r.camara_id) }]),
           { key: 'b', label: 'Barrio', flex: 1, render: r => r.neighborhood ?? '—' },
           { key: 'a', label: 'Alta', width: 130, render: r => shortDate(r.created_at) },
           { key: 'e', label: 'Estado', width: 120, align: 'right', render: r => {

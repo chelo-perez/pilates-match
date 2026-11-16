@@ -1,33 +1,38 @@
 // Datos del panel de administración de la plataforma (super_admin ve todas las redes por RLS).
 import { useQuery } from '@tanstack/react-query'
 import { supabase } from './supabase'
+import { myNetwork } from './platform'
+import { useAuthStore } from '../store'
+
+/** La entidad de una red (camara_admin) usa el mismo panel, limitado a su red */
+export const useIsEntity = () => useAuthStore(s => s.user?.role) === 'camara_admin'
 
 const list = async (q: any) => { const { data, error } = await q; if (error) throw error; return (data ?? []) as any[] }
 
 export const useAdminStudios = () =>
   useQuery({
     queryKey: ['admin-studios'],
-    queryFn: () => list(supabase.from('studios')
+    queryFn: () => list(myNetwork(supabase.from('studios')
       .select('id, name, neighborhood, is_member, member_since, camara_id, created_at, logo_url, owner_email, user_id, placement_credits, membership:memberships(plan_type, status, matches_used_month, matches_limit, last_reset_date)')
-      .order('created_at', { ascending: false })),
+      .order('created_at', { ascending: false }))),
   })
 
 export const useAdminInstructors = () =>
   useQuery({
     queryKey: ['admin-instructors'],
-    queryFn: () => list(supabase.from('instructors')
+    queryFn: () => list(myNetwork(supabase.from('instructors')
       .select('id, full_name, email, phone, neighborhood, avatar_url, verification_status, created_at, camara_id, is_active')
-      .order('created_at', { ascending: false })),
+      .order('created_at', { ascending: false }))),
   })
 
 export const useAdminMatches = () =>
   useQuery({
     queryKey: ['admin-matches'],
-    queryFn: () => list(supabase.from('matches')
+    queryFn: () => list(myNetwork(supabase.from('matches')
       .select(`id, created_at, responded_at, class_type, class_date, start_time, end_time, status, offered_rate, agreed_rate, camara_id,
         cancelled_by, cancel_reason, late_cancel, held_studio, held_instructor, hire_status, placement_status, placement_fee_ars, placement_paid_at,
         studio:studios(id, name), instructor:instructors(id, full_name, avatar_url)`)
-      .order('created_at', { ascending: false }).limit(500)),
+      .order('created_at', { ascending: false }).limit(500))),
   })
 
 /** Cargos de incorporación devueltos o por devolver, facturas sin cobrar y liquidaciones sin pagar (sin importar el mes) */

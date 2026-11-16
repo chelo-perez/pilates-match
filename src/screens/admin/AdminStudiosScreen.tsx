@@ -2,6 +2,7 @@
 import React, { useMemo, useState } from 'react'
 import { useCamaras } from '../../lib/platform'
 import { one, PLAN_LABEL, shortDate, useAdminStudios, usedThisMonth } from '../../lib/admin'
+import { useIsEntity } from '../../lib/admin'
 import { AdminPage, CellTitle, DataTable, NetworkFilter, Pill, SearchBox, Segmented, Toolbar } from '../../components/admin/AdminUI'
 import { Avatar, ErrorState, LoadingScreen } from '../../components/ui'
 
@@ -9,6 +10,7 @@ const norm = (s: string) => s.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCa
 type F = 'todos' | 'socios' | 'no_socios' | 'sin_cuenta'
 
 export default function AdminStudiosScreen({ navigation }: any) {
+  const isEntity = useIsEntity()
   const { data: rows = [], isLoading, isError, refetch } = useAdminStudios()
   const { data: camaras = [] } = useCamaras()
   const [filter, setFilter] = useState<F>('todos')
@@ -25,7 +27,7 @@ export default function AdminStudiosScreen({ navigation }: any) {
   const netName = (id: string) => camaras.find(c => c.id === id)?.name ?? 'Sin red'
 
   return (
-    <AdminPage title="Estudios" subtitle="Tocá un estudio para ver su ficha, su plan y su historial">
+    <AdminPage title="Estudios" subtitle={isEntity ? "Tocá un estudio para ver su ficha, cambiar su plan o hacerlo socio" : "Tocá un estudio para ver su ficha, su plan y su historial"}>
       <Toolbar>
         <Segmented value={filter} onChange={setFilter} items={[
           { key: 'todos', label: 'Todos', count: inNet.length },
@@ -33,14 +35,14 @@ export default function AdminStudiosScreen({ navigation }: any) {
           { key: 'no_socios', label: 'No socios', count: inNet.filter(r => match(r, 'no_socios')).length },
           { key: 'sin_cuenta', label: 'Sin cuenta', count: inNet.filter(r => match(r, 'sin_cuenta')).length },
         ]} />
-        <NetworkFilter networks={camaras} value={net} onChange={setNet} />
+        {!isEntity ? <NetworkFilter networks={camaras} value={net} onChange={setNet} /> : null}
         <SearchBox value={q} onChange={setQ} placeholder="Nombre, barrio o email" />
       </Toolbar>
       <DataTable rows={list} keyOf={r => r.id} onRowPress={r => navigation.navigate('AdminStudioDetail', { studioId: r.id })}
         empty={q ? 'Ningún estudio coincide con la búsqueda.' : 'No hay estudios con este filtro.'}
         columns={[
           { key: 'n', label: 'Estudio', flex: 2.3, render: r => <CellTitle title={r.name} sub={r.owner_email ?? (r.user_id ? null : 'Sin cuenta en la app')} avatar={<Avatar name={r.name} source={r.logo_url} size={34} />} /> },
-          { key: 'r', label: 'Red', flex: 1.5, render: r => netName(r.camara_id) },
+          ...(isEntity ? [] : [{ key: 'r', label: 'Red', flex: 1.5, render: (r: any) => netName(r.camara_id) }]),
           { key: 'b', label: 'Barrio', flex: 1, render: r => r.neighborhood ?? '—' },
           { key: 'p', label: 'Plan', width: 110, render: r => {
             const m = one<any>(r.membership)

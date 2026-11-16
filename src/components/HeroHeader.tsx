@@ -4,6 +4,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { Feather } from '@expo/vector-icons'
 import { colors, spacing } from './ui'
 import { activeBrand, titleFont, titleTweak } from '../lib/brand'
+import { useInPanel } from './admin/panelContext'
 
 interface HeroHeaderProps {
   title: string
@@ -24,6 +25,28 @@ export default function HeroHeader({
   avatarUri, avatarFallback, onAvatarPress, centered,
 }: HeroHeaderProps) {
   const insets = useSafeAreaInsets()
+  const inPanel = useInPanel()
+  // En el portal de escritorio: título oscuro sobre fondo claro, sin "Volver" (el menú lateral ya ubica)
+  if (inPanel) return (
+    <View style={s.panelHead}>
+      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 14 }}>
+        {centered ? (
+          <TouchableOpacity style={s.avatarWrap} onPress={onAvatarPress} disabled={!onAvatarPress} activeOpacity={0.85}
+            accessibilityRole={onAvatarPress ? 'button' : undefined} accessibilityLabel={onAvatarPress ? 'Cambiar logo' : undefined}>
+            {avatarUri ? <Image source={{ uri: avatarUri }} style={[s.avatarImg, { borderColor: colors.border }]} />
+              : <View style={[s.avatarFallback, { backgroundColor: colors.sage }]}><Text style={s.avatarLetter}>{(avatarFallback ?? title)[0]?.toUpperCase()}</Text></View>}
+            {onAvatarPress ? <View style={[s.cameraIcon, { borderColor: colors.cream }]}><Feather name="camera" size={9} color={colors.white} /></View> : null}
+          </TouchableOpacity>
+        ) : null}
+        <View style={{ flex: 1, minWidth: 0 }}>
+          <Text style={s.panelTitle}>{title}</Text>
+          {subtitle ? <Text style={s.panelSub}>{subtitle}</Text> : null}
+        </View>
+        {rightElement ?? null}
+      </View>
+      {bottomElement}
+    </View>
+  )
   // El encabezado cierra recto en todas las pantallas (sin la punta de "hoja")
 
   return (
@@ -109,6 +132,9 @@ const s = StyleSheet.create({
   avatarFallback:  { width: 52, height: 52, borderRadius: 26, backgroundColor: 'rgba(255,255,255,0.18)', borderWidth: 2, borderColor: 'rgba(255,255,255,0.3)', alignItems: 'center', justifyContent: 'center' },
   avatarLetter:    { fontFamily: 'Nunito-Bold', fontSize: 20, color: colors.white },
   cameraIcon:      { position: 'absolute', bottom: -2, right: -2, width: 18, height: 18, borderRadius: 9, backgroundColor: colors.sage, alignItems: 'center', justifyContent: 'center', borderWidth: 2, borderColor: colors.forest },
+  panelHead:       { paddingHorizontal: spacing.md, paddingTop: 28, paddingBottom: 6, backgroundColor: colors.cream },
+  panelTitle:      { fontFamily: 'Nunito-Bold', fontSize: 26, color: colors.dark, letterSpacing: -0.3 },
+  panelSub:        { fontFamily: 'Nunito-Regular', fontSize: 14, color: colors.mid, marginTop: 2 },
   profileTitle:    { fontFamily: 'Nunito-Bold', fontSize: 19, lineHeight: 24, color: colors.white, letterSpacing: -0.2 },
 })
 
@@ -116,14 +142,15 @@ const s = StyleSheet.create({
 export function HeaderPills<T extends string>({ items, value, onChange }: {
   items: { key: T; label: string }[]; value: T; onChange: (k: T) => void
 }) {
+  const inPanel = useInPanel()
   return (
     <View style={pills.row}>
       {items.map(i => {
         const on = i.key === value
         return (
-          <TouchableOpacity key={i.key} style={[pills.pill, on && pills.on]} onPress={() => onChange(i.key)}
+          <TouchableOpacity key={i.key} style={[pills.pill, inPanel && pills.pillLight, on && (inPanel ? pills.onLight : pills.on)]} onPress={() => onChange(i.key)}
             accessibilityRole="tab" accessibilityState={{ selected: on }}>
-            <Text style={[pills.txt, on && pills.txtOn]}>{i.label}</Text>
+            <Text style={[pills.txt, inPanel && { color: colors.mid }, on && (inPanel ? { color: colors.white, fontFamily: 'Nunito-Bold' } : pills.txtOn)]}>{i.label}</Text>
           </TouchableOpacity>
         )
       })}
@@ -135,6 +162,8 @@ const pills = StyleSheet.create({
   row:   { flexDirection: 'row', marginTop: 12, gap: 6 },
   pill:  { paddingVertical: 5, paddingHorizontal: 16, borderRadius: 999, backgroundColor: 'rgba(255,255,255,0.15)', borderWidth: 0.5, borderColor: 'rgba(255,255,255,0.3)' },
   on:    { backgroundColor: colors.white },
+  pillLight: { backgroundColor: colors.white, borderColor: colors.border, borderWidth: 1 },
+  onLight:   { backgroundColor: colors.sage, borderColor: colors.sage },
   txt:   { fontFamily: 'Nunito-SemiBold', fontSize: 12, color: 'rgba(255,255,255,0.75)' },
   txtOn: { color: colors.sage, fontFamily: 'Nunito-Bold' },
 })

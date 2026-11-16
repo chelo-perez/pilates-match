@@ -1,6 +1,8 @@
-// Panel de la plataforma (super_admin). En la compu: menú lateral fijo. En el celular: pestañas abajo.
+// Paneles de escritorio con menú lateral fijo:
+// - AdminTabs: la plataforma (super_admin). En el celular, pestañas abajo.
+// - EntityPortal: la entidad de una red (camara_admin). En el celular se usan las pestañas de siempre (CamaraTabs).
 import React from 'react'
-import { View, Text, Pressable, StyleSheet } from 'react-native'
+import { View, Text, Pressable, StyleSheet, Image } from 'react-native'
 import { createBottomTabNavigator, BottomTabBarProps } from '@react-navigation/bottom-tabs'
 import { Feather } from '@expo/vector-icons'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
@@ -20,9 +22,30 @@ import AdminInstructorDetailScreen from '../screens/admin/AdminInstructorDetailS
 import AdminStudioDetailScreen from '../screens/admin/AdminStudioDetailScreen'
 import AdminNotificationsScreen from '../screens/admin/AdminNotificationsScreen'
 import PlatformCamaraEditScreen from '../screens/platform/CamaraEditScreen'
+import EntityHomeScreen from '../screens/admin/EntityHomeScreen'
+import CamaraRateRangesScreen from '../screens/camara/RateRangesScreen'
+import CamaraReportsScreen from '../screens/camara/ReportsScreen'
+import CamaraProfileEditScreen from '../screens/camara/ProfileEditScreen'
+import { InPanel } from '../components/admin/panelContext'
+import { activeBrand } from '../lib/brand'
+import { useCamara } from '../lib/platform'
+
+type Item = { name: string; label: string; short: string; icon: any; component: any }
+type Hidden = { name: string; component: any; parent?: string }
+
+/** Pantalla pensada para el celular dentro del portal: encabezado de escritorio y ancho máximo */
+const asPanel = (C: any) => function PanelScreen(props: any) {
+  return (
+    <InPanel.Provider value>
+      <View style={{ flex: 1, backgroundColor: colors.cream }}>
+        <View style={{ flex: 1, width: '100%', maxWidth: 980, alignSelf: 'center', paddingHorizontal: 16 }}><C {...props} /></View>
+      </View>
+    </InPanel.Provider>
+  )
+}
 
 // Pantallas del panel que no van en el menú (fichas y notificaciones): se abren desde las tablas
-const HIDDEN: { name: string; component: any; parent?: string }[] = [
+const HIDDEN: Hidden[] = [
   { name: 'AdminInstructorDetail', component: AdminInstructorDetailScreen, parent: 'AdminInstructores' },
   { name: 'AdminStudioDetail', component: AdminStudioDetailScreen, parent: 'AdminEstudios' },
   { name: 'AdminNotificaciones', component: AdminNotificationsScreen },
@@ -31,7 +54,7 @@ const HIDDEN: { name: string; component: any; parent?: string }[] = [
 
 const Tab = createBottomTabNavigator()
 
-const ITEMS: { name: string; label: string; short: string; icon: any; component: any }[] = [
+const ITEMS: Item[] = [
   { name: 'AdminResumen',      label: 'Resumen',      short: 'Resumen',  icon: 'grid',        component: AdminHomeScreen },
   { name: 'AdminRedes',        label: 'Redes',        short: 'Redes',    icon: 'share-2',     component: AdminNetworksScreen },
   { name: 'AdminInstructores', label: 'Instructores', short: 'Instruct.', icon: 'user-check', component: AdminInstructorsScreen },
@@ -40,16 +63,50 @@ const ITEMS: { name: string; label: string; short: string; icon: any; component:
   { name: 'AdminCobros',       label: 'Cobros',       short: 'Cobros',   icon: 'dollar-sign', component: AdminBillingScreen },
 ]
 
-function Sidebar({ state, navigation }: BottomTabBarProps) {
+const ENTITY_ITEMS: Item[] = [
+  { name: 'EntityResumen',     label: 'Resumen',      short: 'Resumen',  icon: 'grid',        component: EntityHomeScreen },
+  { name: 'AdminInstructores', label: 'Instructores', short: 'Instruct.', icon: 'user-check', component: AdminInstructorsScreen },
+  { name: 'AdminEstudios',     label: 'Estudios',     short: 'Estudios', icon: 'home',        component: AdminStudiosScreen },
+  { name: 'AdminActividad',    label: 'Actividad',    short: 'Actividad', icon: 'activity',   component: AdminActivityScreen },
+  { name: 'EntityTarifas',     label: 'Tarifas',      short: 'Tarifas',  icon: 'sliders',     component: asPanel(CamaraRateRangesScreen) },
+  { name: 'EntityReportes',    label: 'Reportes y pagos', short: 'Reportes', icon: 'bar-chart-2', component: asPanel(CamaraReportsScreen) },
+  { name: 'EntityPerfil',      label: 'Perfil y equipo', short: 'Perfil', icon: 'settings',   component: asPanel(CamaraProfileEditScreen) },
+]
+const ENTITY_HIDDEN: Hidden[] = [
+  { name: 'AdminInstructorDetail', component: AdminInstructorDetailScreen, parent: 'AdminInstructores' },
+  { name: 'AdminStudioDetail', component: AdminStudioDetailScreen, parent: 'AdminEstudios' },
+  { name: 'AdminNotificaciones', component: AdminNotificationsScreen },
+]
+
+function EntityBrand() {
+  const camaraId = useAuthStore(s => s.user?.camara_id) as string | undefined
+  const { data: camara } = useCamara(camaraId)
+  const logo = activeBrand?.logos?.markDark ?? (camara as any)?.logo_url
+  return (
+    <View style={s.brand}>
+      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+        {logo ? <Image source={{ uri: logo }} style={s.entityLogo} resizeMode="contain" />
+          : <View style={[s.entityLogo, s.entityLogoFallback]}><Text style={s.entityLetter}>{(camara?.name ?? 'R')[0]}</Text></View>}
+        <Text style={s.entityName} numberOfLines={2}>{camara?.name ?? 'Tu red'}</Text>
+      </View>
+      <Text style={s.brandTxt}>Portal de la entidad</Text>
+    </View>
+  )
+}
+
+function Sidebar({ state, navigation, items, hidden, entity }: BottomTabBarProps & { items: Item[]; hidden: Hidden[]; entity?: boolean }) {
   const email = useAuthStore(s => s.user?.email)
   const unread = useUnreadNotifications()
   const insets = useSafeAreaInsets()
+  const ITEMS = items, HIDDEN = hidden
   return (
     <View style={[s.side, { paddingTop: insets.top + 22 }]}>
-      <View style={s.brand}>
-        <BrandLogo width={92} />
-        <Text style={s.brandTxt}>Panel de la plataforma</Text>
-      </View>
+      {entity ? <EntityBrand /> : (
+        <View style={s.brand}>
+          <BrandLogo width={92} />
+          <Text style={s.brandTxt}>Panel de la plataforma</Text>
+        </View>
+      )}
       <View style={{ gap: 2, marginTop: 18 }}>
         {state.routes.map((r, i) => {
           const item = ITEMS.find(x => x.name === r.name)
@@ -87,12 +144,21 @@ function Sidebar({ state, navigation }: BottomTabBarProps) {
 }
 
 export default function AdminTabs() {
+  return <PanelTabs items={ITEMS} hidden={HIDDEN} />
+}
+
+/** Portal de la entidad en la compu (en pantallas angostas, RootNavigator usa CamaraTabs) */
+export function EntityPortal() {
+  return <PanelTabs items={ENTITY_ITEMS} hidden={ENTITY_HIDDEN} entity />
+}
+
+function PanelTabs({ items: ITEMS, hidden: HIDDEN, entity }: { items: Item[]; hidden: Hidden[]; entity?: boolean }) {
   const wide = useIsWide()
   const insets = useSafeAreaInsets()
   return (
     <Tab.Navigator
       backBehavior="history"
-      tabBar={wide ? (p) => <Sidebar {...p} /> : undefined}
+      tabBar={wide ? (p) => <Sidebar {...p} items={ITEMS} hidden={HIDDEN} entity={entity} /> : undefined}
       screenOptions={{
         headerShown: false,
         tabBarPosition: wide ? 'left' : 'bottom',
@@ -127,5 +193,9 @@ const s = StyleSheet.create({
   user:      { flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 10, paddingTop: 12, paddingHorizontal: 8, borderTopWidth: 1, borderTopColor: 'rgba(255,255,255,0.1)' },
   userLbl:   { fontFamily: 'Nunito-SemiBold', fontSize: 10, color: 'rgba(255,255,255,0.45)', textTransform: 'uppercase', letterSpacing: 0.5 },
   userTxt:   { fontFamily: 'Nunito-SemiBold', fontSize: 12, color: colors.white },
+  entityLogo:{ width: 40, height: 40, borderRadius: 10 },
+  entityLogoFallback: { backgroundColor: 'rgba(255,255,255,0.12)', alignItems: 'center', justifyContent: 'center' },
+  entityLetter: { fontFamily: 'Nunito-Bold', fontSize: 18, color: colors.white },
+  entityName:{ flex: 1, fontFamily: 'Nunito-Bold', fontSize: 14, lineHeight: 18, color: colors.white },
   logout:    { width: 34, height: 34, borderRadius: 10, alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(255,255,255,0.08)' },
 })

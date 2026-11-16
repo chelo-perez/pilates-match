@@ -10,6 +10,7 @@ import { queryClient } from './src/lib/queryClient'
 import { subscribeAuth, subscribeDeepLinks } from './src/lib/auth'
 import { colors } from './src/components/ui'
 import { brandFontFiles } from './src/lib/brand'
+import './src/lib/webAlert' // confirmaciones visibles en la web
 
 SplashScreen.preventAutoHideAsync()
 

@@ -12,7 +12,8 @@ import { View, Text } from 'react-native'
 import { StatusBar } from 'expo-status-bar'
 import { NavigationContainer, createNavigationContainerRef } from '@react-navigation/native'
 import { useNetworkBrandSync } from '../lib/brandSync'
-import AdminTabs from './AdminTabs'
+import AdminTabs, { EntityPortal } from './AdminTabs'
+import { useIsWide } from '../components/admin/AdminUI'
 import { createNativeStackNavigator } from '@react-navigation/native-stack'
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs'
 import { useQuery } from '@tanstack/react-query'
@@ -186,6 +187,11 @@ function StudioTabs() {
 
 // ── CAMARA TABS ───────────────────────────────────────────────
 function CamaraTabs() {
+  // En la compu, el portal de escritorio con menú lateral; en el celular, las pestañas de siempre
+  if (useIsWide()) return <EntityPortal />
+  return <CamaraMobileTabs />
+}
+function CamaraMobileTabs() {
   const tabStyle = useTabStyle()
   return (
     <Tab.Navigator screenOptions={tabScreenOptions(tabStyle)}>

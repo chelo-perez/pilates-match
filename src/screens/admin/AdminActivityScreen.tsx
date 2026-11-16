@@ -5,6 +5,7 @@ import { useCamaras } from '../../lib/platform'
 import { formatARS } from '../../lib/payments'
 import { PLACEMENT_STATUS } from '../../lib/matchFlow'
 import { matchState, one, shortDate, useAdminMatches } from '../../lib/admin'
+import { useIsEntity } from '../../lib/admin'
 import { AdminPage, CellTitle, DataTable, NetworkFilter, Pill, SearchBox, Segmented, Toolbar } from '../../components/admin/AdminUI'
 import { Avatar, ErrorState, LoadingScreen } from '../../components/ui'
 
@@ -13,6 +14,7 @@ type F = 'todas' | 'pendiente' | 'confirmada' | 'cancelada' | 'regular'
 const hours = (m: any) => Math.max(1, Math.round((+new Date(`2000-01-01T${m.end_time}`) - +new Date(`2000-01-01T${m.start_time}`)) / 3600_000))
 
 export default function AdminActivityScreen({ navigation, route }: any) {
+  const isEntity = useIsEntity()
   const { data: rows = [], isLoading, isError, refetch } = useAdminMatches()
   const { data: camaras = [] } = useCamaras()
   const [filter, setFilter] = useState<F>(route?.params?.filter ?? 'todas')
@@ -30,13 +32,13 @@ export default function AdminActivityScreen({ navigation, route }: any) {
   if (isError) return <ErrorState message="No pudimos cargar la actividad." onRetry={refetch} />
 
   return (
-    <AdminPage title="Actividad" subtitle="Propuestas, clases confirmadas y cancelaciones de todas las redes">
+    <AdminPage title="Actividad" subtitle={isEntity ? "Propuestas, clases confirmadas y cancelaciones de tu red" : "Propuestas, clases confirmadas y cancelaciones de todas las redes"}>
       <Toolbar>
         <Segmented value={filter} onChange={setFilter} items={(['todas', 'pendiente', 'confirmada', 'cancelada', 'regular'] as F[]).map(k => ({
           key: k, label: { todas: 'Todas', pendiente: 'Pendientes', confirmada: 'Confirmadas', cancelada: 'Canceladas', regular: 'Regulares' }[k],
           count: inNet.filter(r => is(r, k)).length,
         }))} />
-        <NetworkFilter networks={camaras} value={net} onChange={setNet} />
+        {!isEntity ? <NetworkFilter networks={camaras} value={net} onChange={setNet} /> : null}
         <SearchBox value={q} onChange={setQ} placeholder="Estudio o instructor" />
       </Toolbar>
       <DataTable rows={list} keyOf={r => r.id} onRowPress={r => one<any>(r.studio)?.id && navigation.navigate('AdminStudioDetail', { studioId: one<any>(r.studio).id })}
