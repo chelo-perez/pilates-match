@@ -37,22 +37,39 @@ export function EntryMark() {
   )
 }
 
-/** Firma chica al pie: "una plataforma de Trabajo Más Fácil" (solo con co-marca) */
+// ── Pie del login con medidas fijas: la animación de inicio lleva nuestro logo hasta acá ──
+export const FOOTER_LOGO_W = 64
+const FOOTER_LOGO_H = Math.round(FOOTER_LOGO_W * 462 / 600)
+const FOOTER_CAPTION_H = 14
+const FOOTER_GAP = 6
+const FOOTER_LEGAL_H = 32
+const FOOTER_LEGAL_GAP = 14
+export const FOOTER_H = FOOTER_CAPTION_H + FOOTER_GAP + FOOTER_LOGO_H + FOOTER_LEGAL_GAP + FOOTER_LEGAL_H
+
+/** Distancia desde abajo de la pantalla hasta el centro del logo del pie */
+export function useFooterLogoCenterFromBottom() {
+  const insets = useSafeAreaInsets()
+  return insets.bottom + 16 + FOOTER_LEGAL_H + FOOTER_LEGAL_GAP + FOOTER_LOGO_H / 2
+}
+
+/** Firma al pie: "Una plataforma de" + logo de Trabajo Más Fácil (solo con co-marca) */
 export function PoweredBy() {
   if (!activeBrand) return null
   return (
     <View style={s.powered} accessible accessibilityLabel="Una plataforma de Trabajo Más Fácil">
-      <Text style={s.poweredTxt}>Una plataforma de</Text>
-      <BrandLogo width={58} />
+      <Text style={s.poweredTxt}>UNA PLATAFORMA DE</Text>
+      <BrandLogo width={FOOTER_LOGO_W} />
     </View>
   )
 }
+export const LEGAL_H = FOOTER_LEGAL_H
+export const LEGAL_GAP = FOOTER_LEGAL_GAP
 
 const s = StyleSheet.create({
   wrap:       { height: MARK_H, alignItems: 'center', justifyContent: 'center' },
   mark:       { width: 92, height: 92 },
   // Como el logotipo de la red: sans en mayúsculas, bien espaciada
   name:       { fontFamily: 'Nunito-Medium', fontSize: 24, color: colors.white, letterSpacing: 7, marginTop: 12, paddingLeft: 7 },
-  powered:    { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, opacity: 0.7 },
-  poweredTxt: { fontFamily: 'Nunito-Regular', fontSize: 11, color: colors.white },
+  powered:    { alignItems: 'center', gap: FOOTER_GAP },
+  poweredTxt: { height: FOOTER_CAPTION_H, fontFamily: 'Nunito-SemiBold', fontSize: 9, lineHeight: 14, letterSpacing: 1.6, color: 'rgba(255,255,255,0.55)' },
 })
