@@ -35,10 +35,13 @@ const DAYS = [
 
 const money = (n: number) => '$' + Math.round(n).toLocaleString('es-AR')
 const fmtDate = (d: Date) => d.toLocaleDateString('es-AR', { weekday: 'long', day: 'numeric', month: 'long' })
+/** Fecha corta para las opciones de entrevista: "mié 18 nov" (entra en una línea) */
+const fmtShort = (d: Date) => d.toLocaleDateString('es-AR', { weekday: 'short', day: 'numeric', month: 'short' }).replace(/\./g, '').replace(',', '')
 
 export default function RequestMatchScreen({ navigation, route }: Props) {
   const { instructorId } = (route.params || {}) as any
   const instructorName: string = String(route.params?.instructorName ?? '').trim().replace(/\s+/g, ' ')
+  const firstName = instructorName.split(' ')[0]
   const { data: studio } = useMyStudio()
   const { data: instructor } = useInstructor(instructorId)
   const { data: canMatch } = useCanMatch(studio?.id)
@@ -62,6 +65,9 @@ export default function RequestMatchScreen({ navigation, route }: Props) {
   // ── Regular: entrevista con clase de prueba en el estudio ──
   const [trialDate, setTrialDate] = useState(() => { const d = new Date(); d.setDate(d.getDate() + 2); d.setHours(0, 0, 0, 0); return d })
   const [trialTime, setTrialTime] = useState(() => fromHHMM(need.from))
+  // Segunda opción de entrevista: el instructor elige la que le sirve
+  const [altDate, setAltDate] = useState(() => { const d = new Date(); d.setDate(d.getDate() + 3); d.setHours(0, 0, 0, 0); return d })
+  const [altTime, setAltTime] = useState(() => fromHHMM(need.from))
   const [trialPaid, setTrialPaid] = useState(false)
   const { data: network } = useCamaraContact((studio as any)?.camara_id)
   const credits = Number((studio as any)?.placement_credits ?? 0)
@@ -99,9 +105,12 @@ export default function RequestMatchScreen({ navigation, route }: Props) {
 
   const limitReached = canMatch === false
   const trialStart = new Date(trialDate); trialStart.setHours(trialTime.getHours(), trialTime.getMinutes(), 0, 0)
+  const altStart = new Date(altDate); altStart.setHours(altTime.getHours(), altTime.getMinutes(), 0, 0)
   const problem =
     classType === 'regular' && selectedDays.length === 0 ? 'Elegí al menos un día de la semana' :
-    classType === 'regular' && trialStart.getTime() < Date.now() + 3600_000 ? 'La entrevista tiene que ser al menos dentro de 1 hora' :
+    classType === 'regular' && trialStart.getTime() < Date.now() + 3600_000 ? 'La opción 1 de entrevista tiene que ser al menos dentro de 1 hora' :
+    classType === 'regular' && altStart.getTime() < Date.now() + 3600_000 ? 'La opción 2 de entrevista tiene que ser al menos dentro de 1 hora' :
+    classType === 'regular' && altStart.getTime() === trialStart.getTime() ? 'Las dos opciones de entrevista tienen que ser distintas' :
     !validRange ? 'La hora de fin tiene que ser posterior a la de inicio' :
     offer < 1000 ? 'Indicá cuánto pagás por clase' : null
 
@@ -124,6 +133,9 @@ export default function RequestMatchScreen({ navigation, route }: Props) {
           schedule_from: toHHMM(scheduleFrom),
           schedule_to:   toHHMM(scheduleTo),
           trial_paid:    trialPaid,
+          alt_date:       toLocalISODate(altDate),
+          alt_start_time: toHHMM(altTime),
+          alt_end_time:   toHHMM(new Date(altTime.getTime() + 3600_000)),
         }),
       } as any)
       showToast(
@@ -284,18 +296,23 @@ export default function RequestMatchScreen({ navigation, route }: Props) {
               <Text style={s.trialDesc}>
                 {instructorName} va al estudio y le da una clase a quien lo dirige. Si les gusta, desde la app la sumás como clase regular.
               </Text>
-              <View style={[s.franjaRow, { marginTop: spacing.sm }]}>
-                <View style={{ flex: 1.4 }}>
-                  <Text style={s.franjaLbl}>Día</Text>
-                  <PickerField small value={trialDate} mode="date" display={fmtDate(trialDate)}
-                    minimumDate={(() => { const d = new Date(); d.setHours(0, 0, 0, 0); return d })()}
-                    onChange={d => { d.setHours(0, 0, 0, 0); setTrialDate(d) }} />
+              <Text style={[s.trialDesc, { marginTop: spacing.xs }]}>Proponé dos opciones de día y hora: {firstName} elige la que le sirve.</Text>
+              {[
+                { n: 1, date: trialDate, setDate: setTrialDate, time: trialTime, setTime: setTrialTime },
+                { n: 2, date: altDate, setDate: setAltDate, time: altTime, setTime: setAltTime },
+              ].map(o => (
+                <View key={o.n} style={[s.franjaRow, { marginTop: spacing.sm, alignItems: 'center' }]}>
+                  <Text style={s.optLbl}>Opción {o.n}</Text>
+                  <View style={{ flex: 1.5 }}>
+                    <PickerField small value={o.date} mode="date" display={fmtShort(o.date)}
+                      minimumDate={(() => { const d = new Date(); d.setHours(0, 0, 0, 0); return d })()}
+                      onChange={d => { d.setHours(0, 0, 0, 0); o.setDate(d) }} />
+                  </View>
+                  <View style={{ flex: 1 }}>
+                    <PickerField small value={o.time} mode="time" display={toHHMM(o.time)} minuteInterval={30} onChange={o.setTime} />
+                  </View>
                 </View>
-                <View style={{ flex: 1 }}>
-                  <Text style={s.franjaLbl}>Hora</Text>
-                  <PickerField small value={trialTime} mode="time" display={toHHMM(trialTime)} minuteInterval={30} onChange={setTrialTime} />
-                </View>
-              </View>
+              ))}
               <View style={s.paidRow}>
                 <View style={{ flex: 1 }}>
                   <Text style={s.paidTitle}>La clase de prueba se paga</Text>
@@ -335,7 +352,7 @@ export default function RequestMatchScreen({ navigation, route }: Props) {
                 Cargo de incorporación: {credits > 0 ? 'sin cargo (usás tu crédito)' : money(placementFee(selectedDays.length, offer, network.placement_max_blocks))}
               </Text>
               <Text style={s.feeTxt}>
-                Equivale a 4 clases por cada día de la semana que contratás (hasta {network.placement_max_blocks} días). Lo pagás cuando {instructorName} acepta la entrevista, antes de la clase de prueba. Si lo contratás, se cobra. Si {instructorName} decide no tomar la clase o no se presenta, te devolvemos el total. Si vos decidís no contratarlo, queda como crédito para tu próxima búsqueda.
+                Equivale a 4 clases por cada día de la semana que contratás (hasta {network.placement_max_blocks} días). Lo pagás cuando {instructorName} acepta la entrevista, antes de la clase de prueba. Si contratás a {firstName}, se cobra. Si {firstName} decide no tomar la clase o no se presenta, te devolvemos el total. Si decidís no contratar a {firstName}, queda como crédito para tu próxima búsqueda.
               </Text>
             </View>
           ) : null}
@@ -418,6 +435,7 @@ const s = StyleSheet.create({
 
   franjaRow:        { flexDirection: 'row', alignItems: 'flex-start', gap: spacing.sm },
   franjaLbl:        { ...typography.caption, marginBottom: 4 },
+  optLbl:           { ...typography.caption, width: 62 },
   franjaArrow:      { marginTop: 28 },
   clasesInfo:       { flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: spacing.md, backgroundColor: colors.goldLight, borderTopLeftRadius: 8, borderTopRightRadius: 0, borderBottomLeftRadius: 0, borderBottomRightRadius: 8, padding: spacing.sm },
   clasesInfoTxt:    { fontFamily: 'Nunito-SemiBold', fontSize: 11, color: colors.gold, flex: 1 },

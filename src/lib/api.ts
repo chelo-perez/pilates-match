@@ -188,6 +188,10 @@ export const matchAPI = {
       schedule_from: dto.class_type === 'regular' ? (dto.schedule_from ?? null) : null,
       schedule_to: dto.class_type === 'regular' ? (dto.schedule_to ?? null) : null,
       ...(dto.class_type === 'regular' && (dto as any).trial_paid ? { trial_paid: true } : {}),
+      // Segunda opción de día y hora para la entrevista (el instructor elige)
+      ...(dto.class_type === 'regular' && (dto as any).alt_date ? {
+        alt_date: (dto as any).alt_date, alt_start_time: (dto as any).alt_start_time, alt_end_time: (dto as any).alt_end_time,
+      } : {}),
     }
     const { data, error } = await db.matches().insert(row).select().single()
     if (error) {

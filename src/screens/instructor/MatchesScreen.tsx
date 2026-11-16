@@ -37,6 +37,13 @@ const isExpired = (m: any) => m.status === 'pendiente' && !!m.expires_at && new 
 
 const STUDIO_FIELDS = 'studio:studios(id, name, neighborhood, address, phone, instagram)'
 
+/** La propuesta trae dos opciones de entrevista (y el instructor todavía no eligió) */
+const hasAlt = (m: any) => m?.class_type === 'regular' && !!m?.alt_date && !m?.alt_chosen
+const slotsOf = (m: any) => [
+  { n: 1 as const, date: m.class_date, start: m.start_time, end: m.end_time },
+  { n: 2 as const, date: m.alt_date, start: m.alt_start_time, end: m.alt_end_time },
+]
+
 export default function InstructorMatchesScreen({ navigation }: any) {
   const qc = useQueryClient()
   const { toast, showToast, hideToast } = useToast()
@@ -97,14 +104,17 @@ export default function InstructorMatchesScreen({ navigation }: any) {
   })
 
   const [counter, setCounter] = useState(0)
+  // Entrevista con dos opciones: cuál elige el instructor (1 = la primera, 2 = la segunda)
+  const [slot, setSlot] = useState<1 | 2>(1)
   const myRates: any = Array.isArray(instructor?.rates) ? (instructor?.rates as any)[0] : instructor?.rates
   const myRateFor = (m: any) => Number(m.class_type === 'regular' ? myRates?.rate_regular : myRates?.rate_replacement) || null
 
   const respondMutation = useMutation({
-    mutationFn: async ({ matchId, status, note, counterRate }: { matchId: string; status?: string; note?: string; counterRate?: number }) => {
+    mutationFn: async ({ matchId, status, note, counterRate, useAlt }: { matchId: string; status?: string; note?: string; counterRate?: number; useAlt?: boolean }) => {
+      const alt = useAlt ? { alt_chosen: true } : {}
       const { data, error } = await supabase
         .from('matches')
-        .update(counterRate ? { counter_rate: counterRate, note_instructor: note || null } : { status, note_instructor: note || null })
+        .update(counterRate ? { counter_rate: counterRate, note_instructor: note || null, ...alt } : { status, note_instructor: note || null, ...(status === 'aceptado' ? alt : {}) })
         .eq('id', matchId)
         .eq('status', 'pendiente')
         .select('id')
@@ -141,6 +151,7 @@ export default function InstructorMatchesScreen({ navigation }: any) {
     setActionType(type)
     setNoteText('')
     setCounter(myRateFor(match) ?? Number(match.offered_rate) ?? 0)
+    setSlot(1)
   }
   const closeModal = () => { setSelected(null); setActionType(null); setNoteText('') }
 
@@ -148,13 +159,14 @@ export default function InstructorMatchesScreen({ navigation }: any) {
     if (!selected || !actionType) return
     if (actionType === 'counter') {
       if (counter < 1000) { showToast('Indicá el monto por clase', 'warning'); return }
-      respondMutation.mutate({ matchId: selected.id, counterRate: counter, note: noteText.trim() || undefined })
+      respondMutation.mutate({ matchId: selected.id, counterRate: counter, note: noteText.trim() || undefined, useAlt: hasAlt(selected) && slot === 2 })
       return
     }
     respondMutation.mutate({
       matchId: selected.id,
       status:  actionType === 'accept' ? 'aceptado' : 'rechazado',
       note:    noteText.trim() || undefined,
+      useAlt:  actionType === 'accept' && hasAlt(selected) && slot === 2,
     })
   }
 
@@ -206,16 +218,30 @@ export default function InstructorMatchesScreen({ navigation }: any) {
         </View>
 
         <View style={styles.datetimeRow}>
-          <View style={styles.datetimeItem}>
-            <Feather name="calendar" size={13} color={colors.sage} />
-            <Text style={styles.datetimeText}>
-              {match.class_type === 'regular' ? 'Entrevista: ' : ''}{longDate(match.class_date)}
-            </Text>
-          </View>
-          <View style={styles.datetimeItem}>
-            <Feather name="clock" size={13} color={colors.sage} />
-            <Text style={styles.datetimeText}>{hhmm(match.start_time)} – {hhmm(match.end_time)}</Text>
-          </View>
+          {isPending && hasAlt(match) ? (
+            <>
+              <Text style={styles.altTitle}>Entrevista: elegí una de estas opciones</Text>
+              {slotsOf(match).map(o => (
+                <View key={o.n} style={styles.datetimeItem}>
+                  <Feather name="calendar" size={13} color={colors.sage} />
+                  <Text style={styles.datetimeText}>Opción {o.n}: {longDate(o.date)} · {hhmm(o.start)} – {hhmm(o.end)}</Text>
+                </View>
+              ))}
+            </>
+          ) : (
+            <>
+              <View style={styles.datetimeItem}>
+                <Feather name="calendar" size={13} color={colors.sage} />
+                <Text style={styles.datetimeText}>
+                  {match.class_type === 'regular' ? 'Entrevista: ' : ''}{longDate(match.class_date)}
+                </Text>
+              </View>
+              <View style={styles.datetimeItem}>
+                <Feather name="clock" size={13} color={colors.sage} />
+                <Text style={styles.datetimeText}>{hhmm(match.start_time)} – {hhmm(match.end_time)}</Text>
+              </View>
+            </>
+          )}
           {match.class_type === 'regular' && scheduleDays.length > 0 && (
             <View style={styles.datetimeItem}>
               <Feather name="repeat" size={13} color={colors.sage} />
@@ -377,7 +403,9 @@ export default function InstructorMatchesScreen({ navigation }: any) {
               {actionType === 'accept' ? '¿Aceptar propuesta?' : actionType === 'counter' ? 'Proponer otro monto' : '¿Rechazar propuesta?'}
             </Text>
             <Text style={styles.modalSub}>
-              {actionType === 'accept'
+              {actionType === 'accept' && hasAlt(selected)
+                ? `Elegí el día de la entrevista en ${selected?.studio?.name ?? 'el estudio'}${selected?.offered_rate ? `. Monto: ${money(selected.offered_rate)} por clase` : ''}.`
+                : actionType === 'accept'
                 ? `Confirmás la clase en ${selected?.studio?.name ?? 'el estudio'} el ${selected?.class_date ? longDate(selected.class_date) : ''}${selected?.offered_rate ? ` por ${money(selected.offered_rate)} la clase` : ''}.`
                 : actionType === 'counter'
                 ? `Ofrecen ${selected?.offered_rate ? money(selected.offered_rate) : '—'}. Podés proponer un monto una sola vez: el estudio lo acepta o rechaza.`
@@ -392,6 +420,24 @@ export default function InstructorMatchesScreen({ navigation }: any) {
               </View>
             )}
 
+            {selected && hasAlt(selected) && actionType !== 'reject' ? (
+              <View style={{ gap: 8, marginBottom: spacing.md }}>
+                <Text style={styles.noteInputLabel}>DÍA DE LA ENTREVISTA</Text>
+                {slotsOf(selected).map(o => (
+                  <TouchableOpacity key={o.n} onPress={() => setSlot(o.n)} activeOpacity={0.85}
+                    style={[styles.slot, slot === o.n && styles.slotOn]} accessibilityRole="radio" accessibilityState={{ selected: slot === o.n }}>
+                    <Feather name={slot === o.n ? 'check-circle' : 'circle'} size={18} color={slot === o.n ? colors.white : colors.sage} />
+                    <Text style={[styles.slotTxt, slot === o.n && { color: colors.white }]}>{longDate(o.date)} · {hhmm(o.start)}</Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+            ) : null}
+            {selected && hasAlt(selected) && actionType === 'reject' ? (
+              <TouchableOpacity onPress={() => setNoteText('Ninguno de los días de entrevista me sirve. ¿Podemos ver otros?')} style={[styles.slot, { marginBottom: spacing.sm }]}>
+                <Feather name="calendar" size={16} color={colors.sage} />
+                <Text style={styles.slotTxt}>Ninguno de los días me sirve</Text>
+              </TouchableOpacity>
+            ) : null}
             <Text style={styles.noteInputLabel}>NOTA PARA EL ESTUDIO (OPCIONAL)</Text>
             <TextInput
               style={styles.noteInput}
@@ -445,6 +491,10 @@ const styles = StyleSheet.create({
   expiry:            { ...typography.small, color: colors.mid, marginBottom: spacing.xs },
   statusRow:         { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, marginBottom: spacing.xs },
   respondedAt:       { ...typography.small, color: colors.light },
+  altTitle:          { fontFamily: 'Nunito-Bold', fontSize: 12, color: colors.dark, marginBottom: 2 },
+  slot:              { flexDirection: 'row', alignItems: 'center', gap: 10, paddingVertical: 12, paddingHorizontal: 14, borderRadius: 12, borderWidth: 1, borderColor: colors.border, backgroundColor: colors.white },
+  slotOn:            { backgroundColor: colors.sage, borderColor: colors.sage },
+  slotTxt:           { fontFamily: 'Nunito-SemiBold', fontSize: 14, color: colors.dark, flex: 1 },
   actions:           { gap: spacing.sm, marginTop: spacing.sm },
   offerBox:          { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, ...radius.leaf, padding: spacing.sm, marginBottom: spacing.sm },
   offerTxt:          { fontFamily: 'Nunito-Bold', fontSize: 13 },

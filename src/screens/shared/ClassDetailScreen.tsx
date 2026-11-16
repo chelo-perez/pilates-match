@@ -135,9 +135,9 @@ export default function ClassDetailScreen({ navigation, route }: any) {
               Cargo de incorporación: {feeBlocks} bloque{feeBlocks === 1 ? '' : 's'} de 4 clases. Pagalo antes del {deadlineLabel}; si no, la entrevista se cancela sola.
             </Text>
             <View style={s.rules}>
-              <Text style={s.rule}>✓ Si lo contratás, se cobra.</Text>
+              <Text style={s.rule}>✓ Si contratás a {firstName}, se cobra.</Text>
               <Text style={s.rule}>↺ Si {firstName} decide no tomar la clase o no se presenta, te devolvemos el total.</Text>
-              <Text style={s.rule}>★ Si decidís no contratarlo, queda como crédito para tu próxima búsqueda.</Text>
+              <Text style={s.rule}>★ Si decidís no contratar a {firstName}, queda como crédito para tu próxima búsqueda.</Text>
             </View>
             {IN_APP_PAYMENTS ? (
               <Button label={`Pagar ${money(m.placement_fee_ars)} con Mercado Pago`} isLoading={busy === 'pay'} fullWidth style={{ marginTop: spacing.md }}
