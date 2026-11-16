@@ -49,7 +49,7 @@ async function main() {
   must(await ins.c.from('instructor_zones').insert([{ instructor_id: instructor.id, neighborhood: 'Palermo' }, { instructor_id: instructor.id, neighborhood: 'Belgrano' }]), 'zonas')
   must(await ins.c.from('instructor_specialties').insert([{ instructor_id: instructor.id, specialty: 'reformer' }, { instructor_id: instructor.id, specialty: 'mat' }]), 'especialidades')
   must(await ins.c.from('availability').insert([
-    { instructor_id: instructor.id, day_of_week: 'lunes', start_time: '08:00', end_time: '12:00', class_type: 'regular', is_active: true },
+    { instructor_id: instructor.id, day_of_week: 'lunes', start_time: '08:00', end_time: '12:00', class_type: 'reemplazo', is_active: true },
     { instructor_id: instructor.id, day_of_week: 'miercoles', start_time: '17:00', end_time: '21:00', class_type: 'reemplazo', is_active: true },
   ]), 'disponibilidad')
   must(await ins.c.from('certifications').insert({ instructor_id: instructor.id, name: 'Formación integral en Pilates', institution: 'Escuela de Pilates BA', year: 2018 }), 'certificado')

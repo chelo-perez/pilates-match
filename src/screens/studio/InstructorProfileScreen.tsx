@@ -43,7 +43,8 @@ export default function InstructorProfileScreen({ navigation, route }: Props) {
   const hasEvaluations = (stats?.total_evaluations ?? 0) > 0
 
   const certifications = (instructor.certifications ?? []).filter((c: any) => c.review_status !== 'rejected')
-  const availability = (instructor.availability ?? []).filter((a: any) => a.is_active !== false)
+  // Solo horarios para reemplazos: las clases regulares las propone el estudio con sus días y horarios
+  const availability = (instructor.availability ?? []).filter((a: any) => a.is_active !== false && a.class_type === 'reemplazo')
   const limitReached = canMatch === false
 
   return (
@@ -189,8 +190,8 @@ export default function InstructorProfileScreen({ navigation, route }: Props) {
               </View>
               <BlobCard style={s.section} delay={400}>
                 {availability.length === 0 ? (
-                  <Text style={s.emptyText}>Todavía no cargó sus horarios. Igual podés enviarle una propuesta.</Text>
-                ) : Object.entries(DAYS_ES).map(([day, label]) => {
+                  <Text style={s.emptyText}>Todavía no cargó sus horarios para reemplazos. Igual podés enviarle una propuesta.</Text>
+                ) : [<Text key="t" style={[s.emptyText, { textAlign: 'left', marginBottom: 8 }]}>Horarios en que puede tomar reemplazos. Para una clase regular, proponele tus días y horarios.</Text>, ...Object.entries(DAYS_ES).map(([day, label]) => {
                   const slots = availability.filter((a: any) => a.day_of_week === day)
                   if (!slots.length) return null
                   return (
@@ -199,16 +200,11 @@ export default function InstructorProfileScreen({ navigation, route }: Props) {
                       {slots.map((slot: any) => (
                         <View key={slot.id} style={s.slot}>
                           <Text style={s.slotTime}>{String(slot.start_time).slice(0, 5)} – {String(slot.end_time).slice(0, 5)}</Text>
-                          <View style={[s.chip, { backgroundColor: slot.class_type === 'regular' ? colors.sageLight : colors.goldLight }]}>
-                            <Text style={[s.chipTxt, { color: slot.class_type === 'regular' ? colors.sage : colors.gold }]}>
-                              {slot.class_type === 'regular' ? 'Regular' : 'Reemplazo'}
-                            </Text>
-                          </View>
                         </View>
                       ))}
                     </View>
                   )
-                })}
+                })]}
               </BlobCard>
               {(instructor.zones ?? []).length > 0 && (
                 <BlobCard style={s.section} delay={1000}>

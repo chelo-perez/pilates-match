@@ -98,7 +98,7 @@ export default function RequestMatchScreen({ navigation, route }: Props) {
 
   // Disponibilidad cargada por el instructor (solo informativa, no bloquea)
   const availability = (instructor?.availability ?? []) as any[]
-  const hasAvailability = availability.some(a => a.is_active !== false)
+  const hasAvailability = availability.some(a => a.is_active !== false && a.class_type === 'reemplazo')
   const daysToCheck = classType === 'reemplazo' ? [DAY_BY_JS_INDEX[classDate.getDay()]] : selectedDays
   const fits = daysToCheck.length > 0 && daysToCheck.every(day =>
     availabilityCovers(availability, day, classType, toHHMM(from), toHHMM(to)))
@@ -176,14 +176,16 @@ export default function RequestMatchScreen({ navigation, route }: Props) {
             <View style={{ flex: 1 }}>
               <Text style={s.instructorName}>{instructorName}</Text>
               <Text style={s.instructorMeta}>
-                {!hasAvailability
+                {classType === 'regular'
+                  ? `Vos proponés días y horarios; ${firstName} decide si le sirven`
+                  : !hasAvailability
                   ? 'No cargó sus horarios'
                   : daysToCheck.length === 0
                     ? 'Elegí días y horario para ver si coincide'
                     : fits ? 'Coincide con los horarios que cargó' : 'Fuera de los horarios que cargó'}
               </Text>
             </View>
-            {hasAvailability && daysToCheck.length > 0 && (
+            {classType === 'reemplazo' && hasAvailability && daysToCheck.length > 0 && (
               <View style={[s.availBadge, { backgroundColor: fits ? colors.okBg : colors.warnBg }]}>
                 <Text style={[s.availTxt, { color: fits ? colors.okTx : colors.warnTx }]}>
                   {fits ? 'Disponible' : 'Consultar'}

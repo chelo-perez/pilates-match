@@ -53,7 +53,7 @@ async function ensureInstructor(spec) {
     must(await c.from('instructor_specialties').insert(spec.specs.map(specialty => ({ instructor_id: row.id, specialty }))), 'especialidades')
     must(await c.from('availability').insert(['lunes', 'martes', 'miercoles', 'jueves', 'viernes', 'sabado', 'domingo'].flatMap(d => [
       { instructor_id: row.id, day_of_week: d, start_time: '07:00', end_time: '13:00', class_type: 'reemplazo', is_active: true },
-      { instructor_id: row.id, day_of_week: d, start_time: '17:00', end_time: '21:00', class_type: 'regular', is_active: true },
+      { instructor_id: row.id, day_of_week: d, start_time: '17:00', end_time: '21:00', class_type: 'reemplazo', is_active: true },
     ])), 'disponibilidad')
     must(await c.from('certifications').insert({ instructor_id: row.id, name: 'Formación integral en Pilates', institution: 'Escuela de Pilates BA', year: 2017, hours: 300 }), 'certificado')
   }

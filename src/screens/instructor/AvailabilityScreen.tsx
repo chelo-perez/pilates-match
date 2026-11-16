@@ -48,7 +48,6 @@ export default function AvailabilityScreen() {
   const [addingDays, setAddingDays] = useState<DayOfWeek[]>(['lunes'])
   const [newStart, setNewStart] = useState('09:00')
   const [newEnd, setNewEnd] = useState('13:00')
-  const [newType, setNewType] = useState<ClassType | 'ambos'>('ambos')
   const [addError, setAddError] = useState('')
   const [activeTab, setActiveTab] = useState<'horarios' | 'zonas'>('horarios')
 
@@ -73,7 +72,8 @@ export default function AvailabilityScreen() {
   // Cargar lo guardado solo si el usuario no está editando
   useEffect(() => {
     if (saved && !dirty) {
-      setSlots(saved.availability.filter((a: any) => a.is_active !== false).map((a: any) => ({
+      // Solo horarios para reemplazos: las clases regulares las propone el estudio con sus días y horarios
+      setSlots(saved.availability.filter((a: any) => a.is_active !== false && a.class_type === 'reemplazo').map((a: any) => ({
         id: a.id, day: a.day_of_week, start: a.start_time.slice(0, 5),
         end: a.end_time.slice(0, 5), type: a.class_type,
       })))
@@ -134,7 +134,7 @@ export default function AvailabilityScreen() {
   const addSlot = () => {
     if (!addingDays.length) { setAddError('Elegí al menos un día.'); return }
     if (newEnd <= newStart) { setAddError('El horario de fin tiene que ser posterior al de inicio.'); return }
-    const types: ClassType[] = newType === 'ambos' ? ['regular', 'reemplazo'] : [newType]
+    const types: ClassType[] = ['reemplazo']
     const added: Slot[] = []
     const skipped: DayOfWeek[] = []
     for (const day of addingDays) {
@@ -170,7 +170,6 @@ export default function AvailabilityScreen() {
     setAddingDays(days)
     setNewStart('09:00')
     setNewEnd('13:00')
-    setNewType('ambos')
     setAddError('')
     setShowAddModal(true)
   }
@@ -203,7 +202,7 @@ export default function AvailabilityScreen() {
       {/* Header */}
       <HeroHeader
         title="Mi disponibilidad"
-        subtitle="Configurá tus horarios y zonas de trabajo"
+        subtitle="Cuándo podés tomar reemplazos y dónde trabajás"
         bottomElement={
           <HeaderPills
             value={activeTab}
@@ -223,8 +222,9 @@ export default function AvailabilityScreen() {
           <>
             <Text style={s.intro}>
               {daysWithSlots
-                ? `Cargaste horarios en ${daysWithSlots} día${daysWithSlots > 1 ? 's' : ''}. Los estudios ven si una clase coincide con tu disponibilidad.`
-                : 'Contá cuándo podés dar clases. Podés cargar la misma franja para varios días a la vez.'}
+                ? `Cargaste horarios en ${daysWithSlots} día${daysWithSlots > 1 ? 's' : ''}. Los estudios ven si un reemplazo coincide con tu disponibilidad.`
+                : 'Contá cuándo podés tomar reemplazos. Podés cargar la misma franja para varios días a la vez.'}
+              {' '}Las clases regulares te las proponen los estudios con sus días y horarios, y vos decidís si te sirven.
             </Text>
             <View style={s.week}>
               {DAYS.map((day, idx) => {
@@ -239,7 +239,6 @@ export default function AvailabilityScreen() {
                         return (
                           <View key={`${g.start}-${g.end}`} style={[s.pill, tone]}>
                             <Text style={s.pillTime}>{g.start}–{g.end}</Text>
-                            <Text style={s.pillType}>{label}</Text>
                             <TouchableOpacity onPress={() => removeGroup(day, g.start, g.end)} hitSlop={10} accessibilityLabel={`Quitar ${g.start} a ${g.end}`}>
                               <Feather name="x" size={13} color={colors.mid} />
                             </TouchableOpacity>
@@ -294,16 +293,6 @@ export default function AvailabilityScreen() {
               {DAYS.map(d => (
                 <TouchableOpacity key={d} style={[s.dayChip, addingDays.includes(d) && s.dayChipActive]} onPress={() => toggleDay(d)}>
                   <Text style={[s.dayChipText, addingDays.includes(d) && s.dayChipTextActive]}>{DAYS_SHORT[d]}</Text>
-                </TouchableOpacity>
-              ))}
-            </View>
-
-            {/* Tipo */}
-            <Text style={s.fieldLabel}>PARA</Text>
-            <View style={{ flexDirection: 'row', gap: spacing.xs, marginBottom: spacing.md }}>
-              {([['ambos', 'Ambos'], ['reemplazo', 'Reemplazo'], ['regular', 'Clase regular']] as const).map(([k, l]) => (
-                <TouchableOpacity key={k} style={[s.typeBtn, newType === k && s.typeBtnActive]} onPress={() => setNewType(k)}>
-                  <Text style={[s.typeBtnText, newType === k && s.typeBtnTextActive]}>{l}</Text>
                 </TouchableOpacity>
               ))}
             </View>
