@@ -30,8 +30,9 @@ El identificador no se puede cambiar después de publicar. Pasos:
 - Paquete para Play Store: `npx eas build --platform android --profile production`. **La primera vez** se sube a mano en Play Console. Después se puede usar `npx eas submit --platform android --profile production`.
 
 ## Pendiente de terceros
-- Cuenta de Google Play Console (USD 25) y prueba cerrada con 12 personas durante 14 días.
-- Completar los datos entre [CORCHETES] de los textos legales y publicarlos en una URL propia.
+- Cuenta de Google Play Console a nombre de Tecnología Más Fácil S.A.S. (organización, USD 25). D-U-N-S pedido el 16/11/2026: falta que llegue el número. Como organización, no hace falta la prueba obligatoria de 12 personas durante 14 días.
+- Textos legales publicados: https://masfacil.com.ar/trabajo/terminos, /privacidad y /eliminar-cuenta (con CUIT y domicilio). Falta la revisión de un abogado.
+- Ficha, formularios y cuentas para el revisor de Google: `ficha-y-formularios.md`.
 - Plan Pro de Supabase antes de lanzar, porque el plan gratuito pausa el proyecto si no se usa.
 - Mercado Pago de la plataforma: claves cargadas y probado de punta a punta (pago real de $400 del cargo de incorporación, aviso del webhook y devolución desde Liquidaciones). Tecnología Más Fácil SAS ya tiene CUIT y cuenta.
   - Crear la cuenta de Mercado Pago a nombre de la sociedad y una aplicación en Mercado Pago Developers.
@@ -41,7 +42,4 @@ El identificador no se puede cambiar después de publicar. Pasos:
   - Lo que ya está listo y espera las claves: cargo de incorporación de clases regulares (pago, devolución y crédito) y planes del estudio.
   - Siguiente etapa: cobro garantizado de reemplazos (split de Mercado Pago, 5% para la plataforma, el instructor recibe el 100%).
 - Contador: facturación de la comisión y del cargo de incorporación, e Ingresos Brutos.
-- Mails de autenticación:
-  - Plantilla de "recuperar contraseña" en castellano cargada (docs/emails/recuperar-contrasena.html). Faltan las de confirmar cuenta y cambio de email.
-  - Servidor de correo propio (por ejemplo Resend con el dominio masfacil.com.ar) para que el remitente sea "Trabajo Más Fácil" y subir el límite de 2 mails por hora del servidor de Supabase.
-- Configuración de Supabase Auth: dirección por defecto https://app.trabajo.masfacil.com.ar y direcciones permitidas (app del celular, web, dirección de Expo y la landing).
+- Mails de autenticación: listos. 8 plantillas en castellano (`docs/emails`), remitente no-reply@masfacil.com.ar por Resend y avisos de cambio de contraseña y de email activados.
