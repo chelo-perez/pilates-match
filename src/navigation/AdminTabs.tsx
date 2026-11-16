@@ -16,6 +16,18 @@ import AdminInstructorsScreen from '../screens/admin/AdminInstructorsScreen'
 import AdminStudiosScreen from '../screens/admin/AdminStudiosScreen'
 import AdminActivityScreen from '../screens/admin/AdminActivityScreen'
 import AdminBillingScreen from '../screens/admin/AdminBillingScreen'
+import AdminInstructorDetailScreen from '../screens/admin/AdminInstructorDetailScreen'
+import AdminStudioDetailScreen from '../screens/admin/AdminStudioDetailScreen'
+import AdminNotificationsScreen from '../screens/admin/AdminNotificationsScreen'
+import PlatformCamaraEditScreen from '../screens/platform/CamaraEditScreen'
+
+// Pantallas del panel que no van en el menú (fichas y notificaciones): se abren desde las tablas
+const HIDDEN: { name: string; component: any; parent?: string }[] = [
+  { name: 'AdminInstructorDetail', component: AdminInstructorDetailScreen, parent: 'AdminInstructores' },
+  { name: 'AdminStudioDetail', component: AdminStudioDetailScreen, parent: 'AdminEstudios' },
+  { name: 'AdminNotificaciones', component: AdminNotificationsScreen },
+  { name: 'PlatformCamaraEdit', component: PlatformCamaraEditScreen, parent: 'AdminRedes' },
+]
 
 const Tab = createBottomTabNavigator()
 
@@ -40,8 +52,11 @@ function Sidebar({ state, navigation }: BottomTabBarProps) {
       </View>
       <View style={{ gap: 2, marginTop: 18 }}>
         {state.routes.map((r, i) => {
-          const item = ITEMS.find(x => x.name === r.name)!
-          const on = state.index === i
+          const item = ITEMS.find(x => x.name === r.name)
+          if (!item) return null
+          // Una ficha abierta deja marcada la sección de la que viene
+          const current = state.routes[state.index]?.name
+          const on = current === r.name || HIDDEN.find(h => h.name === current)?.parent === r.name
           return (
             <Pressable key={r.key} onPress={() => navigation.navigate(r.name)} accessibilityRole="link" accessibilityState={{ selected: on }}
               style={({ hovered }: any) => [s.item, on && s.itemOn, hovered && !on && s.itemHover]}>
@@ -52,8 +67,9 @@ function Sidebar({ state, navigation }: BottomTabBarProps) {
         })}
       </View>
       <View style={{ flex: 1 }} />
-      <Pressable onPress={() => navigation.getParent()?.navigate('Notifications')} style={({ hovered }: any) => [s.item, hovered && s.itemHover]}>
-        <Feather name="bell" size={17} color="rgba(255,255,255,0.65)" />
+      <Pressable onPress={() => navigation.navigate('AdminNotificaciones')}
+        style={({ hovered }: any) => [s.item, state.routes[state.index]?.name === 'AdminNotificaciones' && s.itemOn, hovered && s.itemHover]}>
+        <Feather name="bell" size={17} color="rgba(255,255,255,0.75)" />
         <Text style={s.itemTxt}>Notificaciones</Text>
         {unread > 0 ? <View style={s.badge}><Text style={s.badgeTxt}>{unread > 9 ? '9+' : unread}</Text></View> : null}
       </Pressable>
@@ -75,6 +91,7 @@ export default function AdminTabs() {
   const insets = useSafeAreaInsets()
   return (
     <Tab.Navigator
+      backBehavior="history"
       tabBar={wide ? (p) => <Sidebar {...p} /> : undefined}
       screenOptions={{
         headerShown: false,
@@ -87,6 +104,10 @@ export default function AdminTabs() {
       {ITEMS.map(it => (
         <Tab.Screen key={it.name} name={it.name} component={it.component}
           options={{ tabBarLabel: it.short, tabBarIcon: ({ color }) => <Feather name={it.icon} size={20} color={color} /> }} />
+      ))}
+      {HIDDEN.map(it => (
+        <Tab.Screen key={it.name} name={it.name} component={it.component}
+          options={{ tabBarButton: () => null, tabBarItemStyle: { display: 'none' } }} />
       ))}
     </Tab.Navigator>
   )

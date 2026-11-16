@@ -290,7 +290,33 @@ export function TodoRow({ icon, tone = 'warn', title, sub, cta, onPress }: { ico
   )
 }
 
+/** Etiqueta y valor en una ficha */
+export function Field({ label, value, children }: { label: string; value?: string | null; children?: React.ReactNode }) {
+  return (
+    <View style={s.field}>
+      <Text style={s.fieldLabel}>{label}</Text>
+      {children ?? <Text style={s.fieldValue} selectable>{value || '—'}</Text>}
+    </View>
+  )
+}
+
+/** Aviso dentro de una página */
+export function Notice({ icon = 'info', tone = 'info', children }: { icon?: any; tone?: Tone; children: React.ReactNode }) {
+  const t = TONE[tone]
+  return (
+    <View style={[s.notice, { backgroundColor: t.bg }]}>
+      <Feather name={icon} size={16} color={t.tx} />
+      <Text style={[s.noticeTxt, { color: t.tx }]}>{children}</Text>
+    </View>
+  )
+}
+
 const s = StyleSheet.create({
+  field:         { flexDirection: 'row', gap: 12, paddingVertical: 8, borderBottomWidth: 1, borderBottomColor: colors.borderLight },
+  fieldLabel:    { width: 150, fontFamily: 'Nunito-SemiBold', fontSize: 13, color: colors.mid },
+  fieldValue:    { flex: 1, fontFamily: 'Nunito-Regular', fontSize: 13, color: colors.dark },
+  notice:        { flexDirection: 'row', alignItems: 'flex-start', gap: 10, padding: 12, borderRadius: 12 },
+  noticeTxt:     { flex: 1, fontFamily: 'Nunito-SemiBold', fontSize: 13, lineHeight: 19 },
   pageHead:      { backgroundColor: colors.cream, paddingBottom: 8 },
   pageHeadNarrow:{ backgroundColor: colors.forest, paddingBottom: 18 },
   back:          { flexDirection: 'row', alignItems: 'center', gap: 4, marginBottom: 8, alignSelf: 'flex-start' },

@@ -27,7 +27,7 @@ export default function AdminInstructorsScreen({ navigation, route }: any) {
   const netName = (id: string) => camaras.find(c => c.id === id)?.name ?? 'Sin red'
 
   return (
-    <AdminPage title="Instructores" subtitle="Tocá un instructor para ver su perfil, sus certificados y verificarlo">
+    <AdminPage title="Instructores" subtitle="Estado de verificación de cada red: la verificación la hace la entidad">
       <Toolbar>
         <Segmented value={filter} onChange={setFilter} items={[
           { key: 'todos', label: 'Todos', count: count('todos') },
@@ -38,7 +38,7 @@ export default function AdminInstructorsScreen({ navigation, route }: any) {
         <NetworkFilter networks={camaras} value={net} onChange={setNet} />
         <SearchBox value={q} onChange={setQ} placeholder="Nombre, email o barrio" />
       </Toolbar>
-      <DataTable rows={list} keyOf={r => r.id} onRowPress={r => navigation.navigate('VerifyInstructor', { instructorId: r.id })}
+      <DataTable rows={list} keyOf={r => r.id} onRowPress={r => navigation.navigate('AdminInstructorDetail', { instructorId: r.id })}
         empty={q ? 'Nadie coincide con la búsqueda.' : 'No hay instructores con este filtro.'}
         columns={[
           { key: 'n', label: 'Instructor', flex: 2.4, render: r => <CellTitle title={r.full_name} sub={r.email} avatar={<Avatar name={r.full_name} source={r.avatar_url} size={34} />} /> },

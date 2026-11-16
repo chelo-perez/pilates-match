@@ -26,6 +26,7 @@ export default function AdminHomeScreen({ navigation }: any) {
       members: studios.filter(s => s.is_member).length,
       verified: instructors.filter(i => i.verification_status === 'verificado').length,
       toVerify: instructors.filter(i => i.verification_status === 'pendiente'),
+      waiting: instructors.filter(i => i.verification_status === 'pendiente' && Date.now() - new Date(i.created_at).getTime() > 3 * 864e5),
       monthProposals: month.length,
       covered: covered.length,
       placementsIncome,
@@ -45,10 +46,10 @@ export default function AdminHomeScreen({ navigation }: any) {
   const refunds = pending?.refunds ?? []
   const goBilling = (tab?: string) => navigation.navigate('AdminCobros', tab ? { tab } : undefined)
   const todos = [
-    ...m.toVerify.slice(0, 5).map(i => ({ key: 'v' + i.id, icon: 'user-check', tone: 'warn' as const, title: `Verificar a ${i.full_name}`,
-      sub: `${camaras.find(c => c.id === i.camara_id)?.name ?? 'Sin red'} · se registró el ${shortDate(i.created_at)}`, cta: 'Revisar',
-      onPress: () => navigation.navigate('VerifyInstructor', { instructorId: i.id }) })),
-    ...(m.toVerify.length > 5 ? [{ key: 'vmore', icon: 'users', tone: 'warn' as const, title: `Y ${m.toVerify.length - 5} instructores más por verificar`, cta: 'Ver todos', onPress: () => navigation.navigate('AdminInstructores', { filter: 'pendiente' }) }] : []),
+    // Verificar es tarea de cada entidad: acá solo se sigue si alguien espera hace días
+    ...(m.waiting.length ? [{ key: 'wait', icon: 'clock', tone: 'info' as const,
+      title: `${m.waiting.length} instructor${m.waiting.length === 1 ? '' : 'es'} esperando verificación hace más de 3 días`,
+      sub: 'La verificación la hace la entidad de cada red. Podés avisarle.', cta: 'Ver', onPress: () => navigation.navigate('AdminInstructores', { filter: 'pendiente' }) }] : []),
     ...refunds.map(r => ({ key: 'r' + r.id, icon: 'rotate-ccw', tone: 'red' as const, title: `Devolver ${formatARS(Number(r.placement_fee_ars))} a ${one<any>(r.studio)?.name ?? 'un estudio'}`,
       sub: 'Cargo de incorporación que corresponde devolver', cta: 'Devolver', onPress: () => goBilling('incorporacion') })),
     ...toInvoice.map(i => ({ key: 'i' + i.id, icon: 'file-text', tone: 'warn' as const, title: `Emitir la factura de ${one<any>(i.camara)?.name ?? 'una red'}`,
@@ -65,7 +66,7 @@ export default function AdminHomeScreen({ navigation }: any) {
         <Kpi label="Redes activas" value={m.activeNets} icon="share-2" hint={`${camaras.length} en total`} onPress={() => navigation.navigate('AdminRedes')} />
         <Kpi label="Estudios" value={studios.length} icon="home" hint={`${m.members} socios`} onPress={() => navigation.navigate('AdminEstudios')} />
         <Kpi label="Instructores verificados" value={m.verified} icon="user-check"
-          tone={m.toVerify.length ? 'warn' : 'brand'} hint={m.toVerify.length ? `${m.toVerify.length} por verificar` : 'Nadie esperando'}
+          tone={m.toVerify.length ? 'warn' : 'brand'} hint={m.toVerify.length ? `${m.toVerify.length} esperando a su entidad` : 'Nadie esperando'}
           onPress={() => navigation.navigate('AdminInstructores', m.toVerify.length ? { filter: 'pendiente' } : undefined)} />
         <Kpi label="Propuestas este mes" value={m.monthProposals} icon="send" hint={`${m.covered} clases cubiertas`} onPress={() => navigation.navigate('AdminActividad')} />
         <Kpi label="Cargos de incorporación" value={formatARS(m.placementsIncome)} icon="dollar-sign" hint="Cobrados este mes" onPress={() => goBilling('incorporacion')} />
@@ -73,9 +74,9 @@ export default function AdminHomeScreen({ navigation }: any) {
       </KpiGrid>
 
       <Columns min={380}>
-        <Card title="Para hacer" subtitle={todos.length ? `${todos.length} pendiente${todos.length === 1 ? '' : 's'}` : undefined}>
+        <Card title="Para hacer" subtitle={todos.length ? `${todos.length} pendiente${todos.length === 1 ? '' : 's'}` : 'Cobros, devoluciones y seguimiento'}>
           {todos.length ? todos.map(({ key, ...t }) => <TodoRow key={key} {...t} />) : (
-            <View style={s.allDone}><Text style={s.allDoneTitle}>Todo al día</Text><Text style={s.allDoneTxt}>No hay verificaciones, facturas ni devoluciones pendientes.</Text></View>
+            <View style={s.allDone}><Text style={s.allDoneTitle}>Todo al día</Text><Text style={s.allDoneTxt}>No hay facturas, devoluciones ni liquidaciones pendientes.</Text></View>
           )}
         </Card>
         <Card title="Actividad reciente" action={<Text style={s.link} onPress={() => navigation.navigate('AdminActividad')}>Ver todo</Text>}>

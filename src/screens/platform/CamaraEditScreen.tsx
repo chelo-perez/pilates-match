@@ -33,7 +33,13 @@ const slugify = (s: string) => s.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowe
   .replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '').slice(0, 40)
 const digits = (s: string) => s.replace(/\D/g, '')
 
-export default function PlatformCamaraEditScreen({ navigation, route }: any) {
+// Dentro del panel la pantalla queda montada: al pasar de una red a otra (o a "Nueva red")
+// se vuelve a crear para no arrastrar los datos del formulario anterior.
+export default function PlatformCamaraEditScreen(props: any) {
+  return <CamaraEditForm key={props.route?.params?.camaraId ?? 'nueva'} {...props} />
+}
+
+function CamaraEditForm({ navigation, route }: any) {
   const camaraId: string | undefined = route.params?.camaraId
   const isNew = !camaraId
   const qc = useQueryClient()
@@ -153,7 +159,7 @@ export default function PlatformCamaraEditScreen({ navigation, route }: any) {
       }
       await Promise.all(['platform-camaras', 'camara', 'plan-prices', 'active-camaras', 'platform-counts', 'member-tiers', 'billing-preview', 'camara-contact']
         .map(k => qc.invalidateQueries({ queryKey: [k] })))
-      if (isNew) navigation.replace('PlatformCamaraEdit', { camaraId: id })
+      if (isNew) navigation.setParams({ camaraId: id }) // queda en la misma ficha, ya creada
       else {
         setSaved(true)
         setTimeout(() => setSaved(false), 2500)

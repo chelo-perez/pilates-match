@@ -18,7 +18,7 @@ export function openNotificationTarget(nav: any, role: string | undefined, data:
     else if (screen === 'inicio') nav.navigate('EstudioHome', { screen: 'EstudioInicio' })
   } else if (role === 'super_admin') {
     if (screen === 'liquidaciones') nav.navigate('PlatformTabs', { screen: 'AdminCobros' })
-    else if (screen === 'verificar' && data?.instructor_id) nav.navigate('VerifyInstructor', { instructorId: data.instructor_id })
+    else if (screen === 'verificar' && data?.instructor_id) nav.navigate('PlatformTabs', { screen: 'AdminInstructorDetail', params: { instructorId: data.instructor_id } })
     else if (screen === 'verificar') nav.navigate('PlatformTabs', { screen: 'AdminInstructores', params: { filter: 'pendiente' } })
     else nav.navigate('PlatformTabs', { screen: 'AdminResumen' })
   } else if (role === 'camara_admin') {

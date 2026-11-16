@@ -36,7 +36,7 @@ export default function AdminStudiosScreen({ navigation }: any) {
         <NetworkFilter networks={camaras} value={net} onChange={setNet} />
         <SearchBox value={q} onChange={setQ} placeholder="Nombre, barrio o email" />
       </Toolbar>
-      <DataTable rows={list} keyOf={r => r.id} onRowPress={r => navigation.navigate('StudioDetail', { studioId: r.id })}
+      <DataTable rows={list} keyOf={r => r.id} onRowPress={r => navigation.navigate('AdminStudioDetail', { studioId: r.id })}
         empty={q ? 'Ningún estudio coincide con la búsqueda.' : 'No hay estudios con este filtro.'}
         columns={[
           { key: 'n', label: 'Estudio', flex: 2.3, render: r => <CellTitle title={r.name} sub={r.owner_email ?? (r.user_id ? null : 'Sin cuenta en la app')} avatar={<Avatar name={r.name} source={r.logo_url} size={34} />} /> },

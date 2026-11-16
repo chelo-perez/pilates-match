@@ -39,7 +39,7 @@ export default function AdminActivityScreen({ navigation, route }: any) {
         <NetworkFilter networks={camaras} value={net} onChange={setNet} />
         <SearchBox value={q} onChange={setQ} placeholder="Estudio o instructor" />
       </Toolbar>
-      <DataTable rows={list} keyOf={r => r.id} onRowPress={r => one<any>(r.studio)?.id && navigation.navigate('StudioDetail', { studioId: one<any>(r.studio).id })}
+      <DataTable rows={list} keyOf={r => r.id} onRowPress={r => one<any>(r.studio)?.id && navigation.navigate('AdminStudioDetail', { studioId: one<any>(r.studio).id })}
         empty="No hay propuestas con este filtro."
         columns={[
           { key: 'c', label: 'Clase', width: 150, render: r => <CellTitle title={shortDate(r.class_date)} sub={`${r.class_type === 'regular' ? 'Entrevista regular' : 'Reemplazo'} · ${String(r.start_time).slice(0, 5)}`} /> },

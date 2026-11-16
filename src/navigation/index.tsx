@@ -13,7 +13,6 @@ import { StatusBar } from 'expo-status-bar'
 import { NavigationContainer, createNavigationContainerRef } from '@react-navigation/native'
 import { useNetworkBrandSync } from '../lib/brandSync'
 import AdminTabs from './AdminTabs'
-import { withAdminFrame } from '../components/admin/AdminFrame'
 import { createNativeStackNavigator } from '@react-navigation/native-stack'
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs'
 import { useQuery } from '@tanstack/react-query'
@@ -27,7 +26,6 @@ import { useLoadEntity } from '../lib/entity'
 import { queryClient } from '../lib/queryClient'
 import NotificationsScreen from '../screens/shared/NotificationsScreen'
 import ClassDetailScreen from '../screens/shared/ClassDetailScreen'
-import PlatformCamaraEditScreen from '../screens/platform/CamaraEditScreen'
 import LottieTab from '../components/LottieTab'
 import { ErrorState, LoadingScreen, Button, colors, spacing } from '../components/ui'
 
@@ -250,11 +248,6 @@ function useNotificationRouting(role: string | undefined) {
 }
 
 // ── ROOT NAVIGATOR ─────────────────────────────────────────────
-// Panel de la plataforma: pantallas de detalle centradas en la compu
-const Admin_VerifyInstructorScreen = withAdminFrame(VerifyInstructorScreen)
-const Admin_StudioDetailScreen = withAdminFrame(StudioDetailScreen)
-const Admin_NotificationsScreen = withAdminFrame(NotificationsScreen, 720)
-
 export default function RootNavigator() {
   const { user, session, isLoading, needsOnboarding, registering, profileError, passwordRecovery } = useAuthStore()
   useNotificationRouting(user?.role)
@@ -314,10 +307,6 @@ export default function RootNavigator() {
     screens = (
       <>
         <Stack.Screen name="PlatformTabs" component={AdminTabs} />
-        <Stack.Screen name="PlatformCamaraEdit" component={PlatformCamaraEditScreen} />
-        <Stack.Screen name="VerifyInstructor" component={Admin_VerifyInstructorScreen} />
-        <Stack.Screen name="StudioDetail" component={Admin_StudioDetailScreen} />
-        <Stack.Screen name="Notifications" component={Admin_NotificationsScreen} />
       </>
     )
   } else {
