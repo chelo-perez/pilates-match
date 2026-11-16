@@ -1,9 +1,9 @@
 # Política de privacidad — Trabajo Más Fácil
 
-> **Borrador para revisar con un abogado.** Falta completar el CUIT y el domicilio.
+> **Borrador para revisar con un abogado.**
 > Última actualización: 16 de noviembre de 2026
 
-**Trabajo Más Fácil** (la "App") es un servicio de **Tecnología Más Fácil S.A.S.**, CUIT **[CUIT]**, con domicilio en **[DOMICILIO]** ("nosotros"). La App conecta estudios, gimnasios y otros negocios con instructores y profesionales independientes, dentro de redes coordinadas por entidades del sector (cámaras, asociaciones, colegios, escuelas y similares).
+**Trabajo Más Fácil** (la "App") es un servicio de **Tecnología Más Fácil S.A.S.**, CUIT **30-71969345-4**, con domicilio en **Av. Colonia 211, Ciudad Autónoma de Buenos Aires** ("nosotros"). La App conecta estudios, gimnasios y otros negocios con instructores y profesionales independientes, dentro de redes coordinadas por entidades del sector (cámaras, asociaciones, colegios, escuelas y similares).
 
 Tratamos tus datos personales de acuerdo con la **Ley 25.326 de Protección de los Datos Personales** de la República Argentina y su normativa complementaria.
 
@@ -88,4 +88,4 @@ Si cambiamos esta política te avisamos en la App antes de que el cambio entre e
 
 ## 9. Contacto
 
-**Tecnología Más Fácil S.A.S.** — **info@masfacil.com.ar** — **[DOMICILIO]**
+**Tecnología Más Fácil S.A.S.** — **info@masfacil.com.ar** — **Av. Colonia 211, Ciudad Autónoma de Buenos Aires**

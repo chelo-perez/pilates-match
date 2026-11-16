@@ -1,11 +1,11 @@
 # Términos y condiciones — Trabajo Más Fácil
 
-> **Borrador para revisar con un abogado.** Falta completar el CUIT y confirmar la jurisdicción.
+> **Borrador para revisar con un abogado.**
 > Última actualización: 16 de noviembre de 2026
 
 ## 1. Qué es Trabajo Más Fácil
 
-Trabajo Más Fácil (la "App"), de **Tecnología Más Fácil S.A.S.**, CUIT **[CUIT]**, es una plataforma que conecta **negocios** (estudios, gimnasios y similares) con **profesionales independientes** (instructores, entrenadores y similares). Cada red está coordinada por una **entidad** del sector (una cámara, asociación, colegio, escuela u otra organización), que verifica a los profesionales.
+Trabajo Más Fácil (la "App"), de **Tecnología Más Fácil S.A.S.**, CUIT **30-71969345-4**, es una plataforma que conecta **negocios** (estudios, gimnasios y similares) con **profesionales independientes** (instructores, entrenadores y similares). Cada red está coordinada por una **entidad** del sector (una cámara, asociación, colegio, escuela u otra organización), que verifica a los profesionales.
 
 **La App no es empleadora ni agencia de empleo, y no es parte de los acuerdos entre negocios y profesionales.** Las condiciones de cada clase (fecha, horario, monto y forma de pago) las acuerdan el negocio y el profesional, que son responsables de cumplirlas y de sus obligaciones laborales, previsionales e impositivas. La App ayuda a encontrarse, a confirmar las clases y a dejarlas registradas.
 
