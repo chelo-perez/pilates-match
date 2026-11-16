@@ -65,7 +65,7 @@ export default function ClassDetailScreen({ navigation, route }: any) {
   const other = side === 'estudio'
     ? { name: m.instructor?.full_name ?? 'Instructor', area: m.instructor?.neighborhood, photo: m.instructor?.avatar_url }
     : { name: m.studio?.name ?? 'Estudio', area: m.studio?.neighborhood, photo: m.studio?.logo_url }
-  const firstName = other.name.split(' ')[0]
+  const firstName = other.name.trim().split(/\s+/)[0]
   const start = matchStart(m)
   const late = start.getTime() - Date.now() < 24 * 3600_000
   const held = side === 'estudio' ? m.held_studio : m.held_instructor
@@ -106,7 +106,7 @@ export default function ClassDetailScreen({ navigation, route }: any) {
   const title =
     phase === 'cancelada' ? 'Clase cancelada'
     : phase === 'contratado' ? 'Clase regular activa'
-    : phase === 'cerrada' ? (m.hire_status === 'no_sigue' ? 'No siguió' : 'Clase regular terminada')
+    : phase === 'cerrada' ? (m.hire_status === 'no_sigue' ? 'No se contrató' : 'Clase regular terminada')
     : isRegular ? 'Entrevista y clase de prueba' : 'Reemplazo confirmado'
 
   return (
@@ -135,9 +135,9 @@ export default function ClassDetailScreen({ navigation, route }: any) {
               Cargo de incorporación: {feeBlocks} bloque{feeBlocks === 1 ? '' : 's'} de 4 clases. Pagalo antes del {deadlineLabel}; si no, la entrevista se cancela sola.
             </Text>
             <View style={s.rules}>
-              <Text style={s.rule}>✓ Si las dos partes siguen, se cobra.</Text>
-              <Text style={s.rule}>↺ Si {firstName} no sigue o no va, te lo devolvemos.</Text>
-              <Text style={s.rule}>★ Si vos no seguís, queda como crédito para otra búsqueda.</Text>
+              <Text style={s.rule}>✓ Si lo contratás, se cobra.</Text>
+              <Text style={s.rule}>↺ Si {firstName} decide no tomar la clase o no se presenta, te devolvemos el total.</Text>
+              <Text style={s.rule}>★ Si decidís no contratarlo, queda como crédito para tu próxima búsqueda.</Text>
             </View>
             {IN_APP_PAYMENTS ? (
               <Button label={`Pagar ${money(m.placement_fee_ars)} con Mercado Pago`} isLoading={busy === 'pay'} fullWidth style={{ marginTop: spacing.md }}
@@ -165,7 +165,7 @@ export default function ClassDetailScreen({ navigation, route }: any) {
               <Text style={s.askTitle}>{side === 'estudio' ? `¿Cómo te fue con ${firstName}?` : '¿Querés tomar la clase regular?'}</Text>
               <Text style={s.askTxt}>
                 {side === 'estudio'
-                  ? 'Si los dos siguen, queda como clase regular activa con los días y el monto acordados.'
+                  ? 'Si los dos confirman, queda como clase regular con los días y el monto acordados.'
                   : `${schedule ?? 'Los días y horarios acordados'} · ${money(m.agreed_rate ?? m.offered_rate)} por clase.`}
               </Text>
               {side === 'instructor' && declining ? (
@@ -226,8 +226,8 @@ export default function ClassDetailScreen({ navigation, route }: any) {
             <Text style={[s.bannerTxt, { flex: 1 }]}>
               {m.hire_status === 'no_sigue'
                 ? (m.instructor_continue === false
-                    ? `Después de la clase de prueba, ${side === 'instructor' ? 'decidiste' : `${firstName} decidió`} no seguir.`
-                    : `Después de la clase de prueba, ${side === 'estudio' ? 'decidiste' : 'el estudio decidió'} no seguir.`)
+                    ? `Después de la clase de prueba, ${side === 'instructor' ? 'decidiste' : `${firstName} decidió`} no tomar la clase regular.`
+                    : `Después de la clase de prueba, ${side === 'estudio' ? 'decidiste' : 'el estudio decidió'} no contratar la clase regular.`)
                 : `La terminó ${m.ended_by === side ? 'vos' : m.ended_by === 'estudio' ? 'el estudio' : 'el instructor'} el ${shortDate(m.ended_at)}.`}
               {m.cancel_reason ? ` "${m.cancel_reason}"` : ''}
             </Text>

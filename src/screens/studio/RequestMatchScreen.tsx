@@ -37,7 +37,8 @@ const money = (n: number) => '$' + Math.round(n).toLocaleString('es-AR')
 const fmtDate = (d: Date) => d.toLocaleDateString('es-AR', { weekday: 'long', day: 'numeric', month: 'long' })
 
 export default function RequestMatchScreen({ navigation, route }: Props) {
-  const { instructorId, instructorName } = (route.params || {}) as any
+  const { instructorId } = (route.params || {}) as any
+  const instructorName: string = String(route.params?.instructorName ?? '').trim().replace(/\s+/g, ' ')
   const { data: studio } = useMyStudio()
   const { data: instructor } = useInstructor(instructorId)
   const { data: canMatch } = useCanMatch(studio?.id)
@@ -127,7 +128,7 @@ export default function RequestMatchScreen({ navigation, route }: Props) {
       } as any)
       showToast(
         classType === 'reemplazo'
-          ? `Solicitud enviada a ${instructorName}. Vas a ver su respuesta en Historial.`
+          ? `Propuesta de reemplazo enviada a ${instructorName}. Vas a ver su respuesta en Historial.`
           : `Propuesta enviada a ${instructorName}. Vas a ver su respuesta en Historial.`
       )
       setTimeout(() => navigation.goBack(), 1800)
@@ -140,7 +141,7 @@ export default function RequestMatchScreen({ navigation, route }: Props) {
   return (
     <KeyboardAvoidingView style={{ flex: 1, backgroundColor: colors.cream }} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
       <HeroHeader
-        title={classType === 'reemplazo' ? 'Solicitar reemplazo' : 'Proponer clase regular'}
+        title={classType === 'reemplazo' ? 'Proponer reemplazo' : 'Proponer clase regular'}
         subtitle={instructorName}
         onBack={() => navigation.goBack()}
         backLabel="Perfil"
@@ -334,7 +335,7 @@ export default function RequestMatchScreen({ navigation, route }: Props) {
                 Cargo de incorporación: {credits > 0 ? 'sin cargo (usás tu crédito)' : money(placementFee(selectedDays.length, offer, network.placement_max_blocks))}
               </Text>
               <Text style={s.feeTxt}>
-                Un bloque de 4 clases por cada día que sumás, hasta {network.placement_max_blocks}. Lo pagás cuando {instructorName} acepta, antes de la clase de prueba. Si {instructorName} no sigue, te lo devolvemos; si vos no seguís, queda como crédito para otra búsqueda.
+                Equivale a 4 clases por cada día de la semana que contratás (hasta {network.placement_max_blocks} días). Lo pagás cuando {instructorName} acepta la entrevista, antes de la clase de prueba. Si lo contratás, se cobra. Si {instructorName} decide no tomar la clase o no se presenta, te devolvemos el total. Si vos decidís no contratarlo, queda como crédito para tu próxima búsqueda.
               </Text>
             </View>
           ) : null}
@@ -373,7 +374,7 @@ export default function RequestMatchScreen({ navigation, route }: Props) {
         </View>
 
         <Button
-          label={limitReached ? 'Ver mi plan' : classType === 'reemplazo' ? 'Enviar solicitud →' : 'Enviar propuesta →'}
+          label={limitReached ? 'Ver mi plan' : 'Enviar propuesta →'}
           onPress={handleSubmit}
           isLoading={createMatch.isPending}
           disabled={!limitReached && !!problem}

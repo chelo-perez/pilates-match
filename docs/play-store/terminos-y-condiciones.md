@@ -18,7 +18,7 @@ Trabajo Más Fácil (la "App"), de **Tecnología Más Fácil S.A.S.**, CUIT **30
 ## 3. Propuestas y clases
 
 - El negocio propone una clase con fecha, horario y el monto que ofrece por clase. El profesional puede aceptarla, rechazarla o proponer otro monto una vez.
-- Un **reemplazo** es una clase o bloque de clases en una fecha puntual. Una **clase regular** empieza con una **entrevista con clase de prueba** en el estudio. Después, cada parte indica si quiere seguir.
+- Un **reemplazo** es una clase o bloque de clases en una fecha puntual. Una **clase regular** empieza con una **entrevista con clase de prueba** en el estudio. Después, cada parte indica si quiere avanzar con la clase regular.
 - Con la clase confirmada, cada parte ve los datos de contacto de la otra para coordinar el día. Los cambios y cancelaciones se hacen desde la App, para que queden registrados y la otra parte reciba el aviso.
 
 ## 4. Cancelaciones y confiabilidad
@@ -45,9 +45,9 @@ Cuando un negocio suma a un profesional para una clase regular a través de la A
 - **Monto**: un bloque de 4 clases, al monto por clase acordado, por cada día de la semana que se contrata, hasta el máximo que fija cada red. La App muestra el monto antes de enviar la propuesta.
 - **Cuándo se paga**: después de que el profesional acepta la entrevista y antes de la clase de prueba, dentro del plazo que indica la App. Si no se paga a tiempo, la entrevista se cancela.
 - **Qué pasa después de la clase de prueba**:
-  - Si las dos partes siguen, el cargo queda cobrado.
-  - Si el profesional decide no seguir, no se presenta o cancela, **se le devuelve al negocio** por Mercado Pago, al mismo medio de pago.
-  - Si el negocio decide no seguir o cancela, el cargo queda como **crédito para otra búsqueda**, que se usa en la siguiente entrevista.
+  - Si el negocio contrata al profesional, el cargo queda cobrado.
+  - Si el profesional decide no tomar la clase, no se presenta o cancela, **se le devuelve al negocio** por Mercado Pago, al mismo medio de pago.
+  - Si el negocio decide no contratarlo o cancela, el cargo queda como **crédito para otra búsqueda**, que se usa en la siguiente entrevista.
 - Si el negocio incorpora al profesional por fuera de la App dentro de los **6 meses** posteriores a la entrevista, el cargo de incorporación corresponde igual.
 - El profesional **no paga** el cargo de incorporación y recibe el 100% de lo que acuerda con el negocio.
 

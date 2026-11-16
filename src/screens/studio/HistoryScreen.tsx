@@ -111,7 +111,7 @@ export default function HistoryScreen({ navigation }: Props) {
             <EmptyState
               icon="send"
               title={status === 'todas' ? 'Todavía no enviaste propuestas' : 'No hay propuestas con este estado'}
-              message={status === 'todas' ? 'Buscá un instructor y enviale una solicitud de reemplazo o una propuesta regular.' : undefined}
+              message={status === 'todas' ? 'Buscá un instructor y enviale una propuesta de reemplazo o de clase regular.' : undefined}
               action={status === 'todas' ? 'Buscar instructor' : undefined}
               onAction={status === 'todas' ? () => navigation.navigate('Search') : undefined}
             />

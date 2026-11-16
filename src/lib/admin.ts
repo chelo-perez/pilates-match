@@ -81,7 +81,7 @@ export function matchState(m: any): { label: string; tone: 'ok' | 'warn' | 'red'
     : { label: 'Cancelada', tone: 'neutral' }
   if (m.placement_status === 'pendiente_pago') return { label: 'Falta pagar el cargo', tone: 'warn' }
   if (m.hire_status === 'contratado') return { label: 'Regular activa', tone: 'ok' }
-  if (m.hire_status === 'no_sigue') return { label: 'No siguió', tone: 'neutral' }
+  if (m.hire_status === 'no_sigue') return { label: 'No se contrató', tone: 'neutral' }
   if (m.held_studio === false || m.held_instructor === false) return { label: 'No se dio', tone: 'red' }
   if (m.held_studio || m.held_instructor) return { label: 'Se dio', tone: 'ok' }
   return { label: m.class_type === 'regular' ? 'Entrevista confirmada' : 'Confirmada', tone: 'info' }

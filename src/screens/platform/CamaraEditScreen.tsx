@@ -293,7 +293,7 @@ function CamaraEditForm({ navigation, route }: any) {
             </View>
             <Text style={s.hint}>
               El estudio paga 1 bloque de 4 clases (al monto acordado) por cada día de la semana que suma, antes de la clase de prueba.
-              Si los dos siguen, se cobra; si la profe no sigue, se devuelve; si el estudio no sigue, queda como crédito.
+              Si el estudio contrata, se cobra; si la profe no toma la clase, se devuelve; si el estudio no contrata, queda como crédito.
             </Text>
             {f.placement_enabled ? (
               <Input label="MÁXIMO DE BLOQUES" value={f.placement_max} onChangeText={set('placement_max')} keyboardType="number-pad" placeholder="2" />
