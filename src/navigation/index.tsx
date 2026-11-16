@@ -12,6 +12,8 @@ import { View, Text } from 'react-native'
 import { StatusBar } from 'expo-status-bar'
 import { NavigationContainer, createNavigationContainerRef } from '@react-navigation/native'
 import { useNetworkBrandSync } from '../lib/brandSync'
+import AdminTabs from './AdminTabs'
+import { withAdminFrame } from '../components/admin/AdminFrame'
 import { createNativeStackNavigator } from '@react-navigation/native-stack'
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs'
 import { useQuery } from '@tanstack/react-query'
@@ -25,9 +27,7 @@ import { useLoadEntity } from '../lib/entity'
 import { queryClient } from '../lib/queryClient'
 import NotificationsScreen from '../screens/shared/NotificationsScreen'
 import ClassDetailScreen from '../screens/shared/ClassDetailScreen'
-import PlatformCamarasScreen from '../screens/platform/CamarasScreen'
 import PlatformCamaraEditScreen from '../screens/platform/CamaraEditScreen'
-import PlatformSettlementsScreen from '../screens/platform/SettlementsScreen'
 import LottieTab from '../components/LottieTab'
 import { ErrorState, LoadingScreen, Button, colors, spacing } from '../components/ui'
 
@@ -206,21 +206,6 @@ function CamaraTabs() {
 }
 
 // ── PLATAFORMA (dueño: super_admin) ───────────────────────────
-function PlatformTabs() {
-  const tabStyle = useTabStyle()
-  return (
-    <Tab.Navigator screenOptions={tabScreenOptions(tabStyle)}>
-      <Tab.Screen name="PlataformaCamaras" component={PlatformCamarasScreen}
-        options={{ tabBarLabel: 'Redes', tabBarIcon: lottieIcon(ICONS.home) }} />
-      <Tab.Screen name="Liquidaciones" component={PlatformSettlementsScreen}
-        options={{ tabBarLabel: 'Liquidaciones', tabBarIcon: lottieIcon(ICONS.reports) }} />
-      <Tab.Screen name="Directorio" component={CamaraDirectoryScreen}
-        options={{ tabBarLabel: 'Instructores', tabBarIcon: lottieIcon(ICONS.users) }} />
-      <Tab.Screen name="Estudios" component={CamaraStudiosScreen}
-        options={{ tabBarLabel: 'Estudios', tabBarIcon: lottieIcon(ICONS.history) }} />
-    </Tab.Navigator>
-  )
-}
 
 // ── Sesión sin perfil (sin red al abrir) ──────────────────────
 function ProfileErrorScreen() {
@@ -265,6 +250,11 @@ function useNotificationRouting(role: string | undefined) {
 }
 
 // ── ROOT NAVIGATOR ─────────────────────────────────────────────
+// Panel de la plataforma: pantallas de detalle centradas en la compu
+const Admin_VerifyInstructorScreen = withAdminFrame(VerifyInstructorScreen)
+const Admin_StudioDetailScreen = withAdminFrame(StudioDetailScreen)
+const Admin_NotificationsScreen = withAdminFrame(NotificationsScreen, 720)
+
 export default function RootNavigator() {
   const { user, session, isLoading, needsOnboarding, registering, profileError, passwordRecovery } = useAuthStore()
   useNotificationRouting(user?.role)
@@ -323,11 +313,11 @@ export default function RootNavigator() {
     // Dueño de la plataforma: Cámaras, liquidaciones y la red completa
     screens = (
       <>
-        <Stack.Screen name="PlatformTabs" component={PlatformTabs} />
+        <Stack.Screen name="PlatformTabs" component={AdminTabs} />
         <Stack.Screen name="PlatformCamaraEdit" component={PlatformCamaraEditScreen} />
-        <Stack.Screen name="VerifyInstructor" component={VerifyInstructorScreen} />
-        <Stack.Screen name="StudioDetail" component={StudioDetailScreen} />
-        <Stack.Screen name="Notifications" component={NotificationsScreen} />
+        <Stack.Screen name="VerifyInstructor" component={Admin_VerifyInstructorScreen} />
+        <Stack.Screen name="StudioDetail" component={Admin_StudioDetailScreen} />
+        <Stack.Screen name="Notifications" component={Admin_NotificationsScreen} />
       </>
     )
   } else {

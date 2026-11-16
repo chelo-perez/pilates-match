@@ -26,6 +26,7 @@ import { ENTITY_TYPES } from '../../lib/entity'
 import { usePlanPrices } from '../../lib/payments'
 import HeroHeader from '../../components/HeroHeader'
 import CamaraTeam from '../../components/CamaraTeam'
+import { ActionButton, AdminPage, useIsWide } from '../../components/admin/AdminUI'
 import { Button, Input, LoadingScreen, colors, spacing, radius, typography } from '../../components/ui'
 
 const slugify = (s: string) => s.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase()
@@ -36,6 +37,7 @@ export default function PlatformCamaraEditScreen({ navigation, route }: any) {
   const camaraId: string | undefined = route.params?.camaraId
   const isNew = !camaraId
   const qc = useQueryClient()
+  const wide = useIsWide()
   const { data: camara, isLoading } = useCamara(camaraId)
   const { data: prices = [] } = usePlanPrices(camaraId, 'info')
 
@@ -162,11 +164,8 @@ export default function PlatformCamaraEditScreen({ navigation, route }: any) {
 
   if (!isNew && isLoading) return <LoadingScreen />
 
-  return (
-    <View style={{ flex: 1, backgroundColor: colors.cream }}>
-      <HeroHeader title={isNew ? 'Nueva red' : 'Editar red'} subtitle={camara?.name} onBack={() => navigation.goBack()} backLabel="Redes" />
-      <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
-        <ScrollView contentContainerStyle={s.content} keyboardShouldPersistTaps="handled">
+  // ── Secciones del formulario (en la compu van en dos columnas) ──
+  const cardEntity = (
           <View style={s.card}>
             <Text style={s.caption}>ENTIDAD QUE COORDINA LA RED</Text>
             <Text style={s.label}>TIPO</Text>
@@ -190,14 +189,16 @@ export default function PlatformCamaraEditScreen({ navigation, route }: any) {
               <Switch value={f.active} onValueChange={set('active')} trackColor={{ true: colors.sage, false: colors.border }} thumbColor={colors.white} />
             </View>
           </View>
-
+  )
+  const cardNetwork = (
           <View style={s.card}>
             <Text style={s.caption}>LA RED</Text>
             <Text style={s.hint}>Así se ve la opción cuando alguien se registra.</Text>
             <Input label="NEGOCIO" value={f.business_label} onChangeText={set('business_label')} placeholder="Gimnasio" />
             <Input label="INSTRUCTOR" value={f.instructor_label} onChangeText={set('instructor_label')} placeholder="Entrenador/a personal" />
           </View>
-
+  )
+  const cardBilling = (
           <View style={s.card}>
             <Text style={s.caption}>COBROS</Text>
             <Text style={s.label}>MODELO</Text>
@@ -276,7 +277,8 @@ export default function PlatformCamaraEditScreen({ navigation, route }: any) {
               </>
             )}
           </View>
-
+  )
+  const cardPlacement = (
           <View style={s.card}>
             <Text style={s.caption}>CLASES REGULARES: CARGO DE INCORPORACIÓN</Text>
             <View style={s.switchRow}>
@@ -291,7 +293,8 @@ export default function PlatformCamaraEditScreen({ navigation, route }: any) {
               <Input label="MÁXIMO DE BLOQUES" value={f.placement_max} onChangeText={set('placement_max')} keyboardType="number-pad" placeholder="2" />
             ) : null}
           </View>
-
+  )
+  const cardBrand = (
           <View style={s.card}>
             <Text style={s.caption}>MARCA DE LA RED (CO-MARCA)</Text>
             <View style={s.switchRow}>
@@ -349,7 +352,34 @@ export default function PlatformCamaraEditScreen({ navigation, route }: any) {
               </View>
             ))}
           </View>
+  )
+  const saveLabel = saved ? '✓ Cambios guardados' : isNew ? 'Crear red' : 'Guardar cambios'
+  const team = !isNew && camaraId ? <CamaraTeam camaraId={camaraId} camaraName={camara?.name} /> : null
 
+  if (wide) return (
+    <AdminPage title={isNew ? 'Nueva red' : camara?.name ?? 'Editar red'} subtitle={isNew ? 'La entidad que coordina la red, cómo cobra y su marca' : 'Entidad, cobros, cargo de incorporación, marca y equipo'}
+      onBack={() => navigation.goBack()} backLabel="Redes" maxWidth={1240}
+      actions={<>
+        {saved ? <Text style={s.savedTxt}>Los cambios ya rigen para esta red.</Text> : null}
+        <ActionButton label={saveLabel} icon="check" onPress={save} loading={saving} />
+      </>}>
+      <View style={{ flexDirection: 'row', gap: 20, alignItems: 'flex-start' }}>
+        <View style={{ flex: 1, minWidth: 0 }}>{cardEntity}{cardNetwork}{cardPlacement}{team}</View>
+        <View style={{ flex: 1, minWidth: 0 }}>{cardBilling}{cardBrand}</View>
+      </View>
+    </AdminPage>
+  )
+
+  return (
+    <View style={{ flex: 1, backgroundColor: colors.cream }}>
+      <HeroHeader title={isNew ? 'Nueva red' : 'Editar red'} subtitle={camara?.name} onBack={() => navigation.goBack()} backLabel="Redes" />
+      <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+        <ScrollView contentContainerStyle={s.content} keyboardShouldPersistTaps="handled">
+          {cardEntity}
+          {cardNetwork}
+          {cardBilling}
+          {cardPlacement}
+          {cardBrand}
           <Button label={saved ? '✓ Cambios guardados' : isNew ? 'Crear red' : 'Guardar cambios'} onPress={save} isLoading={saving}
             fullWidth size="lg" style={saved ? { backgroundColor: colors.forest } : undefined} />
           {saved ? <Text style={s.savedTxt}>Los cambios ya rigen para esta red.</Text> : null}

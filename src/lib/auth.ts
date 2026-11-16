@@ -246,6 +246,8 @@ export async function signOutNow() {
 }
 
 export function confirmSignOut() {
+  // En la web Alert no se muestra (y el botón "Salir" no hacía nada)
+  if (Platform.OS === 'web') { if (window.confirm('¿Seguro que querés salir?')) signOutNow(); return }
   Alert.alert('Cerrar sesión', '¿Seguro que querés salir?', [
     { text: 'Cancelar', style: 'cancel' },
     { text: 'Salir', style: 'destructive', onPress: () => { signOutNow() } },
