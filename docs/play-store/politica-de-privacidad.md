@@ -41,6 +41,7 @@ No usamos tus datos para publicidad ni los vendemos.
 - Enviarte avisos sobre propuestas, respuestas, recordatorios de clases, verificaciones y tu cuenta.
 - Cobrar los planes y el cargo de incorporación, devolverlo cuando corresponde, y facturar a las entidades.
 - Cuidar la calidad y la seguridad de la red: evaluaciones, confirmación de que la clase se dio y registro de cancelaciones tardías.
+- Mostrarte beneficios y formaciones de empresas del sector que aprobó la entidad de tu red, y medir cuántas personas los ven o los usan. A los patrocinadores y a la entidad solo les mostramos números totales: nunca les decimos quién vio o usó un beneficio.
 
 ## 3. Quién puede ver tus datos
 

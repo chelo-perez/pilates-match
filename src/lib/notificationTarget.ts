@@ -1,4 +1,6 @@
 // A dónde lleva un aviso según el perfil (lo usan el aviso del celular y la campanita).
+import { Dimensions } from 'react-native'
+
 export function openNotificationTarget(nav: any, role: string | undefined, data: any) {
   const screen = data?.screen ?? (data?.match_id ? 'propuestas' : null)
   if (!nav || !screen) return
@@ -20,11 +22,18 @@ export function openNotificationTarget(nav: any, role: string | undefined, data:
     if (screen === 'liquidaciones') nav.navigate('PlatformTabs', { screen: 'AdminCobros' })
     else if (screen === 'verificar' && data?.instructor_id) nav.navigate('PlatformTabs', { screen: 'AdminInstructorDetail', params: { instructorId: data.instructor_id } })
     else if (screen === 'verificar') nav.navigate('PlatformTabs', { screen: 'AdminInstructores', params: { filter: 'pendiente' } })
+    else if (screen === 'patrocinios') nav.navigate('PlatformTabs', { screen: 'AdminPatrocinios' })
     else nav.navigate('PlatformTabs', { screen: 'AdminResumen' })
   } else if (role === 'camara_admin') {
     if (screen === 'liquidaciones') nav.navigate('CamaraTabs', { screen: 'Reportes' })
     else if (screen === 'verificar' && data?.instructor_id) nav.navigate('VerifyInstructor', { instructorId: data.instructor_id })
     else if (screen === 'verificar') nav.navigate('CamaraTabs', { screen: 'Directorio', params: { filter: 'pendiente' } })
     else if (screen === 'inicio') nav.navigate('CamaraTabs', { screen: 'CamaraInicio' })
+    else if (screen === 'patrocinios') {
+      // En la compu, dentro del portal; en el celular, la pantalla suelta
+      const params = data?.offer_id ? { offerId: data.offer_id } : undefined
+      if (Dimensions.get('window').width >= 900) nav.navigate('CamaraTabs', { screen: params ? 'AdminSponsorEdit' : 'AdminPatrocinios', params })
+      else nav.navigate(params ? 'AdminSponsorEdit' : 'AdminPatrocinios', params)
+    }
   }
 }

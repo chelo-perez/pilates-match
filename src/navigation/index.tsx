@@ -13,6 +13,9 @@ import { StatusBar } from 'expo-status-bar'
 import { NavigationContainer, createNavigationContainerRef } from '@react-navigation/native'
 import { useNetworkBrandSync } from '../lib/brandSync'
 import AdminTabs, { EntityPortal } from './AdminTabs'
+import BenefitsScreen from '../screens/shared/BenefitsScreen'
+import AdminSponsorsScreen from '../screens/admin/AdminSponsorsScreen'
+import AdminSponsorEditScreen from '../screens/admin/AdminSponsorEditScreen'
 import { useIsWide } from '../components/admin/AdminUI'
 import { createNativeStackNavigator } from '@react-navigation/native-stack'
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs'
@@ -291,6 +294,7 @@ export default function RootNavigator() {
         <Stack.Screen name="EvaluateStudio" component={EvaluateStudioScreen} />
         <Stack.Screen name="InstructorStudios" component={InstructorStudiosScreen} />
         <Stack.Screen name="OpenClasses" component={OpenClassesScreen} />
+        <Stack.Screen name="Benefits" component={BenefitsScreen} />
         <Stack.Screen name="ClassDetail" component={ClassDetailScreen} />
         <Stack.Screen name="Notifications" component={NotificationsScreen} />
       </>
@@ -306,6 +310,7 @@ export default function RootNavigator() {
         <Stack.Screen name="Membership" component={MembershipScreen} />
         <Stack.Screen name="StudioProfileEdit" component={StudioProfileEditScreen} />
         <Stack.Screen name="StudioOpenClasses" component={StudioOpenClassesScreen} />
+        <Stack.Screen name="Benefits" component={BenefitsScreen} />
         <Stack.Screen name="ClassDetail" component={ClassDetailScreen} />
         <Stack.Screen name="Notifications" component={NotificationsScreen} />
       </>
@@ -325,6 +330,8 @@ export default function RootNavigator() {
         <Stack.Screen name="VerifyInstructor" component={VerifyInstructorScreen} />
         <Stack.Screen name="StudioDetail" component={StudioDetailScreen} />
         <Stack.Screen name="CamaraProfileEdit" component={CamaraProfileEditScreen} />
+        <Stack.Screen name="AdminPatrocinios" component={AdminSponsorsScreen} />
+        <Stack.Screen name="AdminSponsorEdit" component={AdminSponsorEditScreen} />
         <Stack.Screen name="Notifications" component={NotificationsScreen} />
       </>
     )

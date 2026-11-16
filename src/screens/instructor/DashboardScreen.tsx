@@ -8,6 +8,7 @@ import { toLocalISODate } from '../../lib/dates'
 import { VERIFICATION_STATUS } from '../../constants/labels'
 import { LoadingScreen, ErrorState, Button, colors, spacing, radius, typography } from '../../components/ui'
 import { Feather } from '@expo/vector-icons'
+import BenefitsEntry from '../../components/BenefitsEntry'
 import BlobCard from '../../components/BlobCard'
 import HeroHeader from '../../components/HeroHeader'
 import NotificationBell from '../../components/NotificationBell'
@@ -183,6 +184,9 @@ export default function InstructorDashboardScreen({ navigation }: any) {
           </View>
           <Feather name="chevron-right" size={18} color={colors.sage} />
         </TouchableOpacity>
+
+        {/* Beneficios y formaciones aprobados por la entidad */}
+        <BenefitsEntry onPress={() => navigation.navigate('Benefits')} />
 
         {/* Tarifas */}
         <BlobCard style={s.section} delay={1500}>

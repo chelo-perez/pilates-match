@@ -75,12 +75,12 @@ Elegir **"Todas o algunas de las funciones están restringidas"** y agregar dos 
 | Estudio | revision-estudio@qa.pilatesmatch.test | (la que te pasó Claude por chat) | Tocá "Continuar con email" e iniciá sesión. Es un estudio de una red de prueba: puede buscar instructores, enviar propuestas y ver sus clases. |
 | Instructora | revision-instructora@qa.pilatesmatch.test | (la misma) | Tocá "Continuar con email" e iniciá sesión. Tiene una propuesta pendiente para aceptar o rechazar. |
 
-Antes de enviar a revisión, volver a cargar los datos de ejemplo (las pruebas automáticas borran las propuestas de la red de prueba):
+Antes de enviar a revisión, volver a cargar los datos de ejemplo. Las pruebas automáticas (`npm run test:e2e`) y `tests/visual/seed.mjs` borran las propuestas de la red de prueba, así que este comando va **al final**:
 `REVIEW_PASSWORD='...' node tests/visual/store-seed.mjs`
 
 ## Anuncios
 
-¿La app tiene anuncios? **No**.
+¿La app tiene anuncios? **Sí**. La sección "Beneficios de tu red" muestra descuentos y formaciones de empresas del sector que pagan por aparecer (contenido patrocinado). No hay redes de anuncios (como AdMob), ni anuncios de terceros dentro de las pantallas de trabajo, y no se usa el ID de publicidad. Google pide marcar "Sí" ante cualquier promoción pagada de terceros.
 
 ## Clasificación de contenido (cuestionario IARC)
 
@@ -121,6 +121,7 @@ Para cada dato: **se recopila: Sí · se comparte: No** (ver nota) · **se proce
 | Archivos y documentos → **Archivos y documentos** (certificados) | Opcional | Funciones de la app · Prevención de fraude, seguridad y cumplimiento |
 | Mensajes → **Otros mensajes en la app** (notas de las propuestas) | Opcional | Funciones de la app |
 | Actividad en la app → **Otro contenido generado por el usuario** (evaluaciones) | Opcional | Funciones de la app |
+| Actividad en la app → **Interacciones con la app** (qué beneficio vio o usó: vistas, clics en el link, código copiado) | Obligatorio | Estadísticas (resultados agregados para la entidad y el patrocinador; nunca se identifica a la persona ante el patrocinador) |
 | Información y rendimiento de la app → **Registros de fallas** | — | **No se recopila** (no hay herramienta de errores instalada) |
 | Dispositivo u otros IDs → **ID del dispositivo u otros IDs** (token para notificaciones) | Obligatorio | Funciones de la app |
 
@@ -136,7 +137,7 @@ Para cada dato: **se recopila: Sí · se comparte: No** (ver nota) · **se proce
 - **Funciones financieras:** Ninguna.
 - **App de salud:** No.
 - **Permisos:** la app solo pide notificaciones. Las fotos se eligen con el selector del sistema, sin permiso de galería ni de cámara.
-- **ID de publicidad:** la app **no usa** el ID de publicidad.
+- **ID de publicidad:** la app **no usa** el ID de publicidad. En la declaración de "ID de publicidad" responder **No**.
 - **Pagos:** la versión de Play Store no vende planes ni muestra sus precios. El cargo de incorporación de una clase regular es un servicio del mundo real (una incorporación de personal), por lo que no está alcanzado por la facturación de Google Play. Igual, en esta versión la app indica pagarlo desde la web.
 
 ## Subir la primera versión

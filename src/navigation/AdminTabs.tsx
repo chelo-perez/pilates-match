@@ -22,6 +22,8 @@ import AdminInstructorDetailScreen from '../screens/admin/AdminInstructorDetailS
 import AdminStudioDetailScreen from '../screens/admin/AdminStudioDetailScreen'
 import AdminNotificationsScreen from '../screens/admin/AdminNotificationsScreen'
 import PlatformCamaraEditScreen from '../screens/platform/CamaraEditScreen'
+import AdminSponsorsScreen from '../screens/admin/AdminSponsorsScreen'
+import AdminSponsorEditScreen from '../screens/admin/AdminSponsorEditScreen'
 import EntityHomeScreen from '../screens/admin/EntityHomeScreen'
 import CamaraRateRangesScreen from '../screens/camara/RateRangesScreen'
 import CamaraReportsScreen from '../screens/camara/ReportsScreen'
@@ -50,6 +52,7 @@ const HIDDEN: Hidden[] = [
   { name: 'AdminStudioDetail', component: AdminStudioDetailScreen, parent: 'AdminEstudios' },
   { name: 'AdminNotificaciones', component: AdminNotificationsScreen },
   { name: 'PlatformCamaraEdit', component: PlatformCamaraEditScreen, parent: 'AdminRedes' },
+  { name: 'AdminSponsorEdit', component: AdminSponsorEditScreen, parent: 'AdminPatrocinios' },
 ]
 
 const Tab = createBottomTabNavigator()
@@ -60,6 +63,7 @@ const ITEMS: Item[] = [
   { name: 'AdminInstructores', label: 'Instructores', short: 'Instruct.', icon: 'user-check', component: AdminInstructorsScreen },
   { name: 'AdminEstudios',     label: 'Estudios',     short: 'Estudios', icon: 'home',        component: AdminStudiosScreen },
   { name: 'AdminActividad',    label: 'Actividad',    short: 'Actividad', icon: 'activity',   component: AdminActivityScreen },
+  { name: 'AdminPatrocinios',  label: 'Patrocinios',  short: 'Patroc.',  icon: 'gift',        component: AdminSponsorsScreen },
   { name: 'AdminCobros',       label: 'Cobros',       short: 'Cobros',   icon: 'dollar-sign', component: AdminBillingScreen },
 ]
 
@@ -68,6 +72,7 @@ const ENTITY_ITEMS: Item[] = [
   { name: 'AdminInstructores', label: 'Instructores', short: 'Instruct.', icon: 'user-check', component: AdminInstructorsScreen },
   { name: 'AdminEstudios',     label: 'Estudios',     short: 'Estudios', icon: 'home',        component: AdminStudiosScreen },
   { name: 'AdminActividad',    label: 'Actividad',    short: 'Actividad', icon: 'activity',   component: AdminActivityScreen },
+  { name: 'AdminPatrocinios',  label: 'Patrocinios',  short: 'Patroc.',  icon: 'gift',        component: AdminSponsorsScreen },
   { name: 'EntityTarifas',     label: 'Tarifas',      short: 'Tarifas',  icon: 'sliders',     component: asPanel(CamaraRateRangesScreen) },
   { name: 'EntityReportes',    label: 'Reportes y pagos', short: 'Reportes', icon: 'bar-chart-2', component: asPanel(CamaraReportsScreen) },
   { name: 'EntityPerfil',      label: 'Perfil y equipo', short: 'Perfil', icon: 'settings',   component: asPanel(CamaraProfileEditScreen) },
@@ -76,6 +81,7 @@ const ENTITY_HIDDEN: Hidden[] = [
   { name: 'AdminInstructorDetail', component: AdminInstructorDetailScreen, parent: 'AdminInstructores' },
   { name: 'AdminStudioDetail', component: AdminStudioDetailScreen, parent: 'AdminEstudios' },
   { name: 'AdminNotificaciones', component: AdminNotificationsScreen },
+  { name: 'AdminSponsorEdit', component: AdminSponsorEditScreen, parent: 'AdminPatrocinios' },
 ]
 
 function EntityBrand() {

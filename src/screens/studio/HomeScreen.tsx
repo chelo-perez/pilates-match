@@ -9,6 +9,7 @@ import { Avatar, Badge, Button, EmptyState, ErrorState, LoadingScreen, colors, s
 import { planLabel } from '../../constants/plans'
 import { MATCH_STATUS } from '../../constants/labels'
 import { Feather } from '@expo/vector-icons'
+import BenefitsEntry from '../../components/BenefitsEntry'
 import BlobCard from '../../components/BlobCard'
 import HeroHeader from '../../components/HeroHeader'
 import NotificationBell from '../../components/NotificationBell'
@@ -196,6 +197,9 @@ export default function StudioHomeScreen({ navigation }: any) {
           </BlobCard>
         </View>
         </>)}
+
+        {/* Beneficios y formaciones aprobados por la entidad */}
+        <BenefitsEntry onPress={() => navigation.navigate('Benefits')} />
 
         {/* Membresía */}
         <TouchableOpacity

@@ -7,6 +7,7 @@ import { useAuthStore } from '../../store'
 import { INVOICE_STATUS, useBillingPreview, useCamara, useInvoices } from '../../lib/platform'
 import { formatARS } from '../../lib/payments'
 import { matchState, monthStartIso, one, shortDate, useAdminInstructors, useAdminMatches, useAdminStudios } from '../../lib/admin'
+import { useSponsorOffers } from '../../lib/sponsors'
 import { AdminPage, Card, Columns, Kpi, KpiGrid, Pill, TodoRow } from '../../components/admin/AdminUI'
 import { Avatar, LoadingScreen, colors } from '../../components/ui'
 
@@ -17,6 +18,7 @@ export default function EntityHomeScreen({ navigation }: any) {
   const { data: instructors = [] } = useAdminInstructors()
   const { data: matches = [] } = useAdminMatches()
   const { data: invoices = [] } = useInvoices()
+  const { data: sponsorOffers = [] } = useSponsorOffers()
   const perMember = (camara as any)?.billing_model === 'per_member'
   const { data: preview } = useBillingPreview(camaraId, perMember)
   // Certificados esperando revisión (de instructores todavía sin verificar)
@@ -59,6 +61,9 @@ export default function EntityHomeScreen({ navigation }: any) {
     }),
     ...(m.toVerify.length > 8 ? [{ key: 'more', icon: 'users', tone: 'info' as const, title: `Y ${m.toVerify.length - 8} más esperando verificación`, cta: 'Ver todos',
       onPress: () => navigation.navigate('AdminInstructores', { filter: 'pendiente' }) }] : []),
+    ...sponsorOffers.filter(o => o.networks?.some(n => n.camara_id === camaraId && n.status === 'pendiente')).map(o => ({
+      key: 's' + o.id, icon: 'gift', tone: 'info' as const, title: `Aprobar ${o.kind === 'formacion' ? 'la formación' : 'el beneficio'} de ${o.sponsor_name}`,
+      sub: o.title, cta: 'Revisar', onPress: () => navigation.navigate('AdminSponsorEdit', { offerId: o.id }) })),
     ...unpaid.map(i => ({ key: 'f' + i.id, icon: 'file-text', tone: 'info' as const, title: `Factura de la plataforma por ${formatARS(Number(i.amount_ars))}`,
       sub: `${shortDate(i.period)} · ${INVOICE_STATUS[i.status]?.label ?? i.status}`, cta: 'Ver', onPress: () => navigation.navigate('EntityReportes') })),
   ]
