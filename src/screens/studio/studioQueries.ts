@@ -4,23 +4,27 @@ import { Alert, Linking } from 'react-native'
 import { useQuery } from '@tanstack/react-query'
 import { supabase } from '../../lib/supabase'
 import { toLocalISODate } from '../../lib/dates'
+import { matchEnd } from '../../lib/matchFlow'
 import { entity } from '../../lib/entity'
 
 // ── Evaluaciones pendientes ─────────────────────────────────
-// Clases aceptadas con fecha anterior a hoy (hora local) que todavía no se evaluaron.
+// Clases aceptadas que ya terminaron (incluye las de hoy cuya hora de fin pasó),
+// que el estudio no marcó como "no se dio" y que todavía no se evaluaron.
 // La clave empieza con 'pending-evaluations' para que useCreateEvaluation la invalide.
 export const usePendingEvaluationMatches = (studioId: string | undefined) =>
   useQuery({
     queryKey: ['pending-evaluations', studioId, 'matches'],
     queryFn: async () => {
-      const today = toLocalISODate(new Date())
-      const { data, error } = await supabase
+      const now = new Date()
+      const today = toLocalISODate(now)
+      const { data: rows, error } = await supabase
         .from('matches')
         .select('*, instructor:instructors(id, full_name, avatar_url, neighborhood)')
         .eq('studio_id', studioId!)
         .eq('status', 'aceptado')
-        .lt('class_date', today)
+        .lte('class_date', today)
         .order('class_date', { ascending: true })
+      const data = (rows ?? []).filter((m: any) => matchEnd(m) <= now && m.held_studio !== false)
       if (error) throw error
 
       const { data: evaluated, error: evalError } = await supabase
