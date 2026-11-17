@@ -1,12 +1,22 @@
 // src/lib/supabase.ts
 import { createClient } from '@supabase/supabase-js'
 import AsyncStorage from '@react-native-async-storage/async-storage'
+import { AppState } from 'react-native'
 
 // La URL y la anon key salen del entorno (EXPO_PUBLIC_*). La anon key es
 // pública por diseño (la seguridad la da RLS), así que se deja un valor por
 // defecto para que los builds sin .env sigan funcionando.
 const SUPABASE_URL = process.env.EXPO_PUBLIC_SUPABASE_URL || 'https://tkhaiovstwgqzabvxxss.supabase.co'
 const SUPABASE_ANON_KEY = process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InRraGFpb3ZzdHdncXphYnZ4eHNzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzg3MzU4NzksImV4cCI6MjA5NDMxMTg3OX0.KuuF4sOr4Bs51vvgCJQz0C1ophIyFLLpTNwFgrcS1Sc'
+
+// Ningún pedido puede quedar colgado para siempre: si la red no responde en 20 s
+// se corta y la pantalla muestra el error en vez de quedarse pensando.
+const fetchWithTimeout: typeof fetch = (input, init) => {
+  const ctrl = new AbortController()
+  const timer = setTimeout(() => ctrl.abort(), 20_000)
+  init?.signal?.addEventListener?.('abort', () => ctrl.abort())
+  return fetch(input, { ...init, signal: ctrl.signal }).finally(() => clearTimeout(timer))
+}
 
 export const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
   auth: {
@@ -15,6 +25,15 @@ export const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
     persistSession: true,
     detectSessionInUrl: false,
   },
+  global: { fetch: fetchWithTimeout },
+})
+
+// Recomendación de Supabase para React Native: refrescar el token solo con la app
+// en primer plano. Sin esto, al volver de segundo plano el refresco puede quedar
+// trabado y todos los pedidos esperan detrás de él.
+AppState.addEventListener('change', (state) => {
+  if (state === 'active') supabase.auth.startAutoRefresh()
+  else supabase.auth.stopAutoRefresh()
 })
 
 // ── Atajos por tabla ────────────────────────────────────────
