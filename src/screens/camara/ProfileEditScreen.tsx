@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react'
+import GuideLink from '../../components/GuideLink'
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, TextInput, Alert } from 'react-native'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { usePhotoCropper } from '../../components/PhotoCropper'
@@ -197,6 +198,7 @@ export default function CamaraProfileEditScreen({ navigation }: any) {
         />
 
         {user?.camara_id ? <View style={{ marginTop: spacing.lg }}><CamaraTeam camaraId={user.camara_id} camaraName={camara?.name} /></View> : null}
+        <GuideLink role="camara_admin" />
         <DeleteAccount />
       </ScrollView>
 

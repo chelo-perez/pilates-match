@@ -31,6 +31,7 @@ import CamaraProfileEditScreen from '../screens/camara/ProfileEditScreen'
 import { InPanel } from '../components/admin/panelContext'
 import { activeBrand } from '../lib/brand'
 import { useCamara } from '../lib/platform'
+import { registerGuideTarget } from '../components/AppGuide'
 
 type Item = { name: string; label: string; short: string; icon: any; component: any }
 type Hidden = { name: string; component: any; parent?: string }
@@ -100,6 +101,13 @@ function EntityBrand() {
   )
 }
 
+/** Registra dónde está cada ítem del menú, para que la guía de uso lo señale */
+function GuideTargetView({ name, children }: { name: string; children: React.ReactNode }) {
+  const ref = React.useRef<View>(null)
+  const measure = () => ref.current?.measureInWindow?.((x, y, width, height) => registerGuideTarget(name, { x, y, width, height }))
+  return <View ref={ref} onLayout={measure}>{children}</View>
+}
+
 function Sidebar({ state, navigation, items, hidden, entity }: BottomTabBarProps & { items: Item[]; hidden: Hidden[]; entity?: boolean }) {
   const email = useAuthStore(s => s.user?.email)
   const unread = useUnreadNotifications()
@@ -121,11 +129,13 @@ function Sidebar({ state, navigation, items, hidden, entity }: BottomTabBarProps
           const current = state.routes[state.index]?.name
           const on = current === r.name || HIDDEN.find(h => h.name === current)?.parent === r.name
           return (
-            <Pressable key={r.key} onPress={() => navigation.navigate(r.name)} accessibilityRole="link" accessibilityState={{ selected: on }}
-              style={({ hovered }: any) => [s.item, on && s.itemOn, hovered && !on && s.itemHover]}>
-              <Feather name={item.icon} size={17} color={on ? colors.white : 'rgba(255,255,255,0.65)'} />
-              <Text style={[s.itemTxt, on && s.itemTxtOn]}>{item.label}</Text>
-            </Pressable>
+            <GuideTargetView key={r.key} name={r.name}>
+              <Pressable onPress={() => navigation.navigate(r.name)} accessibilityRole="link" accessibilityState={{ selected: on }}
+                style={({ hovered }: any) => [s.item, on && s.itemOn, hovered && !on && s.itemHover]}>
+                <Feather name={item.icon} size={17} color={on ? colors.white : 'rgba(255,255,255,0.65)'} />
+                <Text style={[s.itemTxt, on && s.itemTxtOn]}>{item.label}</Text>
+              </Pressable>
+            </GuideTargetView>
           )
         })}
       </View>

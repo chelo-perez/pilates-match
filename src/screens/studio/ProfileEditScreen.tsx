@@ -1,5 +1,6 @@
 // src/screens/studio/ProfileEditScreen.tsx
 import React, { useState, useEffect } from 'react'
+import GuideLink from '../../components/GuideLink'
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, TextInput, Alert } from 'react-native'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { usePhotoCropper } from '../../components/PhotoCropper'
@@ -270,6 +271,7 @@ export default function StudioProfileEditScreen({ navigation }: any) {
           isPending={saveMutation.isPending}
           isSuccess={saveMutation.isSuccess}
         />
+        <GuideLink role="estudio" />
         <DeleteAccount />
       </ScrollView>
 
