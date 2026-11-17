@@ -309,8 +309,8 @@ export default function ClassDetailScreen({ navigation, route }: any) {
 
         {/* Evaluación */}
         {held === true || m.hire_status ? (
-          evaluated
-            ? <Text style={s.done}>✓ Ya evaluaste esta clase</Text>
+          evaluated != null
+            ? <Text style={s.done}>✓ Ya evaluaste esta clase · {evaluated.toLocaleString('es-AR', { maximumFractionDigits: 1 })}/10</Text>
             : <Button label={side === 'estudio' ? `Evaluar a ${firstName}` : 'Evaluar al estudio'} variant="secondary" onPress={goEvaluate} fullWidth
                 icon={<Feather name="star" size={15} color={colors.sage} />} style={{ marginBottom: spacing.md }} />
         ) : null}

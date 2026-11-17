@@ -100,6 +100,7 @@ export default function EvaluateStudioScreen({ navigation, route }: Props) {
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['instructor-matches'] })
       qc.invalidateQueries({ queryKey: ['instructor-studio-evals'] })
+      qc.invalidateQueries({ queryKey: ['match-evaluated'] })
       Alert.alert(
         'Evaluación enviada',
         `Gracias. El estudio no ve tu evaluación; ${entity().la} la usa para cuidar la calidad de la red.`,

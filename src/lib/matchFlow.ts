@@ -122,13 +122,15 @@ export const useMatchContact = (matchId: string | undefined, enabled: boolean) =
 export const useEvaluated = (m: any, side: 'estudio' | 'instructor') =>
   useQuery({
     queryKey: ['match-evaluated', m?.id, side],
-    queryFn: async () => {
+    // Devuelve el puntaje promedio de la evaluación ya hecha, o null si falta evaluar
+    queryFn: async (): Promise<number | null> => {
       const q = side === 'estudio'
-        ? supabase.from('evaluations').select('id', { count: 'exact', head: true })
+        ? supabase.from('evaluations').select('average_score')
             .eq('studio_id', m.studio_id).eq('instructor_id', m.instructor_id).eq('class_date', m.class_date)
-        : supabase.from('studio_evaluations').select('id', { count: 'exact', head: true }).eq('match_id', m.id)
-      const { count } = await q
-      return (count ?? 0) > 0
+        : supabase.from('studio_evaluations').select('average_score').eq('match_id', m.id)
+      const { data, error } = await q.limit(1)
+      if (error) throw error
+      return data?.length ? Number(data[0].average_score) : null
     },
     enabled: !!m?.id,
   })

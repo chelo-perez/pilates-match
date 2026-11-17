@@ -97,6 +97,7 @@ export const useCreateEvaluation = () => {
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['pending-evaluations'] })
+      qc.invalidateQueries({ queryKey: ['match-evaluated'] })
       qc.invalidateQueries({ queryKey: ['evaluation-history'] })
       qc.invalidateQueries({ queryKey: ['studio-stats'] })
       qc.invalidateQueries({ queryKey: ['instructor'] })

@@ -1,7 +1,8 @@
 // src/screens/studio/EvaluateInstructorScreen.tsx
 import React, { useState, useCallback } from 'react'
 import { View, Text, ScrollView, StyleSheet, Alert, KeyboardAvoidingView, Platform, TouchableOpacity } from 'react-native'
-import { useInstructor, useCreateEvaluation } from '../../hooks'
+import { useInstructor, useCreateEvaluation, useMyStudio } from '../../hooks'
+import { useEvaluated } from '../../lib/matchFlow'
 import { Avatar, Button, Input, LoadingScreen, colors, spacing, typography } from '../../components/ui'
 import { formatDate } from '../../lib/dates'
 import { humanizeError } from '../../lib/errors'
@@ -52,6 +53,14 @@ export default function EvaluateInstructorScreen({ navigation, route }: Props) {
   const { instructorId, classDate, classType } = (route.params || {}) as any
   const { data: instructor, isLoading } = useInstructor(instructorId)
   const createEval = useCreateEvaluation()
+  const { data: studio } = useMyStudio()
+  // Si esta clase ya se evaluó, no se vuelve a mostrar el formulario
+  const alreadyQ = useEvaluated(
+    studio?.id && instructorId && classDate
+      ? { id: `${instructorId}_${classDate}`, studio_id: studio.id, instructor_id: instructorId, class_date: classDate }
+      : null,
+    'estudio',
+  )
 
   const [scores, setScores] = useState({ technique: 8, punctuality: 8, studentCare: 8, presentation: 8 })
   const [comment, setComment] = useState('')
@@ -77,11 +86,34 @@ export default function EvaluateInstructorScreen({ navigation, route }: Props) {
         { text: 'Listo', onPress: () => navigation.goBack() },
       ])
     } catch (e: any) {
+      if (e?.code === '23505') {
+        Alert.alert('Ya evaluaste esta clase', 'Cada clase se evalúa una sola vez.', [
+          { text: 'Volver', onPress: () => navigation.goBack() },
+        ])
+        return
+      }
       showToast(humanizeError(e), 'error')
     }
   }
 
-  if (isLoading) return <LoadingScreen />
+  if (isLoading || (alreadyQ.isFetching && alreadyQ.data === undefined)) return <LoadingScreen />
+
+  if (alreadyQ.data != null) {
+    return (
+      <View style={styles.container}>
+        <HeroHeader title="Ya evaluaste esta clase" onBack={() => navigation.goBack()} />
+        <View style={{ padding: spacing.lg, alignItems: 'center' }}>
+          <Text style={styles.scoreLabel}>
+            Puntaje que le diste: {alreadyQ.data.toLocaleString('es-AR', { maximumFractionDigits: 1 })}/10
+          </Text>
+          <Text style={[styles.scoreHint, { textAlign: 'center', marginTop: spacing.sm }]}>
+            Cada clase se evalúa una sola vez.
+          </Text>
+          <Button label="Volver" onPress={() => navigation.goBack()} style={{ marginTop: spacing.lg }} />
+        </View>
+      </View>
+    )
+  }
 
   const name = instructor?.full_name ?? 'Instructor'
 
