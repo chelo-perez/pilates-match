@@ -27,7 +27,12 @@ const isoDate = (d: Date) => d.toISOString().slice(0, 10)
 Deno.serve(async (req) => {
   const url = new URL(req.url)
   // Página a la que vuelve la persona después de pagar
-  if (req.method === 'GET') return text('Listo. Ya podés volver a la app Trabajo Más Fácil.')
+  // (Supabase no sirve HTML desde las funciones: se redirige a la app, que muestra el resultado)
+  if (req.method === 'GET') {
+    const st = url.searchParams.get('collection_status') ?? url.searchParams.get('status') ?? ''
+    const pago = st === 'approved' ? 'ok' : st === 'pending' || st === 'in_process' ? 'pendiente' : st ? 'error' : 'ok'
+    return new Response(null, { status: 302, headers: { Location: `https://app.trabajo.masfacil.com.ar/?pago=${pago}` } })
+  }
   if (req.method !== 'POST') return text('ok')
 
   const token = Deno.env.get('MP_ACCESS_TOKEN')
