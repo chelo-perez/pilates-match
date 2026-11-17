@@ -5,6 +5,7 @@ import { Feather } from '@expo/vector-icons'
 import { Alert } from 'react-native'
 import { useEvaluationHistory, useMyStudio } from '../../hooks'
 import { matchAPI } from '../../lib/api'
+import { supabase } from '../../lib/supabase'
 import { formatDate } from '../../lib/dates'
 import { MATCH_STATUS } from '../../constants/labels'
 import { pendingAction } from '../../lib/matchFlow'
@@ -51,6 +52,17 @@ export default function HistoryScreen({ navigation }: Props) {
     enabled: !!studio?.id && view === 'propuestas',
   })
   const evalsQ = useEvaluationHistory(view === 'evaluaciones' ? studio?.id : undefined)
+  // Puntaje que el estudio le puso a cada clase (instructor + fecha), para mostrarlo en la tarjeta
+  const myEvalsQ = useQuery({
+    queryKey: ['pending-evaluations', studio?.id, 'scores'],
+    queryFn: async () => {
+      const { data, error } = await supabase.from('evaluations').select('instructor_id, class_date, average_score').eq('studio_id', studio!.id)
+      if (error) throw error
+      return new Map<string, number>((data ?? []).map((e: any) => [`${e.instructor_id}_${e.class_date}`, Number(e.average_score)]))
+    },
+    enabled: !!studio?.id && view === 'propuestas',
+  })
+  const myScore = (m: any) => myEvalsQ.data?.get(`${m.instructor_id}_${m.class_date}`)
   const respond = useMutation({
     mutationFn: ({ id, status }: { id: string; status: 'aceptado' | 'rechazado' | 'cancelado' }) => matchAPI.studioRespond(id, status),
     onSuccess: () => { qc.invalidateQueries({ queryKey: ['studio-matches'] }); qc.invalidateQueries({ queryKey: ['studio-membership'] }); qc.invalidateQueries({ queryKey: ['studio-quota'] }) },
@@ -172,6 +184,9 @@ export default function HistoryScreen({ navigation }: Props) {
                         <Feather name="chevron-right" size={14} color={colors.warnTx} />
                       </TouchableOpacity>
                     ) : null}
+                    {myScore(item) != null ? (
+                      <Text style={s.evaluatedTxt}>✓ Evaluaste a {item.instructor?.full_name?.split(' ')[0] ?? 'la instructora'}: {myScore(item)!.toLocaleString('es-AR', { maximumFractionDigits: 1 })}/10</Text>
+                    ) : null}
                     {item.cancelled_at ? (
                       <Text style={s.comment}>{item.cancelled_by === 'instructor' ? 'La canceló el instructor' : 'La cancelaste'}{item.late_cancel ? ' con menos de 24 h' : ''}{item.cancel_reason ? `: "${item.cancel_reason}"` : ''}</Text>
                     ) : null}
@@ -272,6 +287,7 @@ const s = StyleSheet.create({
   date:          { fontFamily: 'Nunito-Regular', fontSize: 11, color: colors.light },
   comment:       { fontFamily: 'Nunito-Regular', fontSize: 12, color: colors.mid, lineHeight: 17, marginBottom: spacing.sm, fontStyle: 'italic' },
   sentAt:        { fontFamily: 'Nunito-Regular', fontSize: 11, color: colors.light },
+  evaluatedTxt:  { fontFamily: 'Nunito-SemiBold', fontSize: 13, color: colors.okTx, marginBottom: spacing.sm },
   footerRow:     { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
   cancelTxt:     { fontFamily: 'Nunito-Bold', fontSize: 12, color: colors.mid },
   offer:         { fontFamily: 'Nunito-SemiBold', fontSize: 12, color: colors.sage, marginBottom: 4 },

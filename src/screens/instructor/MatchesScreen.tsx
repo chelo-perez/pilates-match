@@ -91,14 +91,27 @@ export default function InstructorMatchesScreen({ navigation }: any) {
     enabled: !!instructorId,
   })
 
-  // Matches que el instructor ya evaluó
+  // Matches que el instructor ya evaluó → puntaje que le puso al estudio
   const evaluatedQ = useQuery({
     queryKey: ['instructor-studio-evals', instructorId, 'match-ids'],
     queryFn: async () => {
       const { data, error } = await supabase
-        .from('studio_evaluations').select('match_id').eq('instructor_id', instructorId!)
+        .from('studio_evaluations').select('match_id, average_score').eq('instructor_id', instructorId!)
       if (error) throw error
-      return new Set((data ?? []).map((e: any) => e.match_id).filter(Boolean))
+      return new Map<string, number>((data ?? []).filter((e: any) => e.match_id).map((e: any) => [e.match_id, Number(e.average_score)]))
+    },
+    enabled: !!instructorId,
+  })
+
+  // Evaluaciones que le hicieron los estudios. La base solo devuelve las ya reveladas
+  // (cuando el instructor evaluó esa clase o pasaron 7 días).
+  const receivedQ = useQuery({
+    queryKey: ['instructor-studio-evals', instructorId, 'received'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('evaluations').select('studio_id, class_date, average_score').eq('instructor_id', instructorId!)
+      if (error) throw error
+      return new Map<string, number>((data ?? []).map((e: any) => [`${e.studio_id}_${e.class_date}`, Number(e.average_score)]))
     },
     enabled: !!instructorId,
   })
@@ -137,12 +150,13 @@ export default function InstructorMatchesScreen({ navigation }: any) {
       pendingQ.refetch()
       historyQ.refetch()
       evaluatedQ.refetch()
+      receivedQ.refetch()
     }
   }, [instructorId]))
 
   const onRefresh = async () => {
     setRefreshing(true)
-    await Promise.all([pendingQ.refetch(), historyQ.refetch(), evaluatedQ.refetch()])
+    await Promise.all([pendingQ.refetch(), historyQ.refetch(), evaluatedQ.refetch(), receivedQ.refetch()])
     setRefreshing(false)
   }
 
@@ -177,7 +191,9 @@ export default function InstructorMatchesScreen({ navigation }: any) {
 
   const pending = pendingQ.data ?? []
   const history = historyQ.data ?? []
-  const evaluated: Set<string> = evaluatedQ.data ?? new Set()
+  const evaluated: Map<string, number> = evaluatedQ.data ?? new Map()
+  const received: Map<string, number> = receivedQ.data ?? new Map()
+  const fmtScore = (n: number) => n.toLocaleString('es-AR', { maximumFractionDigits: 1 })
   const activeQ = tab === 'pendientes' ? pendingQ : historyQ
   const data    = tab === 'pendientes' ? pending : history
   const toEvaluate = history.filter((m: any) => m.status === 'aceptado' && matchEnd(m) <= new Date() && !evaluated.has(m.id)).length
@@ -347,7 +363,14 @@ export default function InstructorMatchesScreen({ navigation }: any) {
             icon={<Feather name="star" size={14} color={colors.sage} />} style={{ marginTop: spacing.sm }} />
         )}
         {accepted && evaluated.has(match.id) && (
-          <Text style={styles.evaluatedTxt}>✓ Ya evaluaste esta clase</Text>
+          <View style={{ marginTop: spacing.xs }}>
+            <Text style={styles.evaluatedTxt}>✓ Evaluaste al estudio: {fmtScore(evaluated.get(match.id)!)}/10</Text>
+            <Text style={styles.receivedTxt}>
+              {received.has(`${match.studio_id}_${match.class_date}`)
+                ? `★ El estudio te puso ${fmtScore(received.get(`${match.studio_id}_${match.class_date}`)!)}/10`
+                : 'El estudio todavía no te evaluó'}
+            </Text>
+          </View>
         )}
       </BlobCard>
     )
@@ -503,6 +526,7 @@ const styles = StyleSheet.create({
   counterBtn:        { width: 44, height: 48, ...radius.leafSm, backgroundColor: colors.sageLighter, alignItems: 'center', justifyContent: 'center' },
   counterInput:      { flex: 1, minWidth: 0, height: 48, textAlign: 'center', fontFamily: 'Nunito-Bold', fontSize: 22, color: colors.sage, backgroundColor: colors.cream, ...radius.leafSm },
   evaluatedTxt:      { ...typography.small, color: colors.okTx, marginTop: spacing.xs },
+  receivedTxt:       { ...typography.small, color: colors.mid, marginTop: 2 },
   modalOverlay:      { flex: 1, backgroundColor: 'rgba(0,0,0,0.45)', justifyContent: 'flex-end' },
   modalBox:          { backgroundColor: colors.white, borderTopLeftRadius: 20, borderTopRightRadius: 20, padding: spacing.xl, paddingBottom: spacing.xxl },
   modalTitle:        { fontFamily: 'Nunito-Bold', fontSize: 20, color: colors.dark, marginBottom: spacing.xs },
