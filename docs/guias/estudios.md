@@ -34,7 +34,15 @@ La tarifa del instructor es privada: no la ves. Él compara tu oferta con lo que
 - Les mandamos un **recordatorio** a los dos el día anterior y 2 horas antes.
 - Si algo cambia, **cancelá desde la app**: el instructor recibe el aviso al instante. Cancelar con menos de 24 horas queda registrado.
 
-## 5. Clases regulares: el cargo de incorporación
+## 5. Reemplazos con cobro garantizado
+
+Si tu red lo usa, cuando el instructor acepta un reemplazo lo pagás **por la app con Mercado Pago**, antes de la clase. Al proponer ves cuánto pagás: el bloque (que recibe completo el instructor), la comisión del servicio y el costo de Mercado Pago. Con el pago confirmado ves el contacto del instructor.
+
+- Si el instructor cancela, **te devolvemos el total**.
+- Si cancelás con más de 24 horas, también.
+- Si cancelás con menos de 24 horas, el instructor cobra igual.
+
+## 6. Clases regulares: el cargo de incorporación
 
 Cuando sumás a un instructor para una clase regular por la app, pagás un **cargo de incorporación** equivalente a 4 clases por cada día de la semana que contratás (con el tope que fija tu red). Lo pagás cuando el instructor acepta la entrevista, antes de la clase de prueba.
 
@@ -42,15 +50,15 @@ Cuando sumás a un instructor para una clase regular por la app, pagás un **car
 - Si el instructor decide no tomar la clase o no se presenta, **te devolvemos el total**.
 - Si decidís no contratarlo, queda como **crédito para tu próxima búsqueda**.
 
-## 6. Evaluá después de cada clase
+## 7. Evaluá después de cada clase
 
 En **Evaluar** contás cómo te fue: técnica, puntualidad, trato. Las evaluaciones son a ciegas: ves la del instructor después de cargar la tuya. Ayudan a toda la red a elegir mejor.
 
-## 7. Tu plan
+## 8. Tu plan
 
 Cada plan incluye una cantidad de **avisos cubiertos por mes**: un aviso se cuenta cuando la clase queda cubierta. Lo ves en **Inicio → Ver mi plan**.
 
-## 8. Beneficios de tu red
+## 9. Beneficios de tu red
 
 En **Inicio → Beneficios de tu red** encontrás descuentos en equipamiento, formaciones y otros beneficios que aprobó la entidad de tu red.
 

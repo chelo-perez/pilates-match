@@ -41,6 +41,14 @@ export default function MpConnectCard({ compact }: { compact?: boolean }) {
             : 'En tu red los reemplazos se pagan por la app: el estudio paga antes de la clase y la plata llega directo a tu cuenta. Lo necesitás para aceptar reemplazos.'}</Text>
         </View>
       </View>
+      {!compact ? (
+        <View style={s.note}>
+          <Feather name="info" size={13} color={colors.mid} style={{ marginTop: 2 }} />
+          <Text style={s.noteTxt}>
+            Siempre recibís al menos el 100% de lo acordado: el estudio paga también el costo de Mercado Pago. Ese costo depende del plazo de liberación que tengas en tu Mercado Pago: si la plata se libera a más días, el costo es menor y te queda un poco más.
+          </Text>
+        </View>
+      ) : null}
       {mp.connected
         ? (!compact ? <Button label="Desconectar" variant="ghost" size="sm" onPress={disconnect} isLoading={busy} style={{ alignSelf: 'flex-start', marginTop: spacing.xs }} /> : null)
         : <Button label="Conectar Mercado Pago" onPress={connect} isLoading={busy} fullWidth style={{ marginTop: spacing.sm }} />}
@@ -55,4 +63,6 @@ const s = StyleSheet.create({
   icon:    { width: 34, height: 34, borderRadius: 17, alignItems: 'center', justifyContent: 'center' },
   title:   { fontFamily: 'Nunito-Bold', fontSize: 15, color: colors.dark },
   sub:     { fontFamily: 'Nunito-Regular', fontSize: 13, lineHeight: 19, color: colors.mid, marginTop: 2 },
+  note:    { flexDirection: 'row', gap: 8, marginTop: spacing.sm, padding: 10, borderRadius: 10, backgroundColor: colors.sageLighter },
+  noteTxt: { flex: 1, fontFamily: 'Nunito-Regular', fontSize: 12, lineHeight: 17, color: colors.mid },
 })

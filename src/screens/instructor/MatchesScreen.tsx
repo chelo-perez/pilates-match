@@ -457,7 +457,7 @@ export default function InstructorMatchesScreen({ navigation }: any) {
                 <Feather name={mp?.connected ? 'shield' : 'credit-card'} size={16} color={mp?.connected ? colors.okTx : colors.warnTx} style={{ marginTop: 2 }} />
                 <Text style={[styles.slotTxt, { fontSize: 13, lineHeight: 19 }]}>
                   {mp?.connected
-                    ? `Cobro garantizado: el estudio paga por la app antes de la clase y recibís ${money(Number(actionType === 'counter' ? counter : selected.offered_rate) * classesOf(selected))} en tu Mercado Pago (${classesOf(selected)} clase${classesOf(selected) > 1 ? 's' : ''}).`
+                    ? `Cobro garantizado: el estudio paga por la app antes de la clase y recibís al menos ${money(Number(actionType === 'counter' ? counter : selected.offered_rate) * classesOf(selected))} en tu Mercado Pago (${classesOf(selected)} clase${classesOf(selected) > 1 ? 's' : ''}). Si tu Mercado Pago libera la plata a más días, te queda un poco más.`
                     : 'En tu red los reemplazos se pagan por la app. Conectá tu Mercado Pago para poder aceptarlo: la plata llega directo a tu cuenta.'}
                 </Text>
               </View>

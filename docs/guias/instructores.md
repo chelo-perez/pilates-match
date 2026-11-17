@@ -42,15 +42,24 @@ Las propuestas vencen: respondé cuanto antes.
 - Te mandamos un **recordatorio** el día anterior y 2 horas antes.
 - Si no podés ir, **cancelá desde la app** con el motivo. Cancelar con menos de 24 horas queda registrado en tu perfil.
 
-## 7. Clases abiertas
+## 7. Cobro garantizado de reemplazos
+
+Si tu red lo usa, los estudios te pagan los reemplazos **por la app, antes de la clase**:
+
+1. En tu perfil tocá **Conectar Mercado Pago** y autorizá con tu cuenta (se hace una sola vez).
+2. Cuando aceptás un reemplazo, el estudio lo paga y la plata va **directo a tu Mercado Pago**.
+3. Siempre recibís **al menos el 100%** de lo acordado: el estudio paga aparte la comisión del servicio y el costo de Mercado Pago. Ese costo depende del plazo de liberación que tengas configurado en tu Mercado Pago: si la plata se libera a más días, el costo es menor y te queda un poco más.
+4. Si el estudio cancela con menos de 24 horas, cobrás igual. Si cancelás vos, se le devuelve al estudio.
+
+## 8. Clases abiertas
 
 En **Inicio → Clases abiertas** ves las clases que publican los estudios de tu red para que se anoten los instructores compatibles. Anotate y el estudio elige.
 
-## 8. Evaluá a los estudios
+## 9. Evaluá a los estudios
 
 Después de cada clase evaluás al estudio y contás si te pagaron lo acordado. Las evaluaciones son a ciegas y ayudan a cuidar la red.
 
-## 9. Beneficios de tu red
+## 10. Beneficios de tu red
 
 En **Inicio → Beneficios de tu red** encontrás descuentos y formaciones que aprobó la entidad de tu red.
 
