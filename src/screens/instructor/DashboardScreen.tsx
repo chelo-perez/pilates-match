@@ -4,7 +4,9 @@ import { View, Text, StyleSheet, ScrollView, TouchableOpacity, RefreshControl } 
 import { useQuery } from '@tanstack/react-query'
 import { supabase } from '../../lib/supabase'
 import { useMyInstructor } from '../../hooks'
-import { toLocalISODate } from '../../lib/dates'
+import { formatDate, toLocalISODate } from '../../lib/dates'
+import { matchEnd, pendingAction } from '../../lib/matchFlow'
+import { useFocusEffect } from '@react-navigation/native'
 import { VERIFICATION_STATUS } from '../../constants/labels'
 import { LoadingScreen, ErrorState, Button, colors, spacing, radius, typography } from '../../components/ui'
 import { Feather } from '@expo/vector-icons'
@@ -87,9 +89,37 @@ export default function InstructorDashboardScreen({ navigation }: any) {
     enabled: !!instructorId,
   })
 
+  // Clases terminadas donde falta algo de su lado: confirmar si se dio, decidir (regular) o evaluar al estudio.
+  // La clave empieza con 'instructor-matches' para que se invalide al confirmar o evaluar.
+  const { data: todo = [], refetch: refetchTodo } = useQuery({
+    queryKey: ['instructor-matches', instructorId, 'todo'],
+    queryFn: async () => {
+      const [mRes, eRes] = await Promise.all([
+        supabase.from('matches').select('*, studio:studios(name)')
+          .eq('instructor_id', instructorId!).eq('status', 'aceptado')
+          .lte('class_date', toLocalISODate(new Date()))
+          .order('class_date', { ascending: false }).limit(30),
+        supabase.from('studio_evaluations').select('match_id').eq('instructor_id', instructorId!),
+      ])
+      if (mRes.error) throw mRes.error
+      if (eRes.error) throw eRes.error
+      const evaluated = new Set((eRes.data ?? []).map((e: any) => e.match_id))
+      const now = new Date()
+      return (mRes.data ?? []).flatMap((m: any) => {
+        if (matchEnd(m) > now) return []
+        const action = pendingAction(m, 'instructor')
+        if (action) return [{ m, action }]
+        if ((m.held_instructor === true || m.hire_status) && !evaluated.has(m.id)) return [{ m, action: 'Evaluá al estudio' }]
+        return []
+      })
+    },
+    enabled: !!instructorId,
+  })
+  useFocusEffect(React.useCallback(() => { if (instructorId) refetchTodo() }, [instructorId, refetchTodo]))
+
   const onRefresh = async () => {
     setRefreshing(true)
-    await Promise.all([refetch(), refetchStats(), refetchActivity(), refetchEvals()])
+    await Promise.all([refetch(), refetchStats(), refetchActivity(), refetchEvals(), refetchTodo()])
     setRefreshing(false)
   }
 
@@ -153,6 +183,32 @@ export default function InstructorDashboardScreen({ navigation }: any) {
               )}
             </View>
           </View>
+        )}
+
+        {/* Pendientes de clases ya dictadas: va primero porque es lo que falta hacer */}
+        {todo.length > 0 && (
+          <TouchableOpacity
+            style={[s.studiosCard, { backgroundColor: colors.warnBg }]}
+            onPress={() => todo.length === 1
+              ? navigation.navigate('ClassDetail', { matchId: todo[0].m.id })
+              : navigation.navigate('InstructorPropuestas')}
+            activeOpacity={0.85}
+          >
+            <View style={s.studiosIcon}><Feather name="star" size={16} color={colors.warnTx} /></View>
+            <View style={{ flex: 1 }}>
+              <Text style={[s.studiosTitle, { color: colors.warnTx }]}>
+                {todo.length === 1
+                  ? `${todo[0].action} · ${todo[0].m.studio?.name ?? 'tu clase'}`
+                  : `Tenés ${todo.length} clases para cerrar`}
+              </Text>
+              <Text style={s.studiosSub}>
+                {todo.length === 1
+                  ? `${formatDate(todo[0].m.class_date)}.${todo[0].m.class_type === 'regular' ? '' : ' Si el estudio ya te evaluó, vas a ver su evaluación cuando evalúes.'}`
+                  : 'Confirmá si se dieron y evaluá a los estudios. Así ves cómo te evaluaron.'}
+              </Text>
+            </View>
+            <Feather name="chevron-right" size={18} color={colors.warnTx} />
+          </TouchableOpacity>
         )}
 
         {/* Acción principal: responder propuestas */}
