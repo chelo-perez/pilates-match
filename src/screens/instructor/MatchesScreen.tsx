@@ -4,7 +4,7 @@
 import React, { useState, useCallback } from 'react'
 import {
   View, Text, StyleSheet, FlatList, TouchableOpacity,
-  TextInput, Modal, RefreshControl, Linking,
+  TextInput, Modal, RefreshControl, Linking, Image,
 } from 'react-native'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useFocusEffect } from '@react-navigation/native'
@@ -35,7 +35,7 @@ const longDate = (d: string) => formatDate(d, { weekday: 'long', day: 'numeric',
 const hhmm = (t?: string | null) => t?.slice(0, 5) ?? ''
 const isExpired = (m: any) => m.status === 'pendiente' && !!m.expires_at && new Date(m.expires_at).getTime() <= Date.now()
 
-const STUDIO_FIELDS = 'studio:studios(id, name, neighborhood, address, phone, instagram)'
+const STUDIO_FIELDS = 'studio:studios(id, name, neighborhood, address, phone, instagram, logo_url)'
 
 /** La propuesta trae dos opciones de entrevista (y el instructor todavía no eligió) */
 const hasAlt = (m: any) => m?.class_type === 'regular' && !!m?.alt_date && !m?.alt_chosen
@@ -215,8 +215,10 @@ export default function InstructorMatchesScreen({ navigation }: any) {
     return (
       <BlobCard style={styles.card}>
         <View style={styles.cardHeader}>
-          <View style={styles.studioAvatar}>
-            <Text style={styles.studioLetter}>{studio?.name?.[0]?.toUpperCase() ?? '?'}</Text>
+          <View style={[styles.studioAvatar, studio?.logo_url && { overflow: 'hidden' }]}>
+            {studio?.logo_url
+              ? <Image source={{ uri: studio.logo_url }} style={{ width: '100%', height: '100%' }} />
+              : <Text style={styles.studioLetter}>{studio?.name?.[0]?.toUpperCase() ?? '?'}</Text>}
           </View>
           <View style={{ flex: 1 }}>
             <Text style={styles.studioName}>{studio?.name ?? 'Estudio'}</Text>

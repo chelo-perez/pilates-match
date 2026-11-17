@@ -8,7 +8,7 @@ import { db } from '../../lib/supabase'
 import { errorText, UserError } from '../../lib/errors'
 import { formatDate } from '../../lib/dates'
 import { planLabel, usedThisMonth } from '../../constants/plans'
-import { Badge, Button, EmptyState, ErrorState, LoadingScreen, colors, spacing, radius, typography } from '../../components/ui'
+import { Avatar, Badge, Button, EmptyState, ErrorState, LoadingScreen, colors, spacing, radius, typography } from '../../components/ui'
 import BlobCard from '../../components/BlobCard'
 import HeroHeader from '../../components/HeroHeader'
 import Toast from '../../components/Toast'
@@ -38,7 +38,7 @@ export default function CamaraStudiosScreen({ navigation, route }: any) {
     queryFn: async () => {
       let q = myNetwork(db.studios()
         .select(`
-          id, name, neighborhood, is_member, created_at, camara:camaras(name),
+          id, name, neighborhood, logo_url, is_member, created_at, camara:camaras(name),
           membership:memberships(status, plan_type, start_date, end_date, matches_used_month, matches_limit, last_reset_date)
         `))
         .order('created_at', { ascending: false })
@@ -168,8 +168,8 @@ export default function CamaraStudiosScreen({ navigation, route }: any) {
             <BlobCard style={styles.card} onPress={() => navigation.navigate('StudioDetail', { studioId: studio.id })} delay={index * 600}>
               {/* Fila principal */}
               <View style={styles.row}>
-                <View style={styles.avatar}>
-                  <Text style={styles.avatarLetter}>{studio.name?.[0]?.toUpperCase() ?? '?'}</Text>
+                <View style={{ marginRight: spacing.sm }}>
+                  <Avatar name={studio.name} source={studio.logo_url} size={42} />
                 </View>
                 <View style={styles.info}>
                   <Text style={styles.studioName}>{studio.name}</Text>

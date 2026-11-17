@@ -1,6 +1,6 @@
 // src/screens/instructor/DashboardScreen.tsx
 import React, { useState } from 'react'
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, RefreshControl } from 'react-native'
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, RefreshControl, Image } from 'react-native'
 import { useQuery } from '@tanstack/react-query'
 import { supabase } from '../../lib/supabase'
 import { useMyInstructor } from '../../hooks'
@@ -80,7 +80,7 @@ export default function InstructorDashboardScreen({ navigation }: any) {
     queryKey: ['my-recent-evals', instructorId],
     queryFn: async () => {
       const { data, error } = await supabase
-        .from('evaluations').select('id, average_score, comment, studio:studios(name)')
+        .from('evaluations').select('id, average_score, comment, studio:studios(name, logo_url)')
         .eq('instructor_id', instructorId!)
         .order('created_at', { ascending: false }).limit(3)
       if (error) throw error
@@ -292,8 +292,10 @@ export default function InstructorDashboardScreen({ navigation }: any) {
           ) : (
             recentEvals.map((item: any) => (
               <View key={item.id} style={s.evalRow}>
-                <View style={s.evalAv}>
-                  <Text style={s.evalAvTxt}>{item.studio?.name?.[0]?.toUpperCase() ?? '?'}</Text>
+                <View style={[s.evalAv, item.studio?.logo_url && { overflow: 'hidden' }]}>
+                  {item.studio?.logo_url
+                    ? <Image source={{ uri: item.studio.logo_url }} style={{ width: '100%', height: '100%' }} />
+                    : <Text style={s.evalAvTxt}>{item.studio?.name?.[0]?.toUpperCase() ?? '?'}</Text>}
                 </View>
                 <View style={s.evalLeft}>
                   <Text style={s.evalStudio}>{item.studio?.name ?? 'Estudio'}</Text>

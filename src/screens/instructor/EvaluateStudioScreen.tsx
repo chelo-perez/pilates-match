@@ -4,9 +4,9 @@
 import React, { useState, useCallback } from 'react'
 import {
   View, Text, StyleSheet, ScrollView, TouchableOpacity,
-  Alert, Switch, KeyboardAvoidingView, Platform
+  Alert, Switch, KeyboardAvoidingView, Platform, Image
 } from 'react-native'
-import { useMutation, useQueryClient } from '@tanstack/react-query'
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { supabase } from '../../lib/supabase'
 import { useMyInstructor } from '../../hooks'
 import { errorText, UserError } from '../../lib/errors'
@@ -45,6 +45,14 @@ export default function EvaluateStudioScreen({ navigation, route }: Props) {
   const { matchId, studioId, studioName, classDate, classType, agreedRate } = route?.params ?? {}
   const [paidAsAgreed, setPaidAsAgreed] = useState<boolean | null>(null)
   const { data: instructor } = useMyInstructor()
+  const { data: studioLogo } = useQuery({
+    queryKey: ['studio-logo', studioId],
+    queryFn: async () => {
+      const { data } = await supabase.from('studios').select('logo_url').eq('id', studioId).maybeSingle()
+      return (data?.logo_url as string | null) ?? null
+    },
+    enabled: !!studioId,
+  })
   const qc   = useQueryClient()
 
   const [scores, setScores] = useState({
@@ -149,8 +157,10 @@ export default function EvaluateStudioScreen({ navigation, route }: Props) {
         {/* Header del estudio */}
         <Card style={styles.studioCard}>
           <View style={styles.studioRow}>
-            <View style={styles.studioAvatar}>
-              <Text style={styles.studioLetter}>{studioName?.[0]?.toUpperCase() ?? '?'}</Text>
+            <View style={[styles.studioAvatar, studioLogo && { overflow: 'hidden' }]}>
+              {studioLogo
+                ? <Image source={{ uri: studioLogo }} style={{ width: '100%', height: '100%' }} />
+                : <Text style={styles.studioLetter}>{studioName?.[0]?.toUpperCase() ?? '?'}</Text>}
             </View>
             <View style={{ flex: 1 }}>
               <Text style={styles.studioName}>{studioName}</Text>
