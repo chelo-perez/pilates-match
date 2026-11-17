@@ -11,14 +11,14 @@ import { useFocusEffect } from '@react-navigation/native'
 import { supabase } from '../../lib/supabase'
 import { useMyInstructor } from '../../hooks'
 import { errorText, UserError } from '../../lib/errors'
-import { formatDate, isPastDate } from '../../lib/dates'
+import { formatDate } from '../../lib/dates'
 import { MATCH_STATUS } from '../../constants/labels'
 import { Badge, EmptyState, ErrorState, LoadingScreen, Button, colors, spacing, radius, typography } from '../../components/ui'
 import BlobCard from '../../components/BlobCard'
 import HeroHeader, { HeaderPills } from '../../components/HeroHeader'
 import Toast from '../../components/Toast'
 import { useToast } from '../../hooks/useToast'
-import { pendingAction } from '../../lib/matchFlow'
+import { matchEnd, pendingAction } from '../../lib/matchFlow'
 import StudioRep from '../../components/StudioRep'
 import { Feather } from '@expo/vector-icons'
 
@@ -180,7 +180,7 @@ export default function InstructorMatchesScreen({ navigation }: any) {
   const evaluated: Set<string> = evaluatedQ.data ?? new Set()
   const activeQ = tab === 'pendientes' ? pendingQ : historyQ
   const data    = tab === 'pendientes' ? pending : history
-  const toEvaluate = history.filter((m: any) => m.status === 'aceptado' && isPastDate(m.class_date) && !evaluated.has(m.id)).length
+  const toEvaluate = history.filter((m: any) => m.status === 'aceptado' && matchEnd(m) <= new Date() && !evaluated.has(m.id)).length
 
   const renderItem = ({ item: match }: any) => {
     const studio    = match.studio
@@ -192,7 +192,7 @@ export default function InstructorMatchesScreen({ navigation }: any) {
     const statusKey = expired ? 'expirado' : match.status
     const status    = MATCH_STATUS[statusKey] ?? { label: statusKey, variant: 'neutral' }
     const accepted  = match.status === 'aceptado'
-    const canEvaluate = accepted && isPastDate(match.class_date) && !evaluated.has(match.id)
+    const canEvaluate = accepted && matchEnd(match) <= new Date() && !evaluated.has(match.id)
     const minutesLeft = match.expires_at ? Math.max(0, Math.round((new Date(match.expires_at).getTime() - Date.now()) / 60_000)) : null
     const scheduleDays: string[] = (match.schedule_days ?? []).slice().sort((a: string, b: string) => DAY_ORDER.indexOf(a) - DAY_ORDER.indexOf(b))
 
