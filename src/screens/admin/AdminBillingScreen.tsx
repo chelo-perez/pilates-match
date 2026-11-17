@@ -1,20 +1,22 @@
 // Cobros de la plataforma, mes por mes:
 // - Por sede: facturas a las entidades con cobro por socio (emitir y marcar cobradas).
 // - Incorporación: cargos de incorporación de clases regulares (cobrados, créditos y devoluciones).
+// - Reemplazos: cobro garantizado (split de Mercado Pago): pagos, comisión de la plataforma y devoluciones.
 // - Liquidaciones: lo que se le paga a las entidades con suscripciones.
 import React, { useEffect, useState } from 'react'
 import { View, Text, StyleSheet, Modal, Pressable, Platform, Alert } from 'react-native'
-import { useQueryClient } from '@tanstack/react-query'
+import { useQuery, useQueryClient } from '@tanstack/react-query'
+import { supabase } from '../../lib/supabase'
 import { errorText } from '../../lib/errors'
 import { formatARS } from '../../lib/payments'
-import { PLACEMENT_STATUS, refundPlacement } from '../../lib/matchFlow'
+import { PAY_STATUS, PLACEMENT_STATUS, refundPlacement, refundReplacement } from '../../lib/matchFlow'
 import { ADMIN_KEYS, one, shortDate, useAdminPending } from '../../lib/admin'
 import { INVOICE_STATUS, Invoice, isoMonth, monthLabel, monthStart, rpc, SETTLEMENT_STATUS, Settlement, useInvoices, usePlacements, useSettlements } from '../../lib/platform'
 import { ActionButton, AdminPage, Card, CellTitle, DataTable, Kpi, KpiGrid, MonthPicker, Pill, Segmented, Toolbar, Tone } from '../../components/admin/AdminUI'
 import { Input, colors, spacing } from '../../components/ui'
 
-type Tab = 'socios' | 'incorporacion' | 'liquidaciones'
-const DEFAULT_OFFSET: Record<Tab, number> = { socios: -1, incorporacion: 0, liquidaciones: -1 }
+type Tab = 'socios' | 'incorporacion' | 'reemplazos' | 'liquidaciones'
+const DEFAULT_OFFSET: Record<Tab, number> = { socios: -1, incorporacion: 0, reemplazos: 0, liquidaciones: -1 }
 const tone = (bg: string): Tone => bg === colors.okBg ? 'ok' : bg === colors.warnBg ? 'warn' : 'brand'
 // En la web Alert no se muestra
 const notify = (title: string, msg: string) => Platform.OS === 'web' ? window.alert(`${title}\n\n${msg}`) : Alert.alert(title, msg)
@@ -33,11 +35,23 @@ export default function AdminBillingScreen({ route }: any) {
   const { data: invoices = [] } = useInvoices(period)
   const { data: placements = [] } = usePlacements(period)
   const { data: pending } = useAdminPending()
+  // Reemplazos con cobro garantizado pagados en el mes, más los que haya que devolver (de cualquier mes)
+  const { data: repPays = [] } = useQuery({
+    queryKey: ['replacement-pays', period],
+    queryFn: async () => {
+      const start = new Date(period + 'T00:00:00'); const end = new Date(start); end.setMonth(end.getMonth() + 1)
+      const { data } = await supabase.from('matches')
+        .select('id, class_date, pay_status, pay_block_ars, pay_fee_ars, pay_total_ars, pay_paid_at, studio:studios(name), instructor:instructors(full_name), camara:camaras(name)')
+        .or(`and(pay_paid_at.gte.${start.toISOString()},pay_paid_at.lt.${end.toISOString()}),pay_status.eq.a_devolver`)
+        .order('pay_paid_at', { ascending: false })
+      return (data ?? []) as any[]
+    },
+  })
   const [busy, setBusy] = useState(false)
   const [action, setAction] = useState<{ kind: 'send' | 'paid' | 'settle'; id: string; title: string; amount: number } | null>(null)
   const [text, setText] = useState('')
 
-  const refresh = () => ADMIN_KEYS.forEach(k => qc.invalidateQueries({ queryKey: k }))
+  const refresh = () => { ADMIN_KEYS.forEach(k => qc.invalidateQueries({ queryKey: k })); qc.invalidateQueries({ queryKey: ['replacement-pays'] }) }
   const run = async (fn: () => Promise<void>, fail: string) => {
     try { setBusy(true); await fn(); refresh() } catch (e) { notify(fail, errorText(e)) } finally { setBusy(false) }
   }
@@ -65,14 +79,16 @@ export default function AdminBillingScreen({ route }: any) {
   const shares = settlements.reduce((a, s) => a + Number(s.share_ars), 0)
   const owed = settlements.filter(s => s.status !== 'pagada').reduce((a, s) => a + Number(s.share_ars), 0)
   const refunds = pending?.refunds ?? []
-  const income = invoiced + placementsCharged + (collected - shares)
+  const repFees = repPays.filter(r => r.pay_status === 'pagado').reduce((a, r) => a + Number(r.pay_fee_ars ?? 0), 0)
+  const repToRefund = repPays.filter(r => r.pay_status === 'a_devolver')
+  const income = invoiced + placementsCharged + (collected - shares) + repFees
 
   const switchTab = (t: Tab) => { setTab(t); setOffset(DEFAULT_OFFSET[t]) }
 
   return (
     <AdminPage title="Cobros" subtitle="Lo que la plataforma cobra y lo que le paga a cada entidad">
       <KpiGrid>
-        <Kpi label={`Ingreso de ${monthLabel(period).toLowerCase()}`} value={formatARS(income)} icon="trending-up" hint="Por sede + incorporación + parte de suscripciones" />
+        <Kpi label={`Ingreso de ${monthLabel(period).toLowerCase()}`} value={formatARS(income)} icon="trending-up" hint="Por sede + incorporación + reemplazos + parte de suscripciones" />
         <Kpi label="Facturas por cobrar" value={formatARS(toCollect)} icon="file-text" tone={toCollect ? 'warn' : 'neutral'} hint={`${invoices.filter(i => i.status !== 'pagada').length} facturas del mes`} onPress={() => switchTab('socios')} />
         <Kpi label="Cargos retenidos" value={formatARS(placementsHeld)} icon="lock" tone="info" hint="Pagados, a resolver después de la clase de prueba" onPress={() => switchTab('incorporacion')} />
         <Kpi label="Devoluciones pendientes" value={refunds.length} icon="rotate-ccw" tone={refunds.length ? 'red' : 'neutral'} hint={refunds.length ? formatARS(refunds.reduce((a, r) => a + Number(r.placement_fee_ars), 0)) : 'Ninguna'} onPress={() => switchTab('incorporacion')} />
@@ -83,10 +99,11 @@ export default function AdminBillingScreen({ route }: any) {
         <Segmented value={tab} onChange={switchTab} items={[
           { key: 'socios', label: 'Por sede', count: invoices.length },
           { key: 'incorporacion', label: 'Incorporación', count: placements.length },
+          { key: 'reemplazos', label: 'Reemplazos', count: repPays.length },
           { key: 'liquidaciones', label: 'Liquidaciones', count: settlements.length },
         ]} />
         <MonthPicker label={`${monthLabel(period)}${offset === 0 ? ' · en curso' : ''}`} onPrev={() => setOffset(o => o - 1)} onNext={() => setOffset(o => Math.min(0, o + 1))} nextDisabled={offset === 0} />
-        {tab !== 'incorporacion' ? <ActionButton label={(tab === 'socios' ? invoices : settlements).length ? 'Recalcular el mes' : 'Calcular el mes'} icon="refresh-cw" variant="secondary" onPress={build} loading={busy} /> : null}
+        {tab === 'socios' || tab === 'liquidaciones' ? <ActionButton label={(tab === 'socios' ? invoices : settlements).length ? 'Recalcular el mes' : 'Calcular el mes'} icon="refresh-cw" variant="secondary" onPress={build} loading={busy} /> : null}
       </Toolbar>
 
       {tab === 'socios' ? (
@@ -138,6 +155,29 @@ export default function AdminBillingScreen({ route }: any) {
             </View>
           </Card>
         </>
+      ) : null}
+
+      {tab === 'reemplazos' ? (
+        <Card title="Reemplazos con cobro garantizado" subtitle={`Comisión de la plataforma del mes: ${formatARS(repFees)}${repToRefund.length ? ` · ${repToRefund.length} para devolver` : ''}. La plata del bloque va directo al instructor.`} pad={false}>
+          <View style={s.inner}>
+            <DataTable rows={repPays} keyOf={r => r.id} empty="No hubo reemplazos pagados por la app en este mes."
+              columns={[
+                { key: 'n', label: 'Estudio → Instructor', flex: 2.4, render: r => <CellTitle title={one<any>(r.studio)?.name ?? 'Estudio'} sub={`→ ${one<any>(r.instructor)?.full_name ?? 'Instructor'} · clase ${shortDate(r.class_date)}`} /> },
+                { key: 'r', label: 'Red', flex: 1.2, hideOnNarrow: true, render: r => one<any>(r.camara)?.name ?? '—' },
+                { key: 't', label: 'Pagó el estudio', width: 130, align: 'right', render: r => <Text style={s.amount}>{formatARS(Number(r.pay_total_ars))}</Text> },
+                { key: 'f', label: 'Comisión', width: 110, align: 'right', render: r => formatARS(Number(r.pay_fee_ars)) },
+                { key: 'e', label: 'Estado', width: 150, align: 'right', render: r => <Pill label={PAY_STATUS[r.pay_status] ?? r.pay_status} tone={r.pay_status === 'pagado' ? 'ok' : r.pay_status === 'a_devolver' ? 'red' : 'neutral'} /> },
+                { key: 'a', label: '', width: 190, align: 'right', render: r => r.pay_status === 'a_devolver'
+                  ? <ActionButton label="Devolver" variant="danger" loading={busy} onPress={async () => {
+                      if (await ask(`¿Devolver ${formatARS(Number(r.pay_total_ars))} a ${one<any>(r.studio)?.name ?? 'el estudio'}?`)) run(() => refundReplacement(r.id), 'No pudimos devolver')
+                    }} />
+                  : r.pay_status === 'pagado' ? <ActionButton label="Devolver (no se dio)" variant="secondary" onPress={async () => {
+                      if (!(await ask('¿La clase no se dio? Se le devuelve el total al estudio desde la cuenta del instructor.'))) return
+                      run(async () => { await rpc('guaranteed_mark_refund', { p_match: r.id }); await refundReplacement(r.id) }, 'No pudimos devolver')
+                    }} /> : null },
+              ]} />
+          </View>
+        </Card>
       ) : null}
 
       {tab === 'liquidaciones' ? (

@@ -2,6 +2,7 @@
 // Nunca confía en el contenido del aviso: consulta el estado real en la API de Mercado Pago.
 // Secretos: MP_ACCESS_TOKEN y MP_WEBHOOK_SECRET (clave secreta del webhook en Mercado Pago).
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.45.4'
+import { instructorToken } from '../_shared/mpAccounts.ts'
 
 const MP = 'https://api.mercadopago.com'
 const LIMIT: Record<string, number | null> = { starter: 5, premium: null }
@@ -82,7 +83,19 @@ Deno.serve(async (req) => {
   }
 
   try {
-    if (type === 'payment') {
+    if (type === 'payment' && url.searchParams.get('m')) {
+      // Reemplazo con cobro garantizado: el pago es de la cuenta del instructor, se consulta con su token
+      const { data: m } = await admin.from('matches').select('id, instructor_id').eq('id', url.searchParams.get('m')!).maybeSingle()
+      const itok = m ? await instructorToken(admin, m.instructor_id) : null
+      if (itok) {
+        const r = await fetch(`${MP}/v1/payments/${rawId}`, { headers: { Authorization: `Bearer ${itok}` } })
+        const pay = r.ok ? await r.json() : null
+        if (pay?.status === 'approved' && String(pay.external_reference) === `replacement:${m!.id}`) {
+          const { error } = await admin.rpc('guaranteed_paid', { p_match: m!.id, p_payment_id: String(pay.id), p_amount: Number(pay.transaction_amount) })
+          if (error) throw error
+        }
+      }
+    } else if (type === 'payment') {
       // Pago único: cargo de incorporación de una clase regular
       const pay = await mp(`/v1/payments/${rawId}`)
       const ref = String(pay?.external_reference ?? '')

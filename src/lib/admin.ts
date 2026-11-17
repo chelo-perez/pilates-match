@@ -30,7 +30,7 @@ export const useAdminMatches = () =>
     queryKey: ['admin-matches'],
     queryFn: () => list(myNetwork(supabase.from('matches')
       .select(`id, created_at, responded_at, class_type, class_date, start_time, end_time, status, offered_rate, agreed_rate, camara_id,
-        cancelled_by, cancel_reason, late_cancel, held_studio, held_instructor, hire_status, placement_status, placement_fee_ars, placement_paid_at,
+        cancelled_by, cancel_reason, late_cancel, held_studio, held_instructor, hire_status, placement_status, placement_fee_ars, placement_paid_at, pay_status, pay_total_ars,
         studio:studios(id, name), instructor:instructors(id, full_name, avatar_url)`)
       .order('created_at', { ascending: false }).limit(500))),
   })
@@ -80,6 +80,7 @@ export function matchState(m: any): { label: string; tone: 'ok' | 'warn' | 'red'
     ? { label: `Cancelada por ${m.cancelled_by === 'estudio' ? 'el estudio' : 'el instructor'}${m.late_cancel ? ' (tarde)' : ''}`, tone: 'red' }
     : { label: 'Cancelada', tone: 'neutral' }
   if (m.placement_status === 'pendiente_pago') return { label: 'Falta pagar el cargo', tone: 'warn' }
+  if (m.pay_status === 'pendiente_pago') return { label: 'Falta pagar el reemplazo', tone: 'warn' }
   if (m.hire_status === 'contratado') return { label: 'Regular activa', tone: 'ok' }
   if (m.hire_status === 'no_sigue') return { label: 'No se contrató', tone: 'neutral' }
   if (m.held_studio === false || m.held_instructor === false) return { label: 'No se dio', tone: 'red' }

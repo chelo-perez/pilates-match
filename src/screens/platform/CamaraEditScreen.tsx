@@ -51,7 +51,7 @@ function CamaraEditForm({ navigation, route }: any) {
     name: '', entity_type: 'Cámara', entity_article: 'la' as 'la' | 'el', sector: '', business_label: '', instructor_label: '', pct: '25', cuit: '', email: '', active: true,
     starter: '', premium: '',
     billing_model: 'subscriptions' as 'subscriptions' | 'per_member', min_members: '0', price_index: 'fixed' as 'fixed' | 'avg_hour',
-    placement_enabled: true, placement_max: '2',
+    placement_enabled: true, placement_max: '2', guaranteed: false, guaranteed_fee: '5',
   })
   const { data: preview } = useBillingPreview(camaraId)
   // Co-marca
@@ -84,6 +84,7 @@ function CamaraEditForm({ navigation, route }: any) {
       billing_model: camara.billing_model === 'per_member' ? 'per_member' : 'subscriptions', min_members: String(camara.min_billable_members ?? 0),
       price_index: camara.price_index === 'avg_hour' ? 'avg_hour' : 'fixed',
       placement_enabled: (camara as any).placement_enabled ?? true, placement_max: String((camara as any).placement_max_blocks ?? 2),
+      guaranteed: !!(camara as any).guaranteed_pay_enabled, guaranteed_fee: String((camara as any).guaranteed_fee_pct ?? 5),
     }))
     const b: any = (camara as any).brand ?? {}
     setBrand({ enabled: !!b.enabled, short_name: b.short_name ?? '', colors: b.colors ?? {}, fonts: b.fonts ?? {}, logos: b.logos ?? {} })
@@ -128,6 +129,7 @@ function CamaraEditForm({ navigation, route }: any) {
         cuit: f.cuit.trim() || null, contact_email: f.email.trim().toLowerCase() || null, is_active: f.active,
         billing_model: f.billing_model, min_billable_members: Math.max(0, parseInt(digits(f.min_members), 10) || 0), price_index: f.price_index,
         placement_enabled: f.placement_enabled, placement_max_blocks: Math.min(7, Math.max(1, parseInt(digits(f.placement_max), 10) || 2)),
+        guaranteed_pay_enabled: f.guaranteed, guaranteed_fee_pct: Math.min(30, Math.max(0, parseInt(digits(f.guaranteed_fee), 10) || 0)),
         brand: brandOut,
       }
       let id = camaraId
@@ -300,6 +302,22 @@ function CamaraEditForm({ navigation, route }: any) {
             ) : null}
           </View>
   )
+  const cardGuaranteed = (
+          <View style={s.card}>
+            <Text style={s.caption}>REEMPLAZOS: COBRO GARANTIZADO</Text>
+            <View style={s.switchRow}>
+              <Text style={s.switchTxt}>Los reemplazos se pagan por la app</Text>
+              <Switch value={f.guaranteed} onValueChange={set('guaranteed')} trackColor={{ true: colors.sage, false: colors.border }} thumbColor={colors.white} />
+            </View>
+            <Text style={s.hint}>
+              El estudio paga el bloque antes de la clase con Mercado Pago y la plata va directo a la cuenta del instructor, que recibe el 100%.
+              El estudio paga además la comisión de la plataforma y el costo de Mercado Pago. Los instructores tienen que conectar su Mercado Pago para aceptar reemplazos.
+            </Text>
+            {f.guaranteed ? (
+              <Input label="COMISIÓN DE LA PLATAFORMA (%)" value={f.guaranteed_fee} onChangeText={set('guaranteed_fee')} keyboardType="number-pad" placeholder="5" />
+            ) : null}
+          </View>
+  )
   const cardBrand = (
           <View style={s.card}>
             <Text style={s.caption}>MARCA DE LA RED (CO-MARCA)</Text>
@@ -370,7 +388,7 @@ function CamaraEditForm({ navigation, route }: any) {
         <ActionButton label={saveLabel} icon="check" onPress={save} loading={saving} />
       </>}>
       <View style={{ flexDirection: 'row', gap: 20, alignItems: 'flex-start' }}>
-        <View style={{ flex: 1, minWidth: 0 }}>{cardEntity}{cardNetwork}{cardPlacement}{team}</View>
+        <View style={{ flex: 1, minWidth: 0 }}>{cardEntity}{cardNetwork}{cardPlacement}{cardGuaranteed}{team}</View>
         <View style={{ flex: 1, minWidth: 0 }}>{cardBilling}{cardBrand}</View>
       </View>
     </AdminPage>
@@ -385,6 +403,7 @@ function CamaraEditForm({ navigation, route }: any) {
           {cardNetwork}
           {cardBilling}
           {cardPlacement}
+          {cardGuaranteed}
           {cardBrand}
           <Button label={saved ? '✓ Cambios guardados' : isNew ? 'Crear red' : 'Guardar cambios'} onPress={save} isLoading={saving}
             fullWidth size="lg" style={saved ? { backgroundColor: colors.forest } : undefined} />

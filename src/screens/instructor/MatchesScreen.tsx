@@ -13,6 +13,7 @@ import { useMyInstructor } from '../../hooks'
 import { errorText, UserError } from '../../lib/errors'
 import { formatDate } from '../../lib/dates'
 import { MATCH_STATUS } from '../../constants/labels'
+import { connectMp, useMpConnection } from '../../lib/matchFlow'
 import { Badge, EmptyState, ErrorState, LoadingScreen, Button, colors, spacing, radius, typography } from '../../components/ui'
 import BlobCard from '../../components/BlobCard'
 import HeroHeader, { HeaderPills } from '../../components/HeroHeader'
@@ -37,6 +38,7 @@ const isExpired = (m: any) => m.status === 'pendiente' && !!m.expires_at && new 
 
 const STUDIO_FIELDS = 'studio:studios(id, name, neighborhood, address, phone, instagram, logo_url)'
 
+const toMin = (t: string) => { const [h, m] = String(t ?? '0:0').split(':').map(Number); return h * 60 + (m || 0) }
 /** La propuesta trae dos opciones de entrevista (y el instructor todavía no eligió) */
 const hasAlt = (m: any) => m?.class_type === 'regular' && !!m?.alt_date && !m?.alt_chosen
 const slotsOf = (m: any) => [
@@ -117,6 +119,11 @@ export default function InstructorMatchesScreen({ navigation }: any) {
   })
 
   const [counter, setCounter] = useState(0)
+  // Cobro garantizado: en esta red los reemplazos se pagan por la app y hace falta Mercado Pago conectado
+  const { data: mp } = useMpConnection()
+  const [connecting, setConnecting] = useState(false)
+  const guaranteed = (m: any) => !!mp?.required && m?.class_type === 'reemplazo'
+  const classesOf = (m: any) => Math.max(1, Math.floor((toMin(m.end_time) - toMin(m.start_time)) / 60))
   // Entrevista con dos opciones: cuál elige el instructor (1 = la primera, 2 = la segunda)
   const [slot, setSlot] = useState<1 | 2>(1)
   const myRates: any = Array.isArray(instructor?.rates) ? (instructor?.rates as any)[0] : instructor?.rates
@@ -445,6 +452,16 @@ export default function InstructorMatchesScreen({ navigation }: any) {
               </View>
             )}
 
+            {selected && guaranteed(selected) && actionType !== 'reject' ? (
+              <View style={[styles.slot, { marginBottom: spacing.md, alignItems: 'flex-start', backgroundColor: mp?.connected ? colors.okBg : colors.warnBg, borderColor: 'transparent' }]}>
+                <Feather name={mp?.connected ? 'shield' : 'credit-card'} size={16} color={mp?.connected ? colors.okTx : colors.warnTx} style={{ marginTop: 2 }} />
+                <Text style={[styles.slotTxt, { fontSize: 13, lineHeight: 19 }]}>
+                  {mp?.connected
+                    ? `Cobro garantizado: el estudio paga por la app antes de la clase y recibís ${money(Number(actionType === 'counter' ? counter : selected.offered_rate) * classesOf(selected))} en tu Mercado Pago (${classesOf(selected)} clase${classesOf(selected) > 1 ? 's' : ''}).`
+                    : 'En tu red los reemplazos se pagan por la app. Conectá tu Mercado Pago para poder aceptarlo: la plata llega directo a tu cuenta.'}
+                </Text>
+              </View>
+            ) : null}
             {selected && hasAlt(selected) && actionType !== 'reject' ? (
               <View style={{ gap: 8, marginBottom: spacing.md }}>
                 <Text style={styles.noteInputLabel}>DÍA DE LA ENTREVISTA</Text>
@@ -475,6 +492,10 @@ export default function InstructorMatchesScreen({ navigation }: any) {
             />
 
             <View style={styles.modalActions}>
+              {selected && guaranteed(selected) && !mp?.connected && actionType !== 'reject' ? (
+                <Button label="Conectar Mercado Pago" fullWidth isLoading={connecting}
+                  onPress={async () => { setConnecting(true); try { await connectMp() } catch (e) { showToast(errorText(e), 'error') } finally { setConnecting(false) } }} />
+              ) : (
               <Button
                 label={actionType === 'accept' ? 'Confirmar' : actionType === 'counter' ? `Proponer ${counter ? money(counter) : ''}` : 'Rechazar propuesta'}
                 variant={actionType === 'reject' ? 'danger' : 'primary'}
@@ -482,6 +503,7 @@ export default function InstructorMatchesScreen({ navigation }: any) {
                 isLoading={respondMutation.isPending}
                 fullWidth
               />
+              )}
               <Button label="Cancelar" variant="ghost" onPress={closeModal} fullWidth />
             </View>
           </View>

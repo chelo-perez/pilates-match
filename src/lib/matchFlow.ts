@@ -35,8 +35,17 @@ export function phaseOf(m: any, now = new Date()): Phase {
 /** Entrevista regular esperando que el estudio pague el cargo de incorporación */
 export const awaitingPayment = (m: any) => m?.status === 'aceptado' && m?.placement_status === 'pendiente_pago'
 
+/** Reemplazo con cobro garantizado esperando que el estudio lo pague */
+export const awaitingReplacementPay = (m: any) => m?.status === 'aceptado' && m?.pay_status === 'pendiente_pago'
+
+export const PAY_STATUS: Record<string, string> = {
+  pendiente_pago: 'Falta pagar', pagado: 'Pagado', vencido: 'No se pagó a tiempo', a_devolver: 'Se está devolviendo',
+  devuelto: 'Devuelto', anulado: 'Anulado',
+}
+
 /** Lo que falta hacer de este lado (para mostrar un aviso en las listas) */
 export function pendingAction(m: any, side: 'estudio' | 'instructor'): string | null {
+  if (awaitingReplacementPay(m)) return side === 'estudio' ? 'Pagá el reemplazo para confirmarlo' : null
   if (awaitingPayment(m)) return side === 'estudio' ? 'Pagá el cargo para confirmar la entrevista' : null
   const ph = phaseOf(m)
   if (ph !== 'terminada') return null
@@ -185,6 +194,60 @@ export async function refundPlacement(matchId: string) {
     throw new UserError(msg ?? 'No se pudo devolver. Probá de nuevo.')
   }
 }
+const fnError = async (error: any, fallback: string) =>
+  new UserError(await error?.context?.json?.().then((j: any) => j?.error).catch(() => null) ?? fallback)
+
+/** Abre el checkout de Mercado Pago para pagar un reemplazo con cobro garantizado */
+export async function payReplacement(matchId: string) {
+  const { data, error } = await supabase.functions.invoke('mercadopago', { body: { action: 'replacement_pay', match_id: matchId } })
+  if (error) throw await fnError(error, 'No pudimos conectar con Mercado Pago. Probá de nuevo.')
+  if (!data?.init_point) throw new UserError('Mercado Pago no devolvió el link de pago.')
+  const WebBrowser = require('expo-web-browser')
+  await WebBrowser.openBrowserAsync(data.init_point)
+}
+/** Devuelve un reemplazo pagado que corresponde devolver (lo pide la app después de cancelar) */
+export async function refundReplacement(matchId: string) {
+  const { error } = await supabase.functions.invoke('mercadopago', { body: { action: 'replacement_refund', match_id: matchId } })
+  if (error) throw await fnError(error, 'No se pudo devolver. Probá de nuevo.')
+}
+
+// ── Mercado Pago del instructor (cobro garantizado) ──
+export const useMpConnection = (enabled = true) =>
+  useQuery({
+    queryKey: ['mp-connection'],
+    queryFn: async () => {
+      const { data, error } = await supabase.rpc('my_mp_connection')
+      if (error) return { required: false, connected: false } as any
+      return data as { required: boolean; connected: boolean; email?: string | null; connected_at?: string | null }
+    },
+    enabled,
+  })
+export async function connectMp() {
+  const { Platform } = require('react-native')
+  const returnTo = Platform.OS === 'web' ? `${window.location.origin}/?mp=1` : 'trabajomasfacil://mp-conectado'
+  const { data, error } = await supabase.functions.invoke('mercadopago', { body: { action: 'mp_connect', return_to: returnTo } })
+  if (error) throw await fnError(error, 'No pudimos iniciar la conexión con Mercado Pago.')
+  const WebBrowser = require('expo-web-browser')
+  if (Platform.OS === 'web') { window.location.href = data.url; return }
+  await WebBrowser.openAuthSessionAsync(data.url, returnTo)
+}
+export async function disconnectMp() {
+  const { error } = await supabase.functions.invoke('mercadopago', { body: { action: 'mp_disconnect' } })
+  if (error) throw await fnError(error, 'No pudimos desconectar tu Mercado Pago.')
+}
+
+/** Cuánto paga el estudio por un reemplazo con cobro garantizado en su red (null si la red no lo usa) */
+export const useGuaranteedQuote = (block: number) =>
+  useQuery({
+    queryKey: ['guaranteed-quote', block],
+    queryFn: async () => {
+      const { data } = await supabase.rpc('guaranteed_quote', { p_block: Math.round(block) })
+      return (data && data.enabled ? data : null) as null | { block: number; fee: number; fee_pct: number; mp_cost: number; total: number }
+    },
+    enabled: block > 0,
+    staleTime: 60_000,
+  })
+
 export const endRegular = (matchId: string, reason: string) => rpc('end_regular', { p_match: matchId, p_reason: reason })
 
 export const MATCH_KEYS = [['match-detail'], ['match-contact'], ['studio-matches'], ['instructor-matches'], ['studio-history-recent'],

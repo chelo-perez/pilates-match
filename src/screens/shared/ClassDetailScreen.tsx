@@ -12,7 +12,7 @@ import { errorText } from '../../lib/errors'
 import { IN_APP_PAYMENTS } from '../../lib/payments'
 import { DAYS_SHORT, publishOpenClass, money } from '../../lib/openClasses'
 import {
-  addToCalendar, awaitingPayment, cancelConfirmed, instructorDecide, matchEnd, payPlacement, PLACEMENT_STATUS, confirmHeld, decideHire, endRegular, isConfirmed, matchStart, MATCH_KEYS,
+  addToCalendar, awaitingPayment, awaitingReplacementPay, payReplacement, refundReplacement, PAY_STATUS, cancelConfirmed, instructorDecide, matchEnd, payPlacement, PLACEMENT_STATUS, confirmHeld, decideHire, endRegular, isConfirmed, matchStart, MATCH_KEYS,
   openCall, openMaps, openWhatsApp, phaseOf, useEvaluated, useMatchContact, useMatchDetail, waNumber,
 } from '../../lib/matchFlow'
 import HeroHeader from '../../components/HeroHeader'
@@ -74,6 +74,8 @@ export default function ClassDetailScreen({ navigation, route }: any) {
   const eventTitle = `${isRegular ? 'Clase de prueba' : 'Reemplazo'} · ${other.name}`
   const address = side === 'instructor' ? contact?.address : null
   const unpaid = awaitingPayment(m)
+  const repUnpaid = awaitingReplacementPay(m)
+  const payDeadline = m.pay_deadline ? new Date(m.pay_deadline).toLocaleString('es-AR', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }) : ''
   const feeBlocks = Math.min(Math.max((m.schedule_days ?? []).length, 1), 2)
   const deadlineLabel = m.placement_deadline ? new Date(m.placement_deadline).toLocaleString('es-AR', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }) : ''
   // Un reemplazo suele ser un bloque de varias horas: una clase por hora
@@ -98,7 +100,11 @@ export default function ClassDetailScreen({ navigation, route }: any) {
   })
   const submitCancel = () => run('cancel', async () => {
     if (cancelOpen === 'end') await endRegular(m.id, reason)
-    else await cancelConfirmed(m.id, reason)
+    else {
+      await cancelConfirmed(m.id, reason)
+      // Cobro garantizado: si corresponde devolver, se pide ya (si no corresponde, la función lo rechaza y seguimos)
+      if (m.pay_status === 'pagado') await refundReplacement(m.id).catch(() => {})
+    }
     setCancelOpen(null); setReason('')
   }, cancelOpen === 'end' ? 'Clase regular terminada' : 'Clase cancelada. Le avisamos.')
 
@@ -123,6 +129,30 @@ export default function ClassDetailScreen({ navigation, route }: any) {
                 {phase === 'en_curso' ? 'En curso ahora' : `Confirmada · ${timeUntil(start)}`}
               </Text>
               <Text style={s.bannerTxt}>Les avisamos a los dos el día anterior y 2 horas antes.</Text>
+            </View>
+          </View>
+        ) : null}
+
+        {/* Reemplazo con cobro garantizado: el estudio paga por la app para confirmarlo */}
+        {repUnpaid && side === 'estudio' ? (
+          <View style={s.ask}>
+            <Text style={s.askTitle}>Pagá el reemplazo para confirmarlo: {money(m.pay_total_ars)}</Text>
+            <Text style={s.askTxt}>
+              {firstName} recibe {money(m.pay_block_ars)} (el 100% de lo acordado). Incluye {money(m.pay_fee_ars)} del servicio y el costo de Mercado Pago. Pagalo antes del {payDeadline}; si no, el reemplazo se cancela.
+            </Text>
+            <View style={s.rules}>
+              <Text style={s.rule}>↺ Si {firstName} cancela, te devolvemos el total.</Text>
+              <Text style={s.rule}>↺ Si cancelás con más de 24 h, también.</Text>
+            </View>
+            <Button label={`Pagar ${money(m.pay_total_ars)} con Mercado Pago`} isLoading={busy === 'rpay'} fullWidth style={{ marginTop: spacing.md }}
+              onPress={() => run('rpay', async () => { await payReplacement(m.id); setTimeout(refresh, 4000); setTimeout(refresh, 12000) })} />
+          </View>
+        ) : repUnpaid ? (
+          <View style={[s.banner, { backgroundColor: colors.warnBg }]}>
+            <Feather name="clock" size={18} color={colors.warnTx} />
+            <View style={{ flex: 1 }}>
+              <Text style={[s.bannerTitle, { color: colors.warnTx }]}>Falta que el estudio lo pague</Text>
+              <Text style={s.bannerTxt}>Tiene tiempo hasta el {payDeadline}. Cuando pague, {money(m.pay_block_ars)} llegan a tu Mercado Pago y ves la dirección y el contacto.</Text>
             </View>
           </View>
         ) : null}
@@ -282,6 +312,11 @@ export default function ClassDetailScreen({ navigation, route }: any) {
             <Text style={s.small}>{m.trial_paid ? 'La clase de prueba se paga con ese monto.' : 'La clase de prueba es sin cargo; el monto rige si la suman como clase regular.'}</Text>
           ) : null}
           {m.note_studio ? <Text style={s.note}>Nota del estudio: "{m.note_studio}"</Text> : null}
+          {m.pay_status && m.pay_status !== 'pendiente_pago' ? (
+            <Text style={s.small}>{side === 'estudio'
+              ? `Pago por la app: ${money(m.pay_total_ars)} · ${PAY_STATUS[m.pay_status] ?? m.pay_status}`
+              : `Cobro garantizado: ${money(m.pay_block_ars)} · ${m.pay_status === 'pagado' ? 'Pagado en tu Mercado Pago' : PAY_STATUS[m.pay_status] ?? m.pay_status}`}</Text>
+          ) : null}
           {side === 'estudio' && m.placement_fee_ars && m.placement_status ? (
             <Text style={s.small}>Cargo de incorporación: {money(m.placement_fee_ars)} · {PLACEMENT_STATUS[m.placement_status] ?? m.placement_status}{m.placement_via === 'credito' ? ' (con crédito)' : ''}</Text>
           ) : null}

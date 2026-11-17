@@ -1,6 +1,7 @@
 // src/screens/instructor/ProfileEditScreen.tsx
 import React, { useState, useEffect } from 'react'
 import GuideLink from '../../components/GuideLink'
+import MpConnectCard from '../../components/MpConnectCard'
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Modal, FlatList, ActivityIndicator, Alert, Linking } from 'react-native'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { usePhotoCropper } from '../../components/PhotoCropper'
@@ -366,6 +367,7 @@ export default function ProfileEditScreen() {
 
           <SaveButton label="Guardar perfil" onPress={() => saveMutation.mutate()} isPending={saveMutation.isPending} isSuccess={saveMutation.isSuccess} />
         </View>
+        <View style={{ marginHorizontal: spacing.md }}><MpConnectCard /></View>
         <GuideLink role="instructor" inset />
         <DeleteAccount inset />
       </ScrollView>

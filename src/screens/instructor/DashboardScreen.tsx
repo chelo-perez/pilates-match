@@ -11,6 +11,7 @@ import { VERIFICATION_STATUS } from '../../constants/labels'
 import { LoadingScreen, ErrorState, Button, colors, spacing, radius, typography } from '../../components/ui'
 import { Feather } from '@expo/vector-icons'
 import BenefitsEntry from '../../components/BenefitsEntry'
+import MpConnectCard from '../../components/MpConnectCard'
 import BlobCard from '../../components/BlobCard'
 import HeroHeader from '../../components/HeroHeader'
 import NotificationBell from '../../components/NotificationBell'
@@ -220,6 +221,9 @@ export default function InstructorDashboardScreen({ navigation }: any) {
             fullWidth
           />
         </View>
+
+        {/* Cobro garantizado: falta conectar Mercado Pago */}
+        <MpConnectCard compact />
 
         {/* Clases abiertas de la red */}
         <TouchableOpacity style={[s.studiosCard, { backgroundColor: colors.goldLight }]} onPress={() => navigation.navigate('OpenClasses')} activeOpacity={0.85}>

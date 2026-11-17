@@ -7,6 +7,7 @@ import {
 import PickerField from '../../components/PickerField'
 import { useSearchNeed, parseLocal, fromHHMM, shiftStart } from '../../store/searchNeed'
 import { useQuery } from '@tanstack/react-query'
+import { useGuaranteedQuote } from '../../lib/matchFlow'
 import { useCanMatch, useCreateMatch, useInstructor, useMyStudio } from '../../hooks'
 import { supabase } from '../../lib/supabase'
 import { Avatar, Button, colors, spacing, radius, typography } from '../../components/ui'
@@ -95,6 +96,8 @@ export default function RequestMatchScreen({ navigation, route }: Props) {
   const minutesOf = (d: Date) => d.getHours() * 60 + d.getMinutes()
   const validRange = minutesOf(to) > minutesOf(from)
   const hours = validRange ? Math.floor((minutesOf(to) - minutesOf(from)) / 60) : 0
+  // Cobro garantizado (si la red lo usa): cuánto paga el estudio por el bloque
+  const { data: quote } = useGuaranteedQuote(classType === 'reemplazo' && offer > 0 ? offer * Math.max(1, hours) : 0)
 
   // Disponibilidad cargada por el instructor (solo informativa, no bloquea)
   const availability = (instructor?.availability ?? []) as any[]
@@ -360,6 +363,14 @@ export default function RequestMatchScreen({ navigation, route }: Props) {
           ) : null}
           {classType === 'reemplazo' && hours > 1 && offer > 0 ? (
             <Text style={s.offerTotal}>Total del bloque: {money(offer * hours)} ({hours} clases × {money(offer)})</Text>
+          ) : null}
+          {classType === 'reemplazo' && quote ? (
+            <View style={s.feeBox}>
+              <Text style={s.feeTitle}>Pagás por la app: {money(quote.total)}</Text>
+              <Text style={s.feeTxt}>
+                {firstName} recibe {money(quote.block)}, el 100% del bloque. Se suman {money(quote.fee)} del servicio ({quote.fee_pct}%) y {money(quote.mp_cost)} de Mercado Pago. Lo pagás cuando acepta, antes de la clase; si cancela, te devolvemos el total.
+              </Text>
+            </View>
           ) : null}
           <Text style={s.offerNote}>
             Es lo que pagás si {instructorName} acepta. Su tarifa es privada: la compara con tu oferta y puede aceptar, rechazar o proponerte otro monto.

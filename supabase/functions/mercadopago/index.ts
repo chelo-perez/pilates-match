@@ -3,9 +3,15 @@
 //   POST { action: 'cancel' }                                            -> { ok }           (estudio)
 //   POST { action: 'placement_pay', match_id }                           -> { init_point }   (estudio: cargo de incorporación)
 //   POST { action: 'placement_refund', match_id }                        -> { ok }           (plataforma: devolver el cargo)
-// El precio depende de la Cámara del estudio. Cobra la cuenta de Mercado Pago de la plataforma.
-// Secretos: MP_ACCESS_TOKEN.
+//   POST { action: 'mp_connect', return_to? }                           -> { url }          (instructor: conectar su Mercado Pago)
+//   POST { action: 'mp_disconnect' }                                     -> { ok }           (instructor)
+//   POST { action: 'replacement_pay', match_id }                         -> { init_point }   (estudio: cobro garantizado, split)
+//   POST { action: 'replacement_refund', match_id }                      -> { ok }           (devolver un reemplazo pagado)
+// El precio depende de la Cámara del estudio. Los planes y el cargo los cobra la cuenta de la plataforma;
+// los reemplazos los cobra la cuenta del instructor y Mercado Pago le transfiere a la plataforma su comisión.
+// Secretos: MP_ACCESS_TOKEN; para reemplazos además MP_CLIENT_ID, MP_CLIENT_SECRET y MP_TOKEN_KEY.
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.45.4'
+import { challenge, instructorToken, oauthConfigured, randomToken, redirectUri } from '../_shared/mpAccounts.ts'
 
 const MP = 'https://api.mercadopago.com'
 const LABEL: Record<string, string> = { starter: 'Starter', premium: 'Premium' }
@@ -32,6 +38,45 @@ Deno.serve(async (req) => {
     const mp = (path: string, init: RequestInit = {}) => fetch(MP + path, {
       ...init, headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json', ...(init.headers ?? {}) },
     })
+
+    // ── Instructor: conectar o desconectar su Mercado Pago (cobro garantizado de reemplazos) ──
+    if (body.action === 'mp_connect' || body.action === 'mp_disconnect') {
+      const { data: ins } = await admin.from('instructors').select('id').eq('user_id', user.id).maybeSingle()
+      if (!ins) return json({ error: 'Solo los instructores conectan su Mercado Pago.' }, 403)
+      if (body.action === 'mp_disconnect') {
+        await admin.from('instructor_mp_accounts').delete().eq('instructor_id', ins.id)
+        return json({ ok: true })
+      }
+      if (!oauthConfigured()) return json({ error: 'La conexión con Mercado Pago todavía no está disponible.' }, 503)
+      const state = randomToken(24), verifier = randomToken(48)
+      const returnTo = typeof body.return_to === 'string' && /^(https:\/\/app\.trabajo\.masfacil\.com\.ar|trabajomasfacil:\/\/|exp:\/\/)/.test(body.return_to) ? body.return_to : null
+      await admin.from('mp_oauth_states').delete().lt('created_at', new Date(Date.now() - 864e5).toISOString())
+      const { error } = await admin.from('mp_oauth_states').insert({ state, instructor_id: ins.id, code_verifier: verifier, return_to: returnTo })
+      if (error) throw error
+      const q = new URLSearchParams({ client_id: Deno.env.get('MP_CLIENT_ID')!, response_type: 'code', platform_id: 'mp', state,
+        redirect_uri: redirectUri(), code_challenge: await challenge(verifier), code_challenge_method: 'S256' })
+      return json({ url: `https://auth.mercadopago.com/authorization?${q}` })
+    }
+
+    // ── Devolver un reemplazo pagado (las partes, cuando corresponde, o la plataforma) ──
+    if (body.action === 'replacement_refund') {
+      const { data: m } = await admin.from('matches')
+        .select('id, instructor_id, pay_status, pay_payment_id, studio:studios(user_id), instructor:instructors(user_id)')
+        .eq('id', body.match_id).maybeSingle()
+      if (!m) return json({ error: 'No encontramos este reemplazo.' }, 404)
+      const { data: me } = await admin.from('users').select('role').eq('id', user.id).maybeSingle()
+      const party = (m as any).studio?.user_id === user.id || (m as any).instructor?.user_id === user.id
+      if (!party && me?.role !== 'super_admin') return json({ error: 'No podés devolver este pago.' }, 403)
+      if (m.pay_status !== 'a_devolver' || !m.pay_payment_id) return json({ error: 'Este pago no está para devolver.' }, 409)
+      const itok = await instructorToken(admin, m.instructor_id)
+      if (!itok) return json({ error: 'No pudimos acceder a la cuenta de Mercado Pago del instructor. La plataforma lo va a resolver.' }, 409)
+      const r = await fetch(`${MP}/v1/payments/${m.pay_payment_id}/refunds`, {
+        method: 'POST', body: '{}', headers: { Authorization: `Bearer ${itok}`, 'Content-Type': 'application/json', 'X-Idempotency-Key': `replacement-refund-${m.id}` },
+      })
+      if (!r.ok) { console.error('replacement refund', r.status, (await r.text()).slice(0, 300)); return json({ error: 'Mercado Pago no pudo hacer la devolución. Probá de nuevo.' }, 502) }
+      await admin.rpc('guaranteed_refunded', { p_match: m.id })
+      return json({ ok: true })
+    }
 
     // ── Plataforma: devolver un cargo de incorporación ──
     if (body.action === 'placement_refund') {
@@ -72,6 +117,34 @@ Deno.serve(async (req) => {
       })
       const pref = await r.json()
       if (!r.ok || !pref.init_point) { console.error('preference', r.status, JSON.stringify(pref)); return json({ error: 'Mercado Pago no pudo iniciar el pago. Probá de nuevo.' }, 502) }
+      return json({ init_point: pref.init_point })
+    }
+
+    // ── Estudio: pagar un reemplazo con cobro garantizado (split: cobra el instructor, la plataforma recibe su comisión) ──
+    if (body.action === 'replacement_pay') {
+      const { data: m } = await admin.from('matches')
+        .select('id, studio_id, instructor_id, class_date, start_time, pay_status, pay_total_ars, pay_fee_ars, pay_deadline, instructor:instructors(full_name)')
+        .eq('id', body.match_id).maybeSingle()
+      if (!m || m.studio_id !== studio.id) return json({ error: 'No encontramos este reemplazo.' }, 404)
+      if (m.pay_status !== 'pendiente_pago') return json({ error: 'Este reemplazo no tiene un pago pendiente.' }, 409)
+      const itok = await instructorToken(admin, m.instructor_id)
+      if (!itok) return json({ error: 'El instructor tiene que volver a conectar su Mercado Pago. Ya le avisamos.' }, 409)
+      const name = (m as any).instructor?.full_name ?? 'instructor'
+      const r = await fetch(MP + '/checkout/preferences', {
+        method: 'POST', headers: { Authorization: `Bearer ${itok}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          items: [{ id: m.id, title: `Reemplazo ${String(m.class_date).split('-').reverse().slice(0, 2).join('/')} · ${name}`, quantity: 1, unit_price: m.pay_total_ars, currency_id: 'ARS' }],
+          marketplace_fee: m.pay_fee_ars,
+          external_reference: `replacement:${m.id}`,
+          notification_url: `${url}/functions/v1/mp-webhook?m=${m.id}`,
+          back_urls: { success: `${url}/functions/v1/mp-webhook?volver=1`, pending: `${url}/functions/v1/mp-webhook?volver=1`, failure: `${url}/functions/v1/mp-webhook?volver=1` },
+          auto_return: 'approved',
+          statement_descriptor: 'TRABAJOMASFACIL',
+          ...(m.pay_deadline ? { expires: true, date_of_expiration: m.pay_deadline } : {}),
+        }),
+      })
+      const pref = await r.json()
+      if (!r.ok || !pref.init_point) { console.error('replacement preference', r.status, JSON.stringify(pref).slice(0, 300)); return json({ error: 'Mercado Pago no pudo iniciar el pago. Probá de nuevo.' }, 502) }
       return json({ init_point: pref.init_point })
     }
 
