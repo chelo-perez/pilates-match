@@ -55,7 +55,7 @@ Deno.serve(async (req) => {
       if (error) throw error
       const q = new URLSearchParams({ client_id: Deno.env.get('MP_CLIENT_ID')!, response_type: 'code', platform_id: 'mp', state,
         redirect_uri: redirectUri(), code_challenge: await challenge(verifier), code_challenge_method: 'S256' })
-      return json({ url: `https://auth.mercadopago.com/authorization?${q}` })
+      return json({ url: `https://auth.mercadopago.com.ar/authorization?${q}` })
     }
 
     // ── Devolver un reemplazo pagado (las partes, cuando corresponde, o la plataforma) ──
