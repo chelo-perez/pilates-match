@@ -63,6 +63,7 @@ export default function AdminSponsorsScreen({ navigation }: any) {
 
   return (
     <AdminPage title="Patrocinios"
+      onBack={navigation.getState?.()?.type === 'stack' ? () => navigation.goBack() : undefined} backLabel="Inicio"
       subtitle={isEntity ? 'Beneficios y formaciones para los estudios e instructores de tu red' : 'Beneficios y formaciones publicados en las redes'}
       actions={<ActionButton label="Nuevo aviso" icon="plus" onPress={() => navigation.navigate('AdminSponsorEdit', {})} />}>
 

@@ -11,6 +11,7 @@ import NotificationBell from '../../components/NotificationBell'
 import { entity } from '../../lib/entity'
 import { myNetwork } from '../../lib/platform'
 import LogoutPill from '../../components/LogoutPill'
+import { useSponsorOffers } from '../../lib/sponsors'
 
 export default function CamaraDashboardScreen({ navigation }: any) {
   const user = useAuthStore(s => s.user)
@@ -48,6 +49,8 @@ export default function CamaraDashboardScreen({ navigation }: any) {
     enabled: !!user?.camara_id,
   })
 
+  const { data: sponsorOffers = [] } = useSponsorOffers()
+
   // Instructores esperando verificación: primero los que esperan hace más tiempo
   const { data: pending = [] } = useQuery({
     queryKey: ['camara-instructors', 'pending-dashboard'],
@@ -60,6 +63,8 @@ export default function CamaraDashboardScreen({ navigation }: any) {
       return data ?? []
     },
   })
+
+  const sponsorPending = sponsorOffers.filter(o => o.networks?.some(n => n.camara_id === user?.camara_id && n.status === 'pendiente')).length
 
   if (isLoading) return <LoadingScreen message="Cargando panel..." />
   if (isError) return <ErrorState message="No pudimos cargar el panel." onRetry={refetch} />
@@ -141,6 +146,20 @@ export default function CamaraDashboardScreen({ navigation }: any) {
             ))}
           </View>
         </View>
+
+        {/* Patrocinios: beneficios y formaciones de la red (aprobar los que propone la plataforma) */}
+        <TouchableOpacity style={[s.card, { marginHorizontal: spacing.md, marginBottom: spacing.lg }]} onPress={() => navigation.navigate('AdminPatrocinios')} activeOpacity={0.85}>
+          <View style={[s.icon, { backgroundColor: sponsorPending ? colors.warnBg : colors.sageLighter }]}>
+            <Feather name="gift" size={16} color={sponsorPending ? colors.warnTx : colors.sage} />
+          </View>
+          <View style={{ flex: 1 }}>
+            <Text style={s.cardTitle}>Patrocinios</Text>
+            <Text style={s.cardSub}>{sponsorPending
+              ? `${sponsorPending} aviso${sponsorPending > 1 ? 's' : ''} para aprobar`
+              : 'Beneficios y formaciones para tu red'}</Text>
+          </View>
+          <Feather name="chevron-right" size={18} color={colors.sageMid} />
+        </TouchableOpacity>
 
         {/* 3. Oportunidad: estudios que todavía no son socios */}
         {(stats?.non_member_studios ?? 0) > 0 && (
