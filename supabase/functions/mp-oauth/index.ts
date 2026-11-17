@@ -4,13 +4,18 @@ import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.45.4'
 import { MP, oauthConfigured, redirectUri, saveTokens } from '../_shared/mpAccounts.ts'
 
 const APP = 'https://app.trabajo.masfacil.com.ar'
-const page = (title: string, msg: string, ok: boolean, back: string) => new Response(`<!doctype html><html lang="es"><head><meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1"><title>${title}</title>
-<style>body{margin:0;font-family:system-ui,sans-serif;background:#163235;color:#fff;display:flex;min-height:100vh;align-items:center;justify-content:center;text-align:center;padding:24px}
-.c{max-width:420px}h1{font-size:24px;margin:0 0 10px}p{color:#cfe7e3;line-height:1.5}a{display:inline-block;margin-top:18px;background:#fff;color:#163235;font-weight:700;padding:12px 22px;border-radius:12px;text-decoration:none}</style>
-</head><body><div class="c"><h1>${ok ? '✓ ' : ''}${title}</h1><p>${msg}</p><a href="${back}">Volver a Trabajo Más Fácil</a></div>
-${ok ? `<script>setTimeout(function(){location.href=${JSON.stringify(back)}},1500)</script>` : ''}</body></html>`,
-  { status: ok ? 200 : 400, headers: { 'Content-Type': 'text/html; charset=utf-8' } })
+// Supabase no sirve páginas HTML desde las funciones: se vuelve a la app con el resultado en la URL
+// (?mp=ok o ?mp=error&mp_msg=...) y la app muestra el aviso.
+const page = (title: string, msg: string, ok: boolean, back: string) => {
+  let to = back
+  try {
+    const u = new URL(back)
+    u.searchParams.set('mp', ok ? 'ok' : 'error')
+    if (!ok) u.searchParams.set('mp_msg', `${title}. ${msg}`)
+    to = u.toString()
+  } catch { /* deep link sin formato de URL: se usa tal cual */ }
+  return new Response(null, { status: 302, headers: { Location: to } })
+}
 
 Deno.serve(async (req) => {
   const url = new URL(req.url)

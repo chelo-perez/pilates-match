@@ -15,6 +15,7 @@ import { useNetworkBrandSync } from '../lib/brandSync'
 import AdminTabs, { EntityPortal } from './AdminTabs'
 import BenefitsScreen from '../screens/shared/BenefitsScreen'
 import AppGuide from '../components/AppGuide'
+import MpReturnNotice from '../components/MpReturnNotice'
 import AdminSponsorsScreen from '../screens/admin/AdminSponsorsScreen'
 import AdminSponsorEditScreen from '../screens/admin/AdminSponsorEditScreen'
 import { useIsWide } from '../components/admin/AdminUI'
@@ -352,6 +353,7 @@ export default function RootNavigator() {
       </NavigationContainer>
       {inApp ? <StatusBarBand /> : null}
       {inApp ? <AppGuide navigationRef={navigationRef} /> : null}
+      {inApp ? <MpReturnNotice /> : null}
     </View>
   )
 }
